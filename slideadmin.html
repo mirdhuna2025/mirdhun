@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slider Admin - Mirdhuna</title>
+<style>
+body { font-family: Arial; padding: 20px; background: #f8f8f8; }
+h2 { color: #d40000; }
+form { background: #fff; padding: 20px; border-radius: 10px; box-shadow:0 4px 10px rgba(0,0,0,0.2);}
+input, button { display:block; width:100%; padding:10px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc; font-size:16px;}
+button { background:#d40000; color:#fff; border:none; cursor:pointer; font-weight:bold;}
+button:hover{ background:#ff4c4c;}
+</style>
+</head>
+<body>
+
+<h2>Upload Slide</h2>
+<form id="slide-form">
+  <input type="text" id="title" placeholder="Slide Title" required />
+  <input type="text" id="image-url" placeholder="Image URL" required />
+  <input type="text" id="link-url" placeholder="Target URL (where user clicks)" />
+  <button type="submit">Upload Slide</button>
+</form>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
+import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey:"AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+  authDomain:"mirdhuna-25542.firebaseapp.com",
+  databaseURL:"https://mirdhuna-25542-default-rtdb.firebaseio.com",
+  projectId:"mirdhuna-25542",
+  storageBucket:"mirdhuna-25542.appspot.com",
+  messagingSenderId:"575924409876",
+  appId:"1:575924409876:web:6ba1ed88ce941d9c83b901"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const form = document.getElementById('slide-form');
+
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const title = document.getElementById('title').value.trim();
+  const image = document.getElementById('image-url').value.trim();
+  const url = document.getElementById('link-url').value.trim();
+
+  if(!title || !image){ alert('Title and Image URL required'); return; }
+
+  // Push slide to Firebase
+  await push(ref(db, 'slides'), {
+    title: title,
+    image: image,
+    url: url,
+    createdAt: new Date().toISOString()
+  });
+
+  alert('Slide uploaded successfully!');
+  form.reset();
+});
+</script>
+
+</body>
+</html>
