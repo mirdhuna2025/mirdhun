@@ -1,128 +1,25 @@
 <section class="slider-section">
-  <style>
-    .slider-container {
-      position: relative;
-      height: 25vh;
-      overflow: hidden;
-      border-radius: 0 0 20px 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      background: #333;
-    }
-    .slider { display: flex; height: 100%; transition: transform 0.5s ease-in-out; }
-    .slide { 
-      min-width: 100%; height: 100%; 
-      background-size: cover; background-position: center; cursor: pointer;
-    }
-    .slider-nav { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
-    .slider-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: 0.3s; }
-    .slider-dot.active { background: #fff; transform: scale(1.2); }
-    .slider-btn {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      background: rgba(255,255,255,0.3); color: white; border: none; width: 40px; height: 40px; border-radius: 50%;
-      font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-    .slider-btn:hover { background: rgba(255,255,255,0.5); }
-    .prev { left: 10px; } .next { right: 10px; }
-    @media (max-width: 600px) {
-      .slider-btn { width: 36px; height: 36px; font-size: 0.9rem; }
-      .slider-dot { width: 8px; height: 8px; }
-    }
-  </style>
+<style>
+.slider-container{position:relative;height:25vh;overflow:hidden;border-radius:0 0 20px 20px;background:#333;}
+.slider{display:flex;height:100%;transition:transform 0.5s ease-in-out;}
+.slide{min-width:100%;height:100%;background-size:cover;background-position:center;cursor:pointer;}
+.slider-nav{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;}
+.slider-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:0.3s;}
+.slider-dot.active{background:#fff;transform:scale(1.2);}
+.slider-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.3);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.slider-btn:hover{background:rgba(255,255,255,0.5);}
+.prev{left:10px;}.next{right:10px;}
+@media(max-width:600px){.slider-btn{width:36px;height:36px;font-size:0.9rem;}.slider-dot{width:8px;height:8px;}}
+</style>
 
-  <div class="slider-container">
-    <div class="slider" id="slider">
-      <!-- Replace with your actual images -->
-      <div class="slide" data-url="https://example.com/1" style="background-image:url('image1.jpg')"></div>
-      <div class="slide" data-url="https://example.com/2" style="background-image:url('image2.jpg')"></div>
-      <div class="slide" data-url="https://example.com/3" style="background-image:url('image3.jpg')"></div>
-    </div>
-
-    <button class="slider-btn prev">&#10094;</button>
-    <button class="slider-btn next">&#10095;</button>
-    <div class="slider-nav" id="sliderNav"></div>
+<div class="slider-container">
+  <div class="slider" id="slider">
+    <div class="slide" data-url="https://example.com/1" style="background-image:url('image1.jpg')"></div>
+    <div class="slide" data-url="https://example.com/2" style="background-image:url('image2.jpg')"></div>
+    <div class="slide" data-url="https://example.com/3" style="background-image:url('image3.jpg')"></div>
   </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
-    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
-
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-      authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
-      projectId: "mirdhuna-25542",
-      storageBucket: "mirdhuna-25542.appspot.com",
-      messagingSenderId: "575924409876",
-      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const slider = document.getElementById("slider");
-    const slides = slider.children;
-    const nav = document.getElementById("sliderNav");
-    let index = 0;
-    const slideCount = slides.length;
-
-    // Create navigation dots
-    for(let i=0;i<slideCount;i++){
-      const dot = document.createElement("div");
-      dot.classList.add("slider-dot");
-      if(i===0) dot.classList.add("active");
-      dot.addEventListener("click", ()=> goToSlide(i));
-      nav.appendChild(dot);
-    }
-    const dots = nav.children;
-
-    function goToSlide(i){
-      index = i;
-      slider.style.transform = `translateX(-${i*100}%)`;
-      updateDots();
-    }
-
-    function updateDots(){
-      for(let i=0;i<dots.length;i++){
-        dots[i].classList.toggle("active", i===index);
-      }
-    }
-
-    document.querySelector(".next").addEventListener("click", ()=>{
-      index = (index+1)%slideCount;
-      goToSlide(index);
-    });
-
-    document.querySelector(".prev").addEventListener("click", ()=>{
-      index = (index-1+slideCount)%slideCount;
-      goToSlide(index);
-    });
-
-    // Slide click: open URL & log to Firebase
-    Array.from(slides).forEach(slide => {
-      slide.addEventListener("click", ()=>{
-        const url = slide.getAttribute("data-url");
-        const imgUrl = slide.style.backgroundImage.slice(5,-2); // strip url("")
-
-        // Log click
-        push(ref(db, 'slideClicks'), {
-          image: imgUrl,
-          url: url,
-          clickedAt: new Date().toISOString()
-        });
-
-        if(url) window.open(url, "_blank");
-      });
-
-      // Preload images to avoid black slides
-      const img = new Image();
-      img.src = slide.style.backgroundImage.slice(5,-2);
-    });
-
-    // Optional: auto slide every 5s
-    setInterval(()=>{
-      index = (index+1)%slideCount;
-      goToSlide(index);
-    }, 5000);
-  </script>
+  <button class="slider-btn prev">&#10094;</button>
+  <button class="slider-btn next">&#10095;</button>
+  <div class="slider-nav" id="sliderNav"></div>
+</div>
 </section>
