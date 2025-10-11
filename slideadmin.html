@@ -1,68 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Slider Admin - Mirdhuna</title>
-<style>
-body { font-family: Arial; padding: 20px; background: #f8f8f8; }
-h2 { color: #d40000; }
-form { background: #fff; padding: 20px; border-radius: 10px; box-shadow:0 4px 10px rgba(0,0,0,0.2);}
-input, button { display:block; width:100%; padding:10px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc; font-size:16px;}
-button { background:#d40000; color:#fff; border:none; cursor:pointer; font-weight:bold;}
-button:hover{ background:#ff4c4c;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Slide Admin Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    button.delete {
+      background: #ea4335;
+    }
+    .slide-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #eee;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    .slide-thumb {
+      width: 80px;
+      height: 50px;
+      object-fit: cover;
+      margin-right: 15px;
+      border-radius: 4px;
+    }
+    .slide-info {
+      flex: 1;
+    }
+    .slide-url {
+      font-size: 0.9em;
+      color: #555;
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Slide Admin Panel</h1>
 
-<h2>Upload Slide</h2>
-<form id="slide-form">
-  <input type="text" id="title" placeholder="Slide Title" required />
-  <input type="text" id="image-url" placeholder="Image URL" required />
-  <input type="text" id="link-url" placeholder="Target URL (where user clicks)" />
-  <button type="submit">Upload Slide</button>
-</form>
+    <!-- Add/Edit Form -->
+    <div class="form-group">
+      <label>Image URL</label>
+      <input type="text" id="imageInput" placeholder="https://example.com/image.jpg" />
+    </div>
+    <div class="form-group">
+      <label>Link URL</label>
+      <input type="text" id="urlInput" placeholder="https://example.com/page" />
+    </div>
+    <button id="saveBtn">Add Slide</button>
+    <button id="cancelBtn" style="display:none;">Cancel</button>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
-import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
+    <hr style="margin: 20px 0;" />
 
-// Firebase config
-const firebaseConfig = {
-  apiKey:"AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-  authDomain:"mirdhuna-25542.firebaseapp.com",
-  databaseURL:"https://mirdhuna-25542-default-rtdb.firebaseio.com",
-  projectId:"mirdhuna-25542",
-  storageBucket:"mirdhuna-25542.appspot.com",
-  messagingSenderId:"575924409876",
-  appId:"1:575924409876:web:6ba1ed88ce941d9c83b901"
-};
+    <!-- Slides List -->
+    <h2>Current Slides</h2>
+    <div id="slidesList"></div>
+  </div>
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+  <!-- Firebase SDKs -->
+  <script type="module">
+    // Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
+    import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
 
-const form = document.getElementById('slide-form');
+    // Your config (cleaned up)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.firebasestorage.app",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901",
+      measurementId: "G-YB7LDKHBPV"
+    };
 
-form.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const title = document.getElementById('title').value.trim();
-  const image = document.getElementById('image-url').value.trim();
-  const url = document.getElementById('link-url').value.trim();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const slidesRef = ref(db, 'slides');
 
-  if(!title || !image){ alert('Title and Image URL required'); return; }
+    // DOM Elements
+    const imageInput = document.getElementById('imageInput');
+    const urlInput = document.getElementById('urlInput');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const slidesList = document.getElementById('slidesList');
 
-  // Push slide to Firebase
-  await push(ref(db, 'slides'), {
-    title: title,
-    image: image,
-    url: url,
-    createdAt: new Date().toISOString()
-  });
+    let editingKey = null;
 
-  alert('Slide uploaded successfully!');
-  form.reset();
-});
-</script>
+    // Load slides
+    onValue(slidesRef, (snapshot) => {
+      slidesList.innerHTML = '';
+      const data = snapshot.val();
+      if (!data) {
+        slidesList.innerHTML = '<p>No slides yet.</p>';
+        return;
+      }
 
+      Object.entries(data).forEach(([key, slide]) => {
+        const div = document.createElement('div');
+        div.className = 'slide-item';
+        div.innerHTML = `
+          <img src="${slide.image || ''}" class="slide-thumb" onerror="this.src='https://via.placeholder.com/80x50?text=No+Image'">
+          <div class="slide-info">
+            <div><strong>Image:</strong> ${slide.image || '—'}</div>
+            <div class="slide-url"><strong>Link:</strong> ${slide.url || '—'}</div>
+          </div>
+          <div class="actions">
+            <button class="edit" data-key="${key}">Edit</button>
+            <button class="delete" data-key="${key}">Delete</button>
+          </div>
+        `;
+        slidesList.appendChild(div);
+      });
+
+      // Reattach event listeners
+      document.querySelectorAll('.edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const key = e.target.dataset.key;
+          const slide = data[key];
+          imageInput.value = slide.image || '';
+          urlInput.value = slide.url || '';
+          editingKey = key;
+          saveBtn.textContent = 'Update Slide';
+          cancelBtn.style.display = 'inline-block';
+        });
+      });
+
+      document.querySelectorAll('.delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (confirm('Delete this slide?')) {
+            remove(ref(db, `slides/${e.target.dataset.key}`));
+          }
+        });
+      });
+    });
+
+    // Save or Update
+    saveBtn.addEventListener('click', () => {
+      const image = imageInput.value.trim();
+      const url = urlInput.value.trim();
+
+      if (!image) {
+        alert('Image URL is required.');
+        return;
+      }
+
+      if (editingKey) {
+        // Update
+        set(ref(db, `slides/${editingKey}`), { image, url })
+          .then(() => resetForm());
+      } else {
+        // Add new
+        push(slidesRef, { image, url })
+          .then(() => resetForm());
+      }
+    });
+
+    cancelBtn.addEventListener('click', resetForm);
+
+    function resetForm() {
+      imageInput.value = '';
+      urlInput.value = '';
+      editingKey = null;
+      saveBtn.textContent = 'Add Slide';
+      cancelBtn.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
