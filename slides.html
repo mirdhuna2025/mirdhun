@@ -9,7 +9,10 @@
       background: #333;
     }
     .slider { display: flex; height: 100%; transition: transform 0.5s ease-in-out; }
-    .slide { min-width: 100%; height: 100%; background-size: cover; background-position: center; cursor: pointer; }
+    .slide { 
+      min-width: 100%; height: 100%; 
+      background-size: cover; background-position: center; cursor: pointer;
+    }
     .slider-nav { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
     .slider-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: 0.3s; }
     .slider-dot.active { background: #fff; transform: scale(1.2); }
@@ -28,10 +31,10 @@
 
   <div class="slider-container">
     <div class="slider" id="slider">
-      <!-- Slides: replace image URLs and URLs -->
-      <div class="slide" data-url="https://example.com/1" data-title="Slide 1" style="background-image:url('image1.jpg')"></div>
-      <div class="slide" data-url="https://example.com/2" data-title="Slide 2" style="background-image:url('image2.jpg')"></div>
-      <div class="slide" data-url="https://example.com/3" data-title="Slide 3" style="background-image:url('image3.jpg')"></div>
+      <!-- Replace with your actual images -->
+      <div class="slide" data-url="https://example.com/1" style="background-image:url('image1.jpg')"></div>
+      <div class="slide" data-url="https://example.com/2" style="background-image:url('image2.jpg')"></div>
+      <div class="slide" data-url="https://example.com/3" style="background-image:url('image3.jpg')"></div>
     </div>
 
     <button class="slider-btn prev">&#10094;</button>
@@ -39,12 +42,11 @@
     <div class="slider-nav" id="sliderNav"></div>
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
 
-    // Your Firebase config
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -58,18 +60,18 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Slider Logic
     const slider = document.getElementById("slider");
     const slides = slider.children;
     const nav = document.getElementById("sliderNav");
     let index = 0;
+    const slideCount = slides.length;
 
-    // Create dots
-    for(let i=0; i<slides.length; i++){
+    // Create navigation dots
+    for(let i=0;i<slideCount;i++){
       const dot = document.createElement("div");
       dot.classList.add("slider-dot");
       if(i===0) dot.classList.add("active");
-      dot.addEventListener("click", ()=>{ goToSlide(i); });
+      dot.addEventListener("click", ()=> goToSlide(i));
       nav.appendChild(dot);
     }
     const dots = nav.children;
@@ -87,32 +89,40 @@
     }
 
     document.querySelector(".next").addEventListener("click", ()=>{
-      index = (index+1)%slides.length;
+      index = (index+1)%slideCount;
       goToSlide(index);
     });
 
     document.querySelector(".prev").addEventListener("click", ()=>{
-      index = (index-1+slides.length)%slides.length;
+      index = (index-1+slideCount)%slideCount;
       goToSlide(index);
     });
 
-    // Click on slide opens URL and logs to Firebase
-    for(let s of slides){
-      s.addEventListener("click", ()=>{
-        const url = s.getAttribute("data-url");
-        const title = s.getAttribute("data-title");
+    // Slide click: open URL & log to Firebase
+    Array.from(slides).forEach(slide => {
+      slide.addEventListener("click", ()=>{
+        const url = slide.getAttribute("data-url");
+        const imgUrl = slide.style.backgroundImage.slice(5,-2); // strip url("")
 
-        // Log to Firebase
-        const slideRef = ref(db, 'slideClicks');
-        push(slideRef, {
-          title: title,
+        // Log click
+        push(ref(db, 'slideClicks'), {
+          image: imgUrl,
           url: url,
           clickedAt: new Date().toISOString()
         });
 
-        // Open URL in new tab
         if(url) window.open(url, "_blank");
       });
-    }
+
+      // Preload images to avoid black slides
+      const img = new Image();
+      img.src = slide.style.backgroundImage.slice(5,-2);
+    });
+
+    // Optional: auto slide every 5s
+    setInterval(()=>{
+      index = (index+1)%slideCount;
+      goToSlide(index);
+    }, 5000);
   </script>
 </section>
