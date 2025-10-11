@@ -1,3 +1,6 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
+import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
+
 // Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -9,34 +12,23 @@ const firebaseConfig = {
   appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
 };
 
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-// Elements
 const loginBtn = document.getElementById("login-btn");
 const popup = document.getElementById("login-popup");
 const closeBtn = document.getElementById("close-popup");
 const submitBtn = document.getElementById("submit-login");
 const mobInput = document.getElementById("mob-number");
 
-// Open/close popup
-loginBtn.addEventListener("click", () => popup.style.display = "block");
-closeBtn.addEventListener("click", () => popup.style.display = "none");
+loginBtn.addEventListener("click", ()=>popup.style.display="block");
+closeBtn.addEventListener("click", ()=>popup.style.display="none");
 
-// Submit mobile number
-submitBtn.addEventListener("click", () => {
+submitBtn.addEventListener("click", ()=>{
   const number = mobInput.value.trim();
-  if(!number){
-    alert("Please enter your mobile number");
-    return;
-  }
-  // Push to Firebase
-  firebase.database().ref('logins').push({
-    number: number,
-    time: new Date().toISOString()
-  });
-  popup.style.display = "none";
-  alert("Logged in successfully!");
-  mobInput.value = "";
+  if(!number){ alert("Enter mobile number"); return; }
+  push(ref(db, 'logins'), { number, time:new Date().toISOString() });
+  popup.style.display="none";
+  alert("Logged in!");
+  mobInput.value="";
 });
