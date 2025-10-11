@@ -1,36 +1,15 @@
 <!-- Floating Login Button -->
 <style>
-  #login-btn {
-    position: fixed; bottom: 20px; right: 20px;
-    background: #d40000; color: #fff; border: none;
-    padding: 12px 20px; border-radius: 50px;
-    cursor: pointer; z-index: 9999; font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    transition: 0.3s;
-  }
-  #login-btn:hover { background: #ff4c4c; }
-
-  #login-popup {
-    display: none; position: fixed;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: #fff; padding: 25px 30px;
-    border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    z-index: 10000;
-  }
-  #login-popup input {
-    width: 100%; padding: 10px; margin-bottom: 15px;
-    border-radius: 5px; border: 1px solid #ccc; font-size: 16px;
-  }
-  #login-popup button {
-    padding: 10px 15px; background: #d40000; color: #fff;
-    border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
-  }
-  #login-popup button:hover { background: #ff4c4c; }
-  #login-popup #close-popup { background: #999; margin-left: 10px; }
+#login-btn { position: fixed; bottom: 20px; right: 20px; background:#d40000; color:#fff; border:none; padding:12px 20px; border-radius:50px; cursor:pointer; z-index:9999; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.3); transition:0.3s; }
+#login-btn:hover { background:#ff4c4c; }
+#login-popup { display:none; position: fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:25px 30px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.25); z-index:10000; }
+#login-popup input { width:100%; padding:10px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc; font-size:16px; }
+#login-popup button { padding:10px 15px; background:#d40000; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+#login-popup button:hover { background:#ff4c4c; }
+#login-popup #close-popup { background:#999; margin-left:10px; }
 </style>
 
 <button id="login-btn">Login</button>
-
 <div id="login-popup">
   <h3>Enter Mobile Number</h3>
   <input type="tel" id="mob-number" placeholder="Mobile Number" />
