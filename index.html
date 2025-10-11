@@ -17,39 +17,53 @@
 </head>
 <body>
 
-  <!-- Add a new line per section to load HTML -->
+  <!-- Sections -->
   <div data-html="headerlogo.html"></div>
   <div data-html="login.html"></div>
   <div data-html="slides.html"></div>
   <div data-html="content.html"></div>
   <div data-html="footer.html"></div>
-  
 
   <script>
-    // Dynamically load HTML and optional JS for each section
-    document.querySelectorAll('div[data-html]').forEach(async div => {
+    async function loadSection(div) {
       const file = div.getAttribute('data-html');
       try {
-        // Load HTML
         const res = await fetch(file);
         if (!res.ok) throw new Error(`Cannot load ${file}`);
-        div.innerHTML = await res.text();
+        const text = await res.text();
 
-        // Load corresponding JS if exists
-        const jsFile = file.replace('.html', '.js');
-        fetch(jsFile).then(r => {
-          if (r.ok) {
-            const script = document.createElement('script');
-            script.src = jsFile;
-            document.body.appendChild(script);
+        // Create a temporary container to parse HTML
+        const temp = document.createElement('div');
+        temp.innerHTML = text;
+
+        // Append styles from the HTML
+        temp.querySelectorAll('style').forEach(style => {
+          document.head.appendChild(style);
+        });
+
+        // Append HTML content
+        div.innerHTML = temp.innerHTML.replace(/<style[\s\S]*?<\/style>/gi, '');
+
+        // Execute scripts from the HTML
+        temp.querySelectorAll('script').forEach(script => {
+          const newScript = document.createElement('script');
+          if (script.type) newScript.type = script.type;
+          if (script.src) {
+            newScript.src = script.src; // External JS
+            newScript.async = false; // Preserve order
+          } else {
+            newScript.textContent = script.textContent; // Inline JS
           }
-        }).catch(() => {}); // ignore if JS file not found
+          document.body.appendChild(newScript);
+        });
+
       } catch (err) {
         console.error(err);
       }
-    });
+    }
+
+    document.querySelectorAll('div[data-html]').forEach(div => loadSection(div));
   </script>
 
 </body>
 </html>
-
