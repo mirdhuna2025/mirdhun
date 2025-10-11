@@ -8,14 +8,9 @@
     body { margin: 0; font-family: Arial, sans-serif; background: #f8f8f8; }
     div { width: 100%; }
   </style>
-
-  <!-- Firebase SDK (global for all modules) -->
-  <script src="https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js"></script>
 </head>
 <body>
 
-  <!-- Sections -->
   <div data-html="headerlogo.html"></div>
   <div data-html="login.html"></div>
   <div data-html="slides.html"></div>
@@ -23,7 +18,6 @@
   <div data-html="footer.html"></div>
 
   <script>
-    // Loader for dynamic HTML + inline JS
     async function loadSection(div){
       const file = div.getAttribute('data-html');
       try{
@@ -34,28 +28,22 @@
         const temp = document.createElement('div');
         temp.innerHTML = text;
 
-        // Append <style> to head
+        // Append style tags to head
         temp.querySelectorAll('style').forEach(s => document.head.appendChild(s));
 
-        // Insert HTML content
+        // Insert HTML without styles
         div.innerHTML = temp.innerHTML.replace(/<style[\s\S]*?<\/style>/gi, '');
 
-        // Load JS file if exists (login.js, header.js, etc.)
+        // Append JS file if exists
         const jsFile = file.replace('.html', '.js');
-        fetch(jsFile).then(r => {
+        fetch(jsFile).then(r=>{
           if(r.ok){
             const script = document.createElement('script');
+            script.type = 'module';  // Important for Firebase
             script.src = jsFile;
             document.body.appendChild(script);
           }
         }).catch(()=>{});
-
-        // Execute inline <script> (optional)
-        temp.querySelectorAll('script').forEach(s=>{
-          const newScript = document.createElement('script');
-          newScript.textContent = s.textContent;
-          document.body.appendChild(newScript);
-        });
 
       } catch(e){
         console.error(e);
@@ -64,5 +52,6 @@
 
     document.querySelectorAll('div[data-html]').forEach(div => loadSection(div));
   </script>
+
 </body>
 </html>
