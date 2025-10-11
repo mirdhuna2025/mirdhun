@@ -5,38 +5,21 @@
       height: 25vh;
       overflow: hidden;
       border-radius: 0 0 20px 20px;
-      box-shadow: var(--shadow);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       background: #333;
     }
     .slider { display: flex; height: 100%; transition: transform 0.5s ease-in-out; }
-    .slide {
-      min-width: 100%;
-      height: 100%;
-      background-size: cover;
-      background-position: center;
-      position: relative;
-    }
-    .slide-content {
-      position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-      padding: 20px; background: linear-gradient(90deg, rgba(0,0,0,0.5), transparent);
-      color: #fff;
-    }
-    .slide-content h2 { margin: 0 0 8px; }
-    .slide-content p { margin: 0 0 14px; max-width: 600px; }
-    .slide-content .cta-button { background: var(--primary); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; }
-
-    .slider-nav { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
-    .slider-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: var(--transition); }
+    .slide { min-width: 100%; height: 100%; background-size: cover; background-position: center; cursor: pointer; }
+    .slider-nav { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+    .slider-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: 0.3s; }
     .slider-dot.active { background: #fff; transform: scale(1.2); }
-
     .slider-btn {
       position: absolute; top: 50%; transform: translateY(-50%);
-      background: rgba(255, 255, 255, 0.3); color: white; border: none; width: 40px; height: 40px; border-radius: 50%;
-      font-size: 1rem; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.3); color: white; border: none; width: 40px; height: 40px; border-radius: 50%;
+      font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
     }
-    .slider-btn:hover, .slider-btn:focus { background: rgba(255, 255, 255, 0.5); }
+    .slider-btn:hover { background: rgba(255,255,255,0.5); }
     .prev { left: 10px; } .next { right: 10px; }
-
     @media (max-width: 600px) {
       .slider-btn { width: 36px; height: 36px; font-size: 0.9rem; }
       .slider-dot { width: 8px; height: 8px; }
@@ -45,13 +28,91 @@
 
   <div class="slider-container">
     <div class="slider" id="slider">
-      <div class="">
-        <div class=""></div>
-        <p style="color:#fff"></p>
-      </div>
+      <!-- Slides: replace image URLs and URLs -->
+      <div class="slide" data-url="https://example.com/1" data-title="Slide 1" style="background-image:url('image1.jpg')"></div>
+      <div class="slide" data-url="https://example.com/2" data-title="Slide 2" style="background-image:url('image2.jpg')"></div>
+      <div class="slide" data-url="https://example.com/3" data-title="Slide 3" style="background-image:url('image3.jpg')"></div>
     </div>
-    <button class="slider-btn prev"><i class="fas fa-chevron-left"></i></button>
-    <button class="slider-btn next"><i class="fas fa-chevron-right"></i></button>
+
+    <button class="slider-btn prev">&#10094;</button>
+    <button class="slider-btn next">&#10095;</button>
     <div class="slider-nav" id="sliderNav"></div>
   </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Slider Logic
+    const slider = document.getElementById("slider");
+    const slides = slider.children;
+    const nav = document.getElementById("sliderNav");
+    let index = 0;
+
+    // Create dots
+    for(let i=0; i<slides.length; i++){
+      const dot = document.createElement("div");
+      dot.classList.add("slider-dot");
+      if(i===0) dot.classList.add("active");
+      dot.addEventListener("click", ()=>{ goToSlide(i); });
+      nav.appendChild(dot);
+    }
+    const dots = nav.children;
+
+    function goToSlide(i){
+      index = i;
+      slider.style.transform = `translateX(-${i*100}%)`;
+      updateDots();
+    }
+
+    function updateDots(){
+      for(let i=0;i<dots.length;i++){
+        dots[i].classList.toggle("active", i===index);
+      }
+    }
+
+    document.querySelector(".next").addEventListener("click", ()=>{
+      index = (index+1)%slides.length;
+      goToSlide(index);
+    });
+
+    document.querySelector(".prev").addEventListener("click", ()=>{
+      index = (index-1+slides.length)%slides.length;
+      goToSlide(index);
+    });
+
+    // Click on slide opens URL and logs to Firebase
+    for(let s of slides){
+      s.addEventListener("click", ()=>{
+        const url = s.getAttribute("data-url");
+        const title = s.getAttribute("data-title");
+
+        // Log to Firebase
+        const slideRef = ref(db, 'slideClicks');
+        push(slideRef, {
+          title: title,
+          url: url,
+          clickedAt: new Date().toISOString()
+        });
+
+        // Open URL in new tab
+        if(url) window.open(url, "_blank");
+      });
+    }
+  </script>
 </section>
