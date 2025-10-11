@@ -17,51 +17,54 @@
 </head>
 <body>
 
-  <!-- Sections -->
+  <!-- Just add a div for each HTML section -->
   <div data-html="headerlogo.html"></div>
   <div data-html="login.html"></div>
   <div data-html="slides.html"></div>
   <div data-html="content.html"></div>
   <div data-html="footer.html"></div>
+  <!-- Add more sections here -->
+  <!-- <div data-html="section6.html"></div> -->
+  <!-- <div data-html="section7.html"></div> -->
+  <!-- ... -->
 
   <script>
-    async function loadSection(div) {
+    // Loader function for dynamically loading HTML + CSS + JS
+    async function loadSection(div){
       const file = div.getAttribute('data-html');
-      try {
+      try{
         const res = await fetch(file);
-        if (!res.ok) throw new Error(`Cannot load ${file}`);
+        if(!res.ok) throw new Error(`Cannot load ${file}`);
         const text = await res.text();
 
-        // Create a temporary container to parse HTML
+        // Temporary container to parse HTML
         const temp = document.createElement('div');
         temp.innerHTML = text;
 
-        // Append styles from the HTML
-        temp.querySelectorAll('style').forEach(style => {
-          document.head.appendChild(style);
-        });
+        // Add styles to head
+        temp.querySelectorAll('style').forEach(s => document.head.appendChild(s));
 
-        // Append HTML content
+        // Insert HTML content (without style tags)
         div.innerHTML = temp.innerHTML.replace(/<style[\s\S]*?<\/style>/gi, '');
 
-        // Execute scripts from the HTML
-        temp.querySelectorAll('script').forEach(script => {
+        // Execute inline scripts
+        temp.querySelectorAll('script').forEach(s => {
           const newScript = document.createElement('script');
-          if (script.type) newScript.type = script.type;
-          if (script.src) {
-            newScript.src = script.src; // External JS
-            newScript.async = false; // Preserve order
+          if(s.src) {
+            newScript.src = s.src;       // External script
+            newScript.async = false;     // Keep execution order
           } else {
-            newScript.textContent = script.textContent; // Inline JS
+            newScript.textContent = s.textContent; // Inline script
           }
           document.body.appendChild(newScript);
         });
 
-      } catch (err) {
-        console.error(err);
+      } catch(e){
+        console.error(e);
       }
     }
 
+    // Load all sections
     document.querySelectorAll('div[data-html]').forEach(div => loadSection(div));
   </script>
 
