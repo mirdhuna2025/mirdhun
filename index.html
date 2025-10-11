@@ -24,30 +24,8 @@
   <div data-html="footer.html"></div>
   <div data-html="login.html"></div>
 
-  <script>
-    // Dynamically load HTML and optional JS for each section
-    document.querySelectorAll('div[data-html]').forEach(async div => {
-      const file = div.getAttribute('data-html');
-      try {
-        // Load HTML
-        const res = await fetch(file);
-        if (!res.ok) throw new Error(`Cannot load ${file}`);
-        div.innerHTML = await res.text();
+  
 
-        // Load corresponding JS if exists
-        const jsFile = file.replace('.html', '.js');
-        fetch(jsFile).then(r => {
-          if (r.ok) {
-            const script = document.createElement('script');
-            script.src = jsFile;
-            document.body.appendChild(script);
-          }
-        }).catch(() => {}); // ignore if JS file not found
-      } catch (err) {
-        console.error(err);
-      }
-    });
-  </script>
 
 </body>
 </html>
