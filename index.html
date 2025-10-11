@@ -5,31 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mirdhuna</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f8f8f8;
-    }
-    div {
-      width: 100%;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f8f8f8; }
+    div { width: 100%; }
   </style>
+
+  <!-- Firebase SDK (global for all modules) -->
+  <script src="https://www.gstatic.com/firebasejs/10.24.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.24.0/firebase-database.js"></script>
 </head>
 <body>
 
-  <!-- Just add a div for each HTML section -->
+  <!-- Sections -->
   <div data-html="headerlogo.html"></div>
   <div data-html="login.html"></div>
   <div data-html="slides.html"></div>
   <div data-html="content.html"></div>
   <div data-html="footer.html"></div>
-  <!-- Add more sections here -->
-  <!-- <div data-html="section6.html"></div> -->
-  <!-- <div data-html="section7.html"></div> -->
-  <!-- ... -->
 
   <script>
-    // Loader function for dynamically loading HTML + CSS + JS
+    // Loader for dynamic HTML + inline JS
     async function loadSection(div){
       const file = div.getAttribute('data-html');
       try{
@@ -37,25 +31,29 @@
         if(!res.ok) throw new Error(`Cannot load ${file}`);
         const text = await res.text();
 
-        // Temporary container to parse HTML
         const temp = document.createElement('div');
         temp.innerHTML = text;
 
-        // Add styles to head
+        // Append <style> to head
         temp.querySelectorAll('style').forEach(s => document.head.appendChild(s));
 
-        // Insert HTML content (without style tags)
+        // Insert HTML content
         div.innerHTML = temp.innerHTML.replace(/<style[\s\S]*?<\/style>/gi, '');
 
-        // Execute inline scripts
-        temp.querySelectorAll('script').forEach(s => {
-          const newScript = document.createElement('script');
-          if(s.src) {
-            newScript.src = s.src;       // External script
-            newScript.async = false;     // Keep execution order
-          } else {
-            newScript.textContent = s.textContent; // Inline script
+        // Load JS file if exists (login.js, header.js, etc.)
+        const jsFile = file.replace('.html', '.js');
+        fetch(jsFile).then(r => {
+          if(r.ok){
+            const script = document.createElement('script');
+            script.src = jsFile;
+            document.body.appendChild(script);
           }
+        }).catch(()=>{});
+
+        // Execute inline <script> (optional)
+        temp.querySelectorAll('script').forEach(s=>{
+          const newScript = document.createElement('script');
+          newScript.textContent = s.textContent;
           document.body.appendChild(newScript);
         });
 
@@ -64,9 +62,7 @@
       }
     }
 
-    // Load all sections
     document.querySelectorAll('div[data-html]').forEach(div => loadSection(div));
   </script>
-
 </body>
 </html>
