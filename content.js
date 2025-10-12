@@ -1,5 +1,3 @@
-// content.js — NO Firebase Auth, only localStorage check
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -28,7 +26,6 @@ const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-// ✅ Check login status (frontend only)
 function isLoggedIn() {
   const session = localStorage.getItem('mirdhuna_session');
   if (session) {
@@ -55,7 +52,6 @@ window.logout = () => {
   updateAuthUI();
 };
 
-// --- Rest of shop logic (same as before) ---
 function loadShopData() {
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -127,7 +123,6 @@ function renderMenu() {
   });
 }
 
-// 🛒 Cart Functions
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
@@ -179,16 +174,21 @@ function updateCartUI() {
 }
 
 function updateCartBadge(count) {
-  const badge = cartToggleBtn.querySelector('.cart-badge');
-  if (badge) badge.remove();
+  const existingBadge = cartToggleBtn.querySelector('.cart-badge');
+  if (existingBadge) existingBadge.remove();
 
   if (count > 0) {
-    const b = document.createElement('span');
-    b.className = 'cart-badge';
-    b.style.cssText = `position:absolute;top:-8px;right:-8px;background:red;color:white;font-size:12px;font-weight:bold;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;`;
-    b.textContent = count > 9 ? '9+' : count;
+    const badge = document.createElement('span');
+    badge.className = 'cart-badge';
+    badge.style.cssText = `
+      position: absolute; top: -8px; right: -8px;
+      background: red; color: white; font-size: 12px; font-weight: bold;
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    `;
+    badge.textContent = count > 9 ? '9+' : count;
     cartToggleBtn.style.position = 'relative';
-    cartToggleBtn.appendChild(b);
+    cartToggleBtn.appendChild(badge);
   }
 }
 
@@ -196,34 +196,34 @@ function changeQty(id, delta) {
   const item = cart.find(i => i.id === id);
   if (item) {
     item.qty += delta;
-    if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+    if (item.qty <= 0) {
+      cart = cart.filter(i => i.id !== id);
+    }
     saveCart();
     updateCartUI();
   }
 }
 
 function toggleCart() {
-  const p = document.getElementById('cart-popup');
-  p.style.display = p.style.display === 'block' ? 'none' : 'block';
+  const popup = document.getElementById('cart-popup');
+  popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
 }
 
 function closeCart() {
   document.getElementById('cart-popup').style.display = 'none';
 }
 
-// ✅ PLACE ORDER: Only check isLoggedIn()
 function placeOrder() {
   if (cart.length === 0) {
-    alert("Cart is empty!");
+    showToast("Cart is empty!");
     return;
   }
 
   if (!isLoggedIn()) {
-    window.location.href = 'login.html'; // 🔁 Redirect if not logged in
+    showToast("Please login first to place order.");
     return;
   }
 
-  // Get phone number for order
   const session = JSON.parse(localStorage.getItem('mirdhuna_session'));
   const order = {
     phoneNumber: session.phoneNumber,
@@ -235,7 +235,7 @@ function placeOrder() {
 
   push(ref(db, 'orders'), order)
     .then(() => {
-      alert("Order placed successfully!");
+      showToast("Order placed successfully!");
       cart = [];
       saveCart();
       updateCartUI();
@@ -243,33 +243,52 @@ function placeOrder() {
     })
     .catch(err => {
       console.error(err);
-      alert("Failed to place order.");
+      showToast("Failed to place order. Please try again.");
     });
 }
 
-function showToast(msg) {
-  let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:white;padding:10px 20px;border-radius:6px;z-index:2000;font-size:14px;`;
-    document.body.appendChild(t);
+function showToast(message) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-size: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      max-width: 90%;
+      text-align: center;
+    `;
+    document.body.appendChild(toast);
   }
-  t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 2000);
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+  }, 2500);
 }
 
-// Init
 updateAuthUI();
 updateCartUI();
 loadShopData();
 
-// Events
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
-    addToCart(btn.dataset.id, btn.dataset.name, parseFloat(btn.dataset.price), btn.dataset.image);
+    addToCart(
+      btn.dataset.id,
+      btn.dataset.name,
+      parseFloat(btn.dataset.price),
+      btn.dataset.image
+    );
   } else if (e.target.classList.contains('qty-btn')) {
     const id = e.target.dataset.id;
     const action = e.target.dataset.action;
