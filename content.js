@@ -1,12 +1,12 @@
-// Firebase imports
+// Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ✅ FIXED: Removed trailing spaces in databaseURL
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
-  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com", // ← No spaces!
+  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
   projectId: "mirdhuna-25542",
   storageBucket: "mirdhuna-25542.appspot.com",
   messagingSenderId: "575924409876",
@@ -14,7 +14,9 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
 
 // State
 let categories = [];
@@ -22,40 +24,51 @@ let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentOffer = null;
 let selectedCategory = null;
+let currentUser = null;
 
-// DOM Elements
+// DOM
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
+const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-// Hide auth bar or show guest message
-authBar.innerHTML = `Welcome! (No login required)`;
+// Handle redirect result (after login from login.html or direct)
+getRedirectResult(auth).then((result) => {
+  if (result.user) {
+    currentUser = result.user;
+    updateAuthUI();
+  }
+}).catch(console.error);
 
-// Load shop data from Firebase
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  updateAuthUI();
+});
+
+function updateAuthUI() {
+  if (currentUser) {
+    authBar.innerHTML = `Hello, ${currentUser.displayName || 'User'}!`;
+  } else {
+    authBar.innerHTML = `Welcome! <a href="login.html" style="color:white;text-decoration:underline">Login to Order</a>`;
+  }
+}
+
+// Load shop data
 function loadShopData() {
-  // Categories
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
     renderCategories();
   });
 
-  // Menu
   onValue(ref(db, 'menu'), snapshot => {
     menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
     renderMenu();
   });
 
-  // Offers
   onValue(ref(db, 'offers'), snapshot => {
     const offers = snapshot.val();
-    currentOffer = null;
-    if (offers) {
-      const activeOffers = Object.values(offers).filter(o => o.active);
-      if (activeOffers.length > 0) {
-        currentOffer = activeOffers[0];
-      }
-    }
+    currentOffer = offers ? Object.values(offers).find(o => o.active) || null : null;
     renderOffer();
   });
 }
@@ -88,16 +101,16 @@ function renderCategories() {
 
 function renderMenu() {
   menuGrid.innerHTML = '';
-  let itemsToRender = selectedCategory
+  const items = selectedCategory
     ? menuItems.filter(item => item.category === selectedCategory)
     : menuItems;
 
-  if (itemsToRender.length === 0) {
+  if (items.length === 0) {
     menuGrid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#999;">No items available</p>';
     return;
   }
 
-  itemsToRender.forEach(item => {
+  items.forEach(item => {
     const card = document.createElement('div');
     card.className = 'menu-card';
     card.innerHTML = `
@@ -113,7 +126,7 @@ function renderMenu() {
   });
 }
 
-// Cart functions
+// 🛒 CART SYSTEM
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
@@ -123,6 +136,9 @@ function addToCart(id, name, price, image) {
   }
   saveCart();
   updateCartUI();
+
+  // ✅ Show "Added" toast
+  showToast("Item added to cart!");
 }
 
 function saveCart() {
@@ -135,10 +151,13 @@ function updateCartUI() {
 
   cartItemsEl.innerHTML = '';
   let total = 0;
+  let totalCount = 0;
 
   cart.forEach(item => {
     const subtotal = item.price * item.qty;
     total += subtotal;
+    totalCount += item.qty;
+
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
@@ -157,15 +176,34 @@ function updateCartUI() {
   });
 
   totalEl.textContent = total;
+  updateCartBadge(totalCount); // ✅ Update cart icon badge
+}
+
+function updateCartBadge(count) {
+  // Remove existing badge
+  const existingBadge = cartToggleBtn.querySelector('.cart-badge');
+  if (existingBadge) existingBadge.remove();
+
+  if (count > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'cart-badge';
+    badge.style.cssText = `
+      position: absolute; top: -8px; right: -8px;
+      background: red; color: white; font-size: 12px; font-weight: bold;
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    `;
+    badge.textContent = count > 9 ? '9+' : count;
+    cartToggleBtn.style.position = 'relative';
+    cartToggleBtn.appendChild(badge);
+  }
 }
 
 function changeQty(id, delta) {
   const item = cart.find(i => i.id === id);
   if (item) {
     item.qty += delta;
-    if (item.qty <= 0) {
-      cart = cart.filter(i => i.id !== id);
-    }
+    if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
     saveCart();
     updateCartUI();
   }
@@ -180,19 +218,26 @@ function closeCart() {
   document.getElementById('cart-popup').style.display = 'none';
 }
 
+// ✅ Place Order: Check login → redirect if needed
 function placeOrder() {
-  if (!cart || cart.length === 0) {
+  if (cart.length === 0) {
     alert("Cart is empty!");
     return;
   }
 
-  // Place order anonymously
+  if (!currentUser) {
+    // 🔁 Redirect to login.html (as requested)
+    window.location.href = 'login.html';
+    return;
+  }
+
   const order = {
+    userId: currentUser.uid,
+    customerName: currentUser.displayName || 'Customer',
     items: cart,
     total: parseFloat(document.getElementById('cartTotal').textContent),
     timestamp: new Date().toISOString(),
-    status: "pending",
-    customer: "guest" // or collect name/phone later
+    status: "pending"
   };
 
   push(ref(db, 'orders'), order)
@@ -204,9 +249,27 @@ function placeOrder() {
       closeCart();
     })
     .catch(err => {
-      console.error("Order failed:", err);
-      alert("Failed to place order. Please try again.");
+      console.error(err);
+      alert("Failed to place order.");
     });
+}
+
+// 🍞 Toast Notification
+function showToast(message) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = `
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
+      border-radius: 6px; z-index: 2000; font-size: 14px;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2000);
 }
 
 // Initialize
@@ -215,7 +278,6 @@ loadShopData();
 
 // Event delegation
 document.addEventListener('click', (e) => {
-  // Add to cart
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
     addToCart(
@@ -226,14 +288,12 @@ document.addEventListener('click', (e) => {
     );
   }
 
-  // Cart quantity buttons
   if (e.target.classList.contains('qty-btn')) {
     const id = e.target.dataset.id;
     const action = e.target.dataset.action;
     changeQty(id, action === 'inc' ? 1 : -1);
   }
 
-  // UI buttons
   if (e.target.id === 'cart-toggle-btn') toggleCart();
   if (e.target.id === 'close-cart') closeCart();
   if (e.target.id === 'checkout-btn') placeOrder();
