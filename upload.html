@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Firebase Image Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px auto;
+      max-width: 1000px;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #333;
+    }
+    h2, h3 {
+      color: #1a73e8;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .folder-controls, .upload-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    input, select, button {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
+    button.choose {
+      background: #1a73e8;
+      color: white;
+    }
+    button.upload {
+      background: #4caf50;
+      color: white;
+    }
+    button.create {
+      background: #ff9800;
+      color: white;
+    }
+    button.delete {
+      background: #d32f2f;
+      color: white;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    button.copy {
+      background: #388e3c;
+      color: white;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .drop-zone {
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 20px;
+      background: #f0f4ff;
+    }
+    .drop-zone.highlight {
+      border-color: #1a73e8;
+      background: #e3f2fd;
+    }
+    .selected-files {
+      margin: 10px 0;
+      font-size: 0.9em;
+      color: #555;
+    }
+    .image-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .image-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      width: 200px;
+      text-align: center;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .image-card img {
+      max-width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .image-info {
+      font-size: 0.75em;
+      word-break: break-all;
+      margin: 5px 0;
+      color: #555;
+    }
+    .folder-tag {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1a73e8;
+      font-size: 0.7em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+    progress {
+      width: 100%;
+      display: none;
+      margin-top: 10px;
+    }
+    .empty {
+      color: #777;
+      font-style: italic;
+      text-align: center;
+      padding: 40px;
+    }
+    /* Folder List Styles */
+    .folder-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 20px 0;
+    }
+    .folder-item {
+      display: flex;
+      align-items: center;
+      background: #e3f2fd;
+      color: #1a73e8;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .folder-item:hover {
+      background: #bbdefb;
+    }
+    .folder-item.active {
+      background: #1a73e8;
+      color: white;
+    }
+    .folder-item .delete-folder {
+      margin-left: 6px;
+      background: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      font-size: 10px;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+    .folder-item .delete-folder:hover {
+      opacity: 1;
+    }
+    .folder-root {
+      background: #f0f4ff;
+      font-weight: bold;
+    }
+    .folder-root.active {
+      background: #1a73e8;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📁 Image Manager</h2>
+
+  <!-- Folder Controls -->
+  <div class="section">
+    <strong>Folders:</strong>
+    <div class="folder-list" id="folderList">
+      <!-- Folders will be dynamically inserted here -->
+      <div class="folder-item folder-root" data-folder="">📁 Root</div>
+    </div>
+    <div class="folder-controls">
+      <input type="text" id="newFolderInput" placeholder="New folder name" />
+      <button class="create" id="createFolderBtn">Create Folder</button>
+    </div>
+  </div>
+
+  <!-- Upload Section -->
+  <div class="section drop-zone" id="dropZone">
+    <p>📁 Drag & drop images here</p>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none;" />
+    <button class="choose" id="chooseBtn">Choose Files</button>
+    <div class="selected-files" id="selectedFiles">No files selected</div>
+    <button class="upload" id="uploadBtn">📤 Upload Selected Files</button>
+    <progress id="uploadProgress" value="0" max="100"></progress>
+  </div>
+
+  <!-- Image List -->
+  <h3>🖼 Uploaded Images (<span id="currentFolderDisplay">Root</span>)</h3>
+  <div id="imageGrid">
+    <p class="empty">Loading images...</p>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.firebasestorage.app",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const storageRef = firebase.storage().ref();
+    const imagesRef = firebase.database().ref("images");
+
+    // DOM Elements
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const chooseBtn = document.getElementById("chooseBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const uploadProgress = document.getElementById("uploadProgress");
+    const imageGrid = document.getElementById("imageGrid");
+    const createFolderBtn = document.getElementById("createFolderBtn");
+    const newFolderInput = document.getElementById("newFolderInput");
+    const currentFolderDisplay = document.getElementById("currentFolderDisplay");
+    const selectedFiles = document.getElementById("selectedFiles");
+    const folderList = document.getElementById("folderList");
+
+    let selectedFilesList = [];
+    let currentFolder = "";
+
+    // =============== Choose Files ===============
+    chooseBtn.onclick = () => fileInput.click();
+    fileInput.addEventListener("change", () => {
+      const files = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+      selectedFilesList = files;
+      selectedFiles.textContent = `Selected: ${files.length} image(s)`;
+    });
+
+    // =============== Drag & Drop ===============
+    ["dragenter", "dragover", "dragleave", "drop"].forEach(evt => {
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+    });
+
+    dropZone.addEventListener("dragover", () => dropZone.classList.add("highlight"));
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("highlight"));
+    dropZone.addEventListener("drop", (e) => {
+      dropZone.classList.remove("highlight");
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+      selectedFilesList = files;
+      selectedFiles.textContent = `Selected: ${files.length} image(s)`;
+    });
+
+    // =============== Create Folder ===============
+    createFolderBtn.addEventListener("click", () => {
+      const name = newFolderInput.value.trim();
+      if (!name) return alert("Folder name is required");
+      if (/[.#$\/\[\]]/.test(name)) return alert("Invalid characters: .#$[]/");
+
+      // Check if folder already exists
+      const exists = Array.from(folderList.children).some(el => el.dataset.folder === name);
+      if (exists) {
+        alert("Folder already exists!");
+        return;
+      }
+
+      addFolderToList(name);
+      newFolderInput.value = "";
+    });
+
+    // Helper: Add folder to list
+    function addFolderToList(folderName) {
+      const div = document.createElement("div");
+      div.className = "folder-item";
+      div.dataset.folder = folderName;
+      div.innerHTML = `
+        📁 ${folderName}
+        <button class="delete-folder" data-folder="${folderName}" title="Delete folder">×</button>
+      `;
+      folderList.appendChild(div);
+
+      // Add click listener
+      div.addEventListener("click", (e) => {
+        if (!e.target.classList.contains("delete-folder")) {
+          setCurrentFolder(folderName);
+        }
+      });
+
+      // Delete button event
+      div.querySelector(".delete-folder").addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteFolder(folderName);
+      });
+    }
+
+    // =============== Set Current Folder ===============
+    function setCurrentFolder(folder) {
+      currentFolder = folder;
+      currentFolderDisplay.textContent = folder || "Root";
+
+      // Update active class
+      document.querySelectorAll(".folder-item").forEach(el => {
+        el.classList.toggle("active", el.dataset.folder === folder);
+      });
+
+      loadImages();
+    }
+
+    // =============== Delete Folder ===============
+    async function deleteFolder(folderName) {
+      if (!confirm(`Delete folder "${folderName}" and all its images? This cannot be undone.`)) return;
+
+      try {
+        const snapshot = await imagesRef.once("value");
+        const data = snapshot.val();
+        const toDelete = [];
+
+        if (data) {
+          Object.values(data).forEach(img => {
+            if (img.folder === folderName) {
+              toDelete.push({
+                id: img.id,
+                path: img.path
+              });
+            }
+          });
+        }
+
+        // Delete from storage and database
+        for (const item of toDelete) {
+          await storageRef.child(item.path).delete()
+            .catch(err => {
+              if (err.code !== 'storage/object-not-found') console.error("Storage delete error:", err);
+            });
+          await imagesRef.orderByChild("id").equalTo(item.id).once("value", snap => {
+            snap.forEach(child => child.ref.remove());
+          });
+        }
+
+        // Remove folder from UI
+        document.querySelectorAll(`[data-folder="${folderName}"]`).forEach(el => el.remove());
+
+        if (currentFolder === folderName) {
+          setCurrentFolder("");
+        }
+
+        alert(`✅ Folder "${folderName}" deleted successfully!`);
+        loadFolders(); // Refresh folder list
+      } catch (err) {
+        alert("❌ Error deleting folder: " + err.message);
+      }
+    }
+
+    // =============== Upload Files ===============
+    uploadBtn.addEventListener("click", () => {
+      if (selectedFilesList.length === 0) {
+        alert("Please select at least one image");
+        return;
+      }
+
+      uploadProgress.style.display = "block";
+      uploadProgress.value = 0;
+
+      const total = selectedFilesList.length;
+      let uploaded = 0;
+
+      selectedFilesList.forEach(file => {
+        const timestamp = new Date().getTime();
+        const folderPath = currentFolder ? `${currentFolder}/` : "";
+        const filePath = `images/${folderPath}${timestamp}_${file.name}`;
+        const fileRef = storageRef.child(filePath);
+
+        const task = fileRef.put(file);
+
+        task.on("state_changed",
+          (snap) => {
+            const percent = (snap.bytesTransferred / snap.totalBytes) * 100;
+            uploadProgress.value = ((uploaded * 100) + percent) / total;
+          },
+          (error) => {
+            console.error("Upload failed:", error);
+            alert(`Failed: ${file.name}`);
+          },
+          () => {
+            task.snapshot.ref.getDownloadURL().then(url => {
+              const newImageRef = imagesRef.push();
+              newImageRef.set({
+                id: newImageRef.key,
+                name: file.name,
+                url: url,
+                path: filePath,
+                folder: currentFolder,
+                uploadedAt: firebase.database.ServerValue.TIMESTAMP
+              }).then(() => {
+                uploaded++;
+                if (uploaded === total) {
+                  uploadProgress.style.display = "none";
+                  selectedFilesList = [];
+                  fileInput.value = "";
+                  selectedFiles.textContent = "No files selected";
+                  loadImages();
+                  alert("✅ All images uploaded!");
+                }
+              });
+            });
+          }
+        );
+      });
+    });
+
+    // =============== Load Folders ===============
+    function loadFolders() {
+      imagesRef.once("value", (snapshot) => {
+        const data = snapshot.val();
+        const folders = new Set();
+
+        if (data) {
+          Object.values(data).forEach(img => {
+            if (img.folder) folders.add(img.folder);
+          });
+        }
+
+        // Clear all except root
+        while (folderList.children.length > 1) {
+          folderList.removeChild(folderList.lastChild);
+        }
+
+        // Add folders
+        Array.from(folders).sort().forEach(folder => {
+          if (!Array.from(folderList.children).some(el => el.dataset.folder === folder)) {
+            addFolderToList(folder);
+          }
+        });
+
+        // Ensure current folder still exists
+        if (currentFolder && !Array.from(folderList.children).some(el => el.dataset.folder === currentFolder)) {
+          setCurrentFolder("");
+        }
+      });
+    }
+
+    // =============== Load Images ===============
+    function loadImages() {
+      imageGrid.innerHTML = '<p>Loading images...</p>';
+
+      imagesRef.once("value", (snapshot) => {
+        const data = snapshot.val();
+        imageGrid.innerHTML = "";
+
+        if (!data) {
+          imageGrid.innerHTML = '<p class="empty">No images found</p>';
+          return;
+        }
+
+        const items = Object.values(data).filter(img => {
+          if (!currentFolder) return !img.folder;
+          return img.folder === currentFolder;
+        }).sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+
+        if (items.length === 0) {
+          imageGrid.innerHTML = '<p class="empty">No images in this folder</p>';
+          return;
+        }
+
+        items.forEach(img => {
+          const card = document.createElement("div");
+          card.className = "image-card";
+
+          const folderLabel = img.folder ? `<span class="folder-tag">${img.folder}</span>` : "📁 Root";
+
+          card.innerHTML = `
+            <img src="${img.url}" alt="${img.name}" onerror="this.src='https://via.placeholder.com/200x150?text=Image+Not+Found';" />
+            <div class="image-info">${img.name}</div>
+            ${folderLabel}
+            <button class="copy" data-url="${img.url}">📋 Copy URL</button>
+            <button class="delete" data-id="${img.id}" data-path="${img.path}">🗑 Delete</button>
+          `;
+
+          imageGrid.appendChild(card);
+        });
+
+        // =============== Copy URL (Improved) ===============
+        document.querySelectorAll(".copy").forEach(btn => {
+          btn.addEventListener("click", async (e) => { // Make the handler async
+            const url = e.target.dataset.url;
+            try {
+              // Try using the modern clipboard API
+              await navigator.clipboard.writeText(url);
+              alert("✅ URL copied!");
+            } catch (err) {
+              // If it fails, use the prompt fallback
+              // Wrap prompt in try/catch in case it's also restricted
+              try {
+                const fallbackResult = prompt("Copy URL:", url);
+                // Optionally, provide feedback if prompt was cancelled (fallbackResult is null)
+                // if (fallbackResult === null) {
+                //   console.log("Prompt cancelled or failed");
+                // } else {
+                //   alert("Please copy the URL from the prompt.");
+                // }
+                // For simplicity, we can just rely on the prompt itself.
+                 // Alerting here might be confusing if prompt failed, so maybe just log or do nothing.
+                 // Let's just ensure the prompt runs.
+                 if (fallbackResult !== null) { // If user didn't cancel the prompt
+                     // User had the chance to copy, assume they did or cancelled intentionally
+                     // You could alert here, but often the prompt itself is enough feedback.
+                     // alert("Please copy the URL from the prompt.");
+                 }
+              } catch (promptErr) {
+                 console.error("Both copy methods failed:", err, promptErr);
+                 // Last resort: Alert the URL or open in new tab?
+                 alert("Could not copy. Please copy this URL manually: " + url);
+                 // Or maybe: window.open(url, '_blank'); // Opens URL in new tab
+              }
+            }
+          });
+        });
+        // =============== End Copy URL ===============
+
+        // Delete image
+        document.querySelectorAll(".delete").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            const id = e.target.dataset.id;
+            const path = e.target.dataset.path;
+
+            if (!confirm("Delete this image permanently?")) return;
+
+            storageRef.child(path).delete()
+              .then(() => console.log("✅ Deleted from Storage"))
+              .catch(err => {
+                if (err.code !== 'storage/object-not-found') {
+                  console.error("Storage delete error:", err);
+                }
+              });
+
+            imagesRef.orderByChild("id").equalTo(id).once("value", snap => {
+              snap.forEach(child => {
+                child.ref.remove()
+                  .then(() => {
+                    alert("✅ Deleted successfully");
+                    loadImages();
+                    loadFolders();
+                  })
+                  .catch(err => {
+                    alert("❌ Failed to delete from database: " + err.message);
+                  });
+              });
+            });
+          });
+        });
+      });
+    }
+
+    // =============== Initialize ===============
+    loadFolders();
+    setCurrentFolder(""); // Set to root
+  </script>
+
+</body>
+</html>
