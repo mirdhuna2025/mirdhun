@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ✅ Firebase Config — Clean, no trailing spaces
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -12,22 +11,19 @@ const firebaseConfig = {
   appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// DOM Elements
 const slider = document.getElementById("offerSlider");
 const nav = document.getElementById("offerNav");
 let slides = [];
 let index = 0;
 let autoSlideInterval;
 
-// Load offers from Firebase
-onValue(ref(db, 'slides'), (snapshot) => {
+// 🔥 Now reading from 'offerslide' instead of 'slides'
+onValue(ref(db, 'offerslide'), (snapshot) => {
   const data = snapshot.val();
   
-  // Cleanup previous state
   if (autoSlideInterval) clearInterval(autoSlideInterval);
   slider.innerHTML = '';
   nav.innerHTML = '';
@@ -35,7 +31,6 @@ onValue(ref(db, 'slides'), (snapshot) => {
 
   if (!data) return;
 
-  // Create slides
   Object.values(data).forEach(item => {
     if (!item.image) return;
     
@@ -49,7 +44,6 @@ onValue(ref(db, 'slides'), (snapshot) => {
     slides.push(div);
   });
 
-  // Setup slider if we have slides
   if (slides.length > 0) {
     setupOfferSlider();
   }
@@ -59,7 +53,6 @@ function setupOfferSlider() {
   const dots = [];
   nav.innerHTML = '';
 
-  // Create navigation dots
   slides.forEach((slide, i) => {
     const dot = document.createElement('div');
     dot.classList.add('offer-dot');
@@ -68,19 +61,17 @@ function setupOfferSlider() {
     nav.appendChild(dot);
     dots.push(dot);
 
-    // Click handler for slide
     slide.addEventListener('click', () => {
       const imgUrl = slide.dataset.image;
       const url = slide.dataset.url;
       
-      // Log click to Firebase
+      // 🔥 Also logs to 'slideClicks' (you can change if needed)
       push(ref(db, 'slideClicks'), {
         image: imgUrl,
         url: url,
         clickedAt: new Date().toISOString()
       });
 
-      // Open link if exists
       if (url) window.open(url, '_blank');
     });
   });
@@ -91,7 +82,6 @@ function setupOfferSlider() {
     dots.forEach((d, j) => d.classList.toggle('active', i === j));
   }
 
-  // Navigation buttons
   document.querySelector(".prev").addEventListener("click", () => {
     goToSlide((index - 1 + slides.length) % slides.length);
   });
@@ -100,7 +90,6 @@ function setupOfferSlider() {
     goToSlide((index + 1) % slides.length);
   });
 
-  // Auto-slide every 5 seconds
   autoSlideInterval = setInterval(() => {
     goToSlide((index + 1) % slides.length);
   }, 5000);
