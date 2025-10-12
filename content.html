@@ -3,11 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Shop</title>
+  <title>Mirdhuna Shop</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 10px; }
     h2 { margin: 16px 0; color: #333; }
+
+    /* Auth Bar */
+    #auth-bar {
+      background: #d40000;
+      color: white;
+      padding: 8px;
+      text-align: center;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    #auth-bar button {
+      background: white;
+      color: #d40000;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
 
     /* Category Carousel */
     .category-carousel {
@@ -23,6 +42,7 @@
       flex: 0 0 auto;
       width: 80px;
       text-align: center;
+      cursor: pointer;
     }
     .category-img {
       width: 60px;
@@ -150,6 +170,9 @@
 </head>
 <body>
 
+  <!-- Auth Status -->
+  <div id="auth-bar">Loading...</div>
+
   <!-- Offer Banner -->
   <div class="offer-banner" id="offerBanner"></div>
 
@@ -174,9 +197,9 @@
     </div>
   </div>
 
-  <!-- Fixed Cart Button -->
   <button id="cart-toggle-btn" style="position:fixed; bottom:20px; right:20px; background:#4CAF50; color:white; border:none; width:50px; height:50px; border-radius:50%; font-size:24px; cursor:pointer; z-index:999;">🛒</button>
 
+  <!-- Firebase SDKs -->
   <script type="module" src="content.js"></script>
 </body>
 </html>
