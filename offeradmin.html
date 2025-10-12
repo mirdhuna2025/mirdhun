@@ -6,79 +6,101 @@
   <title>Offer Admin</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       padding: 20px;
-      background: #f9f9f9;
+      background: #f8f9fa;
+      max-width: 800px;
+      margin: 0 auto;
     }
-    h3 { margin-top: 0; color: #d40000; }
-    .offer-item {
+    h2 {
+      color: #d40000;
+      text-align: center;
+    }
+    .section {
       background: white;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      position: relative;
-    }
-    .offer-image {
-      width: 100%;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 6px;
-      margin-bottom: 8px;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     input {
       width: 100%;
-      padding: 8px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
+      padding: 10px;
+      margin: 6px 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 15px;
+      box-sizing: border-box;
     }
     button {
-      padding: 6px 12px;
-      margin: 0 4px;
+      padding: 10px 16px;
+      margin: 4px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      font-weight: bold;
+      font-size: 15px;
     }
+    .add-btn { background: #d40000; color: white; }
     .save-btn { background: #4CAF50; color: white; }
     .delete-btn { background: #f44336; color: white; }
-    .cancel-btn { background: #9E9E9E; color: white; }
-    .status {
-      padding: 8px;
-      margin-top: 10px;
-      border-radius: 4px;
-      display: none;
-    }
-    .success { background: #d4edda; color: #155724; display: block; }
-    .error { background: #f8d7da; color: #721c24; display: block; }
-    .add-form {
-      background: white;
-      padding: 16px;
+    .offer-card {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid #eee;
       border-radius: 8px;
-      margin: 20px 0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 10px 0;
+      align-items: flex-start;
     }
+    .offer-img {
+      width: 100px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .offer-fields {
+      flex: 1;
+    }
+    .status {
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
   </style>
 </head>
 <body>
 
-  <h3>🛠️ Manage Offers</h3>
+  <h2>🎯 Offer Admin Panel</h2>
 
-  <div class="add-form">
-    <h4>Add New Offer</h4>
-    <input type="url" id="new-img" placeholder="Image URL (required)" />
-    <input type="url" id="new-url" placeholder="Redirect URL (optional)" />
-    <button onclick="addOffer()">Add Offer</button>
+  <!-- Add New Offer -->
+  <div class="section">
+    <h3>➕ Add New Offer</h3>
+    <input type="url" id="newImg" placeholder="Image URL (required)" />
+    <input type="url" id="newUrl" placeholder="Redirect URL (optional)" />
+    <button class="add-btn" onclick="addOffer()">Add Offer</button>
   </div>
 
-  <div id="offers-list"></div>
+  <!-- Current Offers -->
+  <div class="section">
+    <h3>🔄 Current Running Offers</h3>
+    <div id="offersContainer">
+      <p>Loading offers...</p>
+    </div>
+  </div>
+
   <div id="status"></div>
 
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
+    // 🔥 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -91,19 +113,20 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    // 🔥 Now using 'offerslide' node
-    const offersRef = db.ref('offerslide');
+    const offersRef = db.ref('offerslide'); // ✅ Using 'offerslide'
 
+    // Show status message
     function showStatus(msg, isSuccess) {
       const el = document.getElementById('status');
       el.textContent = msg;
-      el.className = isSuccess ? 'success' : 'error';
-      setTimeout(() => el.className = '', 3000);
+      el.className = isSuccess ? 'status success' : 'status error';
+      setTimeout(() => el.textContent = '', 3000);
     }
 
+    // Add new offer
     function addOffer() {
-      const img = document.getElementById('new-img').value.trim();
-      const url = document.getElementById('new-url').value.trim();
+      const img = document.getElementById('newImg').value.trim();
+      const url = document.getElementById('newUrl').value.trim();
 
       if (!img) {
         showStatus('Image URL is required!', false);
@@ -113,53 +136,55 @@
       offersRef.push({
         image: img,
         url: url || ''
-      })
-      .then(() => {
-        showStatus('Offer added!', true);
-        document.getElementById('new-img').value = '';
-        document.getElementById('new-url').value = '';
+      }).then(() => {
+        showStatus('✅ Offer added successfully!', true);
+        document.getElementById('newImg').value = '';
+        document.getElementById('newUrl').value = '';
         loadOffers();
-      })
-      .catch(err => {
+      }).catch(err => {
         console.error(err);
-        showStatus('Failed to add offer.', false);
+        showStatus('❌ Failed to add offer.', false);
       });
     }
 
+    // Load and display all offers
     function loadOffers() {
+      const container = document.getElementById('offersContainer');
+      container.innerHTML = '<p>Loading...</p>';
+
       offersRef.once('value')
         .then(snapshot => {
           const data = snapshot.val();
-          const list = document.getElementById('offers-list');
-          list.innerHTML = '<h4>Current Offers</h4>';
-
           if (!data) {
-            list.innerHTML += '<p>No offers found.</p>';
+            container.innerHTML = '<p>📭 No offers running.</p>';
             return;
           }
 
-          Object.keys(data).forEach(key => {
-            const item = data[key];
-            const div = document.createElement('div');
-            div.className = 'offer-item';
-            div.innerHTML = `
-              <img class="offer-image" src="${item.image}" alt="Offer" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YyZjJmMiIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5Ob8OfPC90ZXh0Pjwvc3ZnPg=='" />
-              <input type="url" value="${item.image}" placeholder="Image URL" data-key="${key}" data-field="image" />
-              <input type="url" value="${item.url || ''}" placeholder="Redirect URL" data-key="${key}" data-field="url" />
-              <div>
-                <button class="save-btn" onclick="saveOffer('${key}')">Save</button>
-                <button class="delete-btn" onclick="deleteOffer('${key}')">Delete</button>
+          let html = '';
+          Object.entries(data).forEach(([key, item]) => {
+            html += `
+              <div class="offer-card">
+                <img class="offer-img" src="${item.image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%2260%22><rect width=%22100%22 height=%2260%22 fill=%22%23f0f0f0%22/><text x=%2250%22 y=%2235%22 font-size=%2212%22 fill=%22%23999%22 text-anchor=%22middle%22>Image</text></svg>'" />
+                <div class="offer-fields">
+                  <input type="url" value="${item.image}" data-key="${key}" data-field="image" placeholder="Image URL" style="width:100%;margin:4px 0;" />
+                  <input type="url" value="${item.url || ''}" data-key="${key}" data-field="url" placeholder="Redirect URL" style="width:100%;margin:4px 0;" />
+                  <div>
+                    <button class="save-btn" onclick="saveOffer('${key}')">Save</button>
+                    <button class="delete-btn" onclick="deleteOffer('${key}')">Delete</button>
+                  </div>
+                </div>
               </div>
             `;
-            list.appendChild(div);
           });
+          container.innerHTML = html;
         })
         .catch(err => {
           console.error(err);
-          showStatus('Failed to load offers.', false);
+          container.innerHTML = '<p>❌ Failed to load offers.</p>';
         });
     }
 
+    // Save edited offer
     function saveOffer(key) {
       const imgInput = document.querySelector(`[data-key="${key}"][data-field="image"]`);
       const urlInput = document.querySelector(`[data-key="${key}"][data-field="url"]`);
@@ -175,31 +200,31 @@
       offersRef.child(key).update({
         image: newImg,
         url: newUrl || ''
-      })
-      .then(() => {
-        showStatus('Offer updated!', true);
+      }).then(() => {
+        showStatus('✅ Offer updated!', true);
         loadOffers();
-      })
-      .catch(err => {
+      }).catch(err => {
         console.error(err);
-        showStatus('Failed to update offer.', false);
+        showStatus('❌ Update failed.', false);
       });
     }
 
+    // Delete offer
     function deleteOffer(key) {
-      if (confirm("Delete this offer?")) {
+      if (confirm("⚠️ Are you sure you want to delete this offer?")) {
         offersRef.child(key).remove()
-        .then(() => {
-          showStatus('Offer deleted!', true);
-          loadOffers();
-        })
-        .catch(err => {
-          console.error(err);
-          showStatus('Failed to delete offer.', false);
-        });
+          .then(() => {
+            showStatus('🗑️ Offer deleted!', true);
+            loadOffers();
+          })
+          .catch(err => {
+            console.error(err);
+            showStatus('❌ Deletion failed.', false);
+          });
       }
     }
 
+    // Load on page start
     window.addEventListener('load', loadOffers);
   </script>
 
