@@ -1,6 +1,6 @@
-// Firebase
+// content.js — NO Firebase Auth, only localStorage check
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -14,47 +14,48 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getDatabase(app);
-const provider = new GoogleAuthProvider();
 
-// State
 let categories = [];
 let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentOffer = null;
 let selectedCategory = null;
-let currentUser = null;
 
-// DOM
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-// Handle redirect result (after login from login.html or direct)
-getRedirectResult(auth).then((result) => {
-  if (result.user) {
-    currentUser = result.user;
-    updateAuthUI();
+// ✅ Check login status (frontend only)
+function isLoggedIn() {
+  const session = localStorage.getItem('mirdhuna_session');
+  if (session) {
+    try {
+      const data = JSON.parse(session);
+      return data.isLoggedIn === true;
+    } catch (e) {
+      return false;
+    }
   }
-}).catch(console.error);
-
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-  updateAuthUI();
-});
+  return false;
+}
 
 function updateAuthUI() {
-  if (currentUser) {
-    authBar.innerHTML = `Hello, ${currentUser.displayName || 'User'}!`;
+  if (isLoggedIn()) {
+    authBar.innerHTML = `Logged in! <button onclick="logout()">Logout</button>`;
   } else {
     authBar.innerHTML = `Welcome! <a href="login.html" style="color:white;text-decoration:underline">Login to Order</a>`;
   }
 }
 
-// Load shop data
+window.logout = () => {
+  localStorage.removeItem('mirdhuna_session');
+  updateAuthUI();
+};
+
+// --- Rest of shop logic (same as before) ---
 function loadShopData() {
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -88,7 +89,7 @@ function renderCategories() {
     const div = document.createElement('div');
     div.className = 'category-item';
     div.innerHTML = `
-      <img class="category-img" src="${cat.image || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'}" alt="${cat.name}" />
+      <img class="category-img" src="${cat.image || 'image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'}" alt="${cat.name}" />
       <div class="category-name">${cat.name}</div>
     `;
     div.addEventListener('click', () => {
@@ -126,7 +127,7 @@ function renderMenu() {
   });
 }
 
-// 🛒 CART SYSTEM
+// 🛒 Cart Functions
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
@@ -136,8 +137,6 @@ function addToCart(id, name, price, image) {
   }
   saveCart();
   updateCartUI();
-
-  // ✅ Show "Added" toast
   showToast("Item added to cart!");
 }
 
@@ -161,7 +160,7 @@ function updateCartUI() {
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
-      <img class="cart-img" src="${item.image || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/></svg>'}" />
+      <img class="cart-img" src="${item.image || 'image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/></svg>'}" />
       <div class="cart-info">
         <div>${item.name}</div>
         <div>₹${item.price} × 
@@ -176,26 +175,20 @@ function updateCartUI() {
   });
 
   totalEl.textContent = total;
-  updateCartBadge(totalCount); // ✅ Update cart icon badge
+  updateCartBadge(totalCount);
 }
 
 function updateCartBadge(count) {
-  // Remove existing badge
-  const existingBadge = cartToggleBtn.querySelector('.cart-badge');
-  if (existingBadge) existingBadge.remove();
+  const badge = cartToggleBtn.querySelector('.cart-badge');
+  if (badge) badge.remove();
 
   if (count > 0) {
-    const badge = document.createElement('span');
-    badge.className = 'cart-badge';
-    badge.style.cssText = `
-      position: absolute; top: -8px; right: -8px;
-      background: red; color: white; font-size: 12px; font-weight: bold;
-      width: 20px; height: 20px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-    `;
-    badge.textContent = count > 9 ? '9+' : count;
+    const b = document.createElement('span');
+    b.className = 'cart-badge';
+    b.style.cssText = `position:absolute;top:-8px;right:-8px;background:red;color:white;font-size:12px;font-weight:bold;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;`;
+    b.textContent = count > 9 ? '9+' : count;
     cartToggleBtn.style.position = 'relative';
-    cartToggleBtn.appendChild(badge);
+    cartToggleBtn.appendChild(b);
   }
 }
 
@@ -210,30 +203,30 @@ function changeQty(id, delta) {
 }
 
 function toggleCart() {
-  const popup = document.getElementById('cart-popup');
-  popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+  const p = document.getElementById('cart-popup');
+  p.style.display = p.style.display === 'block' ? 'none' : 'block';
 }
 
 function closeCart() {
   document.getElementById('cart-popup').style.display = 'none';
 }
 
-// ✅ Place Order: Check login → redirect if needed
+// ✅ PLACE ORDER: Only check isLoggedIn()
 function placeOrder() {
   if (cart.length === 0) {
     alert("Cart is empty!");
     return;
   }
 
-  if (!currentUser) {
-    // 🔁 Redirect to login.html (as requested)
-    window.location.href = 'login.html';
+  if (!isLoggedIn()) {
+    window.location.href = 'login.html'; // 🔁 Redirect if not logged in
     return;
   }
 
+  // Get phone number for order
+  const session = JSON.parse(localStorage.getItem('mirdhuna_session'));
   const order = {
-    userId: currentUser.uid,
-    customerName: currentUser.displayName || 'Customer',
+    phoneNumber: session.phoneNumber,
     items: cart,
     total: parseFloat(document.getElementById('cartTotal').textContent),
     timestamp: new Date().toISOString(),
@@ -254,47 +247,38 @@ function placeOrder() {
     });
 }
 
-// 🍞 Toast Notification
-function showToast(message) {
-  let toast = document.getElementById('toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'toast';
-    toast.style.cssText = `
-      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
-      border-radius: 6px; z-index: 2000; font-size: 14px;
-    `;
-    document.body.appendChild(toast);
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:white;padding:10px 20px;border-radius:6px;z-index:2000;font-size:14px;`;
+    document.body.appendChild(t);
   }
-  toast.textContent = message;
-  toast.style.display = 'block';
-  setTimeout(() => { toast.style.display = 'none'; }, 2000);
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2000);
 }
 
-// Initialize
+// Init
+updateAuthUI();
 updateCartUI();
 loadShopData();
 
-// Event delegation
+// Events
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
-    addToCart(
-      btn.dataset.id,
-      btn.dataset.name,
-      parseFloat(btn.dataset.price),
-      btn.dataset.image
-    );
-  }
-
-  if (e.target.classList.contains('qty-btn')) {
+    addToCart(btn.dataset.id, btn.dataset.name, parseFloat(btn.dataset.price), btn.dataset.image);
+  } else if (e.target.classList.contains('qty-btn')) {
     const id = e.target.dataset.id;
     const action = e.target.dataset.action;
     changeQty(id, action === 'inc' ? 1 : -1);
+  } else if (e.target.id === 'cart-toggle-btn') {
+    toggleCart();
+  } else if (e.target.id === 'close-cart') {
+    closeCart();
+  } else if (e.target.id === 'checkout-btn') {
+    placeOrder();
   }
-
-  if (e.target.id === 'cart-toggle-btn') toggleCart();
-  if (e.target.id === 'close-cart') closeCart();
-  if (e.target.id === 'checkout-btn') placeOrder();
 });
