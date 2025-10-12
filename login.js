@@ -29,6 +29,7 @@ function updateLoginState() {
 loginBtn.addEventListener("click", () => {
   if (localStorage.getItem("isLoggedIn") === "true") {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userPhone"); // 👈 clear phone too
     updateLoginState();
     alert("Logged out successfully.");
   } else {
@@ -42,8 +43,8 @@ closeBtn.addEventListener("click", () => {
 
 submitBtn.addEventListener("click", async () => {
   const number = mobInput.value.trim();
-  if (!number || !/^\d{10}$/.test(number)) {
-    alert("Please enter a valid 10-digit mobile number.");
+  if (!number || !/^[6-9]\d{9}$/.test(number)) {
+    alert("Please enter a valid 10-digit Indian mobile number.");
     return;
   }
 
@@ -76,13 +77,14 @@ submitBtn.addEventListener("click", async () => {
     });
 
     localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("userPhone", number); // ✅ Save phone
     alert("Login successful!");
     popup.style.display = "none";
     mobInput.value = "";
     updateLoginState();
   } catch (error) {
     console.error("Firebase error:", error);
-    alert("Login failed. Check console.");
+    alert("Login failed. Please try again.");
   }
 });
 
