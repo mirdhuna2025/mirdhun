@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Offer Admin</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    input, button {
+      padding: 10px;
+      margin: 8px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background: #d40000;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #ff4c4c;
+    }
+    #status {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 4px;
+      display: none;
+    }
+    .success { background: #d4edda; color: #155724; display: block; }
+    .error { background: #f8d7da; color: #721c24; display: block; }
+  </style>
+</head>
+<body>
+
+  <h3>Add New Offer</h3>
+  <input type="url" id="img" placeholder="Image URL (required)" />
+  <input type="url" id="url" placeholder="Redirect URL (optional)" />
+  <button onclick="addOffer()">Add Offer</button>
+  <div id="status"></div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function showStatus(msg, isSuccess) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = isSuccess ? 'success' : 'error';
+    }
+
+    function addOffer() {
+      const img = document.getElementById('img').value.trim();
+      const url = document.getElementById('url').value.trim();
+
+      if (!img) {
+        showStatus('Image URL is required!', false);
+        return;
+      }
+
+      db.ref('slides').push({
+        image: img,
+        url: url || ''
+      })
+      .then(() => {
+        showStatus('Offer added successfully!', true);
+        document.getElementById('img').value = '';
+        document.getElementById('url').value = '';
+      })
+      .catch(err => {
+        console.error(err);
+        showStatus('Failed to add offer.', false);
+      });
+    }
+  </script>
+</body>
+</html>
