@@ -7,16 +7,22 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f0f0;
+    }
+
+    /* 🔒 Only blur the admin panel */
+    #admin-container {
       padding: 15px;
-      background: #f9f9f9;
       max-width: 900px;
       margin: 0 auto;
-      transition: filter 0.3s;
+      transition: filter 0.3s, opacity 0.3s;
     }
-    /* Blur everything until login */
-    body.protected {
-      filter: blur(10px);
+    body.protected #admin-container {
+      filter: blur(8px);
       pointer-events: none;
+      opacity: 0.7;
     }
 
     /* Login Overlay */
@@ -26,7 +32,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -35,10 +41,11 @@
     .login-box {
       background: white;
       padding: 30px;
-      border-radius: 10px;
+      border-radius: 12px;
       text-align: center;
       width: 90%;
       max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     .login-box h2 {
       margin-bottom: 20px;
@@ -47,7 +54,7 @@
     .login-box input {
       width: 100%;
       padding: 12px;
-      margin: 10px 0;
+      margin: 12px 0;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 16px;
@@ -62,16 +69,17 @@
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
-      margin-top: 10px;
     }
     .login-error {
-      color: #f44336;
+      color: #e74c3c;
       margin-top: 10px;
       font-weight: bold;
     }
 
-    /* Rest of styles */
-    h1, h2 { color: #d40000; }
+    /* Admin Styles */
+    h1, h2 {
+      color: #d40000;
+    }
     .section {
       background: white;
       padding: 16px;
@@ -127,68 +135,68 @@
 </head>
 <body class="protected">
 
-  <!-- Password Login Overlay -->
+  <!-- 🔑 Login Overlay (NOT blurred) -->
   <div id="login-overlay">
     <div class="login-box">
       <h2>🔐 Admin Login</h2>
-      <input type="password" id="password-input" placeholder="Enter password" />
+      <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
       <button onclick="attemptLogin()">Login</button>
       <div id="login-error" class="login-error"></div>
     </div>
   </div>
 
-  <!-- Admin Content (blurred until login) -->
-  <h1>🛠️ Content Admin Panel</h1>
+  <!-- 🛠️ Admin Content (blurred until login) -->
+  <div id="admin-container">
+    <h1>🛠️ Content Admin Panel</h1>
 
-  <!-- Categories -->
-  <div class="section">
-    <h2>📁 Categories</h2>
-    <div>
-      <input type="text" id="catName" placeholder="Category Name" />
-      <input type="url" id="catImage" placeholder="Image URL" />
-      <button class="add-btn" id="addCategoryBtn">Add Category</button>
+    <!-- Categories -->
+    <div class="section">
+      <h2>📁 Categories</h2>
+      <div>
+        <input type="text" id="catName" placeholder="Category Name" />
+        <input type="url" id="catImage" placeholder="Image URL" />
+        <button class="add-btn" id="addCategoryBtn">Add Category</button>
+      </div>
+      <div id="categoriesList"></div>
     </div>
-    <div id="categoriesList"></div>
-  </div>
 
-  <!-- Menu Items -->
-  <div class="section">
-    <h2>🍲 Menu Items</h2>
-    <div>
-      <input type="text" id="itemName" placeholder="Item Name" />
-      <input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01" />
-      <input type="url" id="itemImage" placeholder="Image URL" />
-      <select id="itemCategory">
-        <option value="">-- Select Category --</option>
-      </select>
-      <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
-      <button class="add-btn" id="addMenuItemBtn">Add Menu Item</button>
+    <!-- Menu Items -->
+    <div class="section">
+      <h2>🍲 Menu Items</h2>
+      <div>
+        <input type="text" id="itemName" placeholder="Item Name" />
+        <input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01" />
+        <input type="url" id="itemImage" placeholder="Image URL" />
+        <select id="itemCategory">
+          <option value="">-- Select Category --</option>
+        </select>
+        <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
+        <button class="add-btn" id="addMenuItemBtn">Add Menu Item</button>
+      </div>
+      <div id="menuList"></div>
     </div>
-    <div id="menuList"></div>
-  </div>
 
-  <!-- Offers -->
-  <div class="section">
-    <h2>🎁 Offers</h2>
-    <div>
-      <input type="text" id="offerTitle" placeholder="Offer Title" />
-      <input type="text" id="offerDesc" placeholder="Description" />
-      <label><input type="checkbox" id="offerActive" checked /> Active</label>
-      <button class="add-btn" id="addOfferBtn">Add Offer</button>
+    <!-- Offers -->
+    <div class="section">
+      <h2>🎁 Offers</h2>
+      <div>
+        <input type="text" id="offerTitle" placeholder="Offer Title" />
+        <input type="text" id="offerDesc" placeholder="Description" />
+        <label><input type="checkbox" id="offerActive" checked /> Active</label>
+        <button class="add-btn" id="addOfferBtn">Add Offer</button>
+      </div>
+      <div id="offersList"></div>
     </div>
-    <div id="offersList"></div>
-  </div>
 
-  <div id="status"></div>
+    <div id="status"></div>
+  </div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // 🔑 Password
     const ADMIN_PASSWORD = "Sanu.0000";
 
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -203,7 +211,6 @@
     const db = firebase.database();
     let categories = [];
 
-    // Login function
     function attemptLogin() {
       const input = document.getElementById('password-input').value;
       const errorEl = document.getElementById('login-error');
@@ -217,12 +224,10 @@
       }
     }
 
-    // Allow Enter key
     document.getElementById('password-input').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') attemptLogin();
     });
 
-    // Rest of admin logic
     function showStatus(msg, isSuccess) {
       const el = document.getElementById('status');
       el.textContent = msg;
@@ -244,7 +249,6 @@
       });
     }
 
-    // Add listeners
     document.getElementById('addCategoryBtn').addEventListener('click', () => {
       const name = document.getElementById('catName').value.trim();
       const image = document.getElementById('catImage').value.trim();
@@ -294,7 +298,6 @@
     function loadAllData() {
       loadCategoriesForDropdown();
 
-      // Categories
       db.ref('categories').once('value').then(snap => {
         const list = document.getElementById('categoriesList');
         list.innerHTML = '<h3>Current Categories</h3>';
@@ -304,7 +307,7 @@
           const div = document.createElement('div');
           div.className = 'item-preview';
           div.innerHTML = `
-            <img class="item-img" src="${item.image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
+            <img class="item-img" src="${item.image}" onerror="this.src='image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
             <div>
               <strong>${item.name}</strong><br>
               <button class="save-btn" onclick="editCategory('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
@@ -315,7 +318,6 @@
         });
       });
 
-      // Menu
       db.ref('menu').once('value').then(snap => {
         const list = document.getElementById('menuList');
         list.innerHTML = '<h3>Current Menu Items</h3>';
@@ -336,7 +338,6 @@
         });
       });
 
-      // Offers
       db.ref('offers').once('value').then(snap => {
         const list = document.getElementById('offersList');
         list.innerHTML = '<h3>Current Offers</h3>';
@@ -357,7 +358,6 @@
       });
     }
 
-    // Edit functions (exposed globally for inline onclick)
     window.editCategory = function(key, item) {
       document.getElementById('catName').value = item.name;
       document.getElementById('catImage').value = item.image;
@@ -421,13 +421,12 @@
     function resetButton(id, text) {
       const btn = document.getElementById(id);
       btn.textContent = text;
-      // Rebind original click
       if (id === 'addCategoryBtn') {
-        btn.onclick = () => document.getElementById(id).click();
+        btn.onclick = () => document.getElementById('addCategoryBtn').click();
       } else if (id === 'addMenuItemBtn') {
-        btn.onclick = () => document.getElementById(id).click();
+        btn.onclick = () => document.getElementById('addMenuItemBtn').click();
       } else if (id === 'addOfferBtn') {
-        btn.onclick = () => document.getElementById(id).click();
+        btn.onclick = () => document.getElementById('addOfferBtn').click();
       }
     }
 
