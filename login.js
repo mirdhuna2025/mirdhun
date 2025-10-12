@@ -4,7 +4,7 @@ import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
-  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com", // ✅ Fixed: removed trailing spaces
   projectId: "mirdhuna-25542",
   storageBucket: "mirdhuna-25542.appspot.com",
   messagingSenderId: "575924409876",
@@ -29,7 +29,6 @@ function updateLoginState() {
 loginBtn.addEventListener("click", () => {
   if (localStorage.getItem("isLoggedIn") === "true") {
     localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userPhone"); // 👈 clear phone too
     updateLoginState();
     alert("Logged out successfully.");
   } else {
@@ -43,8 +42,8 @@ closeBtn.addEventListener("click", () => {
 
 submitBtn.addEventListener("click", async () => {
   const number = mobInput.value.trim();
-  if (!number || !/^[6-9]\d{9}$/.test(number)) {
-    alert("Please enter a valid 10-digit Indian mobile number.");
+  if (!number || !/^\d{10}$/.test(number)) {
+    alert("Please enter a valid 10-digit mobile number.");
     return;
   }
 
@@ -77,14 +76,13 @@ submitBtn.addEventListener("click", async () => {
     });
 
     localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("userPhone", number); // ✅ Save phone
     alert("Login successful!");
     popup.style.display = "none";
     mobInput.value = "";
     updateLoginState();
   } catch (error) {
     console.error("Firebase error:", error);
-    alert("Login failed. Please try again.");
+    alert("Login failed. Check console.");
   }
 });
 
