@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Content Admin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      background: #f9f9f9;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h2 {
+      color: #d40000;
+      margin: 20px 0 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .section {
+      background: white;
+      padding: 16px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 8px 14px;
+      margin: 4px 4px 4px 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .add-btn { background: #d40000; color: white; }
+    .save-btn { background: #4CAF50; color: white; }
+    .delete-btn { background: #f44336; color: white; }
+    .item-preview {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      margin: 8px 0;
+      align-items: flex-start;
+    }
+    .item-img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .status {
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 4px;
+      display: none;
+    }
+    .success { background: #d4edda; color: #155724; display: block; }
+    .error { background: #f8d7da; color: #721c24; display: block; }
+    .offer-toggle {
+      display: inline-block;
+      margin-top: 6px;
+    }
+    label { display: inline-block; margin-right: 10px; }
+  </style>
+</head>
+<body>
+
+  <h1>🛠️ Content Admin Panel</h1>
+
+  <!-- Categories -->
+  <div class="section">
+    <h2>📁 Categories</h2>
+    <div>
+      <input type="text" id="catName" placeholder="Category Name" />
+      <input type="url" id="catImage" placeholder="Image URL" />
+      <button class="add-btn" onclick="addItem('categories')">Add Category</button>
+    </div>
+    <div id="categoriesList"></div>
+  </div>
+
+  <!-- Menu Items -->
+  <div class="section">
+    <h2>🍲 Menu Items</h2>
+    <div>
+      <input type="text" id="itemName" placeholder="Item Name" />
+      <input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01" />
+      <input type="url" id="itemImage" placeholder="Image URL" />
+      <div class="offer-toggle">
+        <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
+      </div>
+      <button class="add-btn" onclick="addItem('menu')">Add Menu Item</button>
+    </div>
+    <div id="menuList"></div>
+  </div>
+
+  <!-- Offers -->
+  <div class="section">
+    <h2>🎁 Offers</h2>
+    <div>
+      <input type="text" id="offerTitle" placeholder="Offer Title (e.g., Festive Sale)" />
+      <input type="text" id="offerDesc" placeholder="Description (e.g., 20% off)" />
+      <label><input type="checkbox" id="offerActive" checked /> Active</label>
+      <button class="add-btn" onclick="addItem('offers')">Add Offer</button>
+    </div>
+    <div id="offersList"></div>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script>
+    // 🔥 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function showStatus(msg, isSuccess) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = isSuccess ? 'success' : 'error';
+      setTimeout(() => el.textContent = '', 3000);
+    }
+
+    // Generic add function
+    function addItem(type) {
+      let data = {};
+      if (type === 'categories') {
+        const name = document.getElementById('catName').value.trim();
+        const image = document.getElementById('catImage').value.trim();
+        if (!name || !image) return showStatus('Name and image required for category.', false);
+        data = { name, image };
+      } else if (type === 'menu') {
+        const name = document.getElementById('itemName').value.trim();
+        const price = parseFloat(document.getElementById('itemPrice').value);
+        const image = document.getElementById('itemImage').value.trim();
+        const offer = document.getElementById('itemOffer').checked;
+        if (!name || !image || isNaN(price)) return showStatus('Valid name, price & image required.', false);
+        // Generate simple ID (you can use push().key in production)
+        data = { id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, offer };
+      } else if (type === 'offers') {
+        const title = document.getElementById('offerTitle').value.trim();
+        const description = document.getElementById('offerDesc').value.trim();
+        const active = document.getElementById('offerActive').checked;
+        if (!title || !description) return showStatus('Title and description required.', false);
+        data = { title, description, active };
+      }
+
+      db.ref(type).push(data)
+        .then(() => {
+          showStatus(`${type.slice(0, -1)} added!`, true);
+          resetForm(type);
+          loadAllData();
+        })
+        .catch(err => {
+          console.error(err);
+          showStatus('Failed to add.', false);
+        });
+    }
+
+    function resetForm(type) {
+      if (type === 'categories') {
+        document.getElementById('catName').value = '';
+        document.getElementById('catImage').value = '';
+      } else if (type === 'menu') {
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemPrice').value = '';
+        document.getElementById('itemImage').value = '';
+        document.getElementById('itemOffer').checked = false;
+      } else if (type === 'offers') {
+        document.getElementById('offerTitle').value = '';
+        document.getElementById('offerDesc').value = '';
+        document.getElementById('offerActive').checked = true;
+      }
+    }
+
+    // Load all data
+    function loadAllData() {
+      // Categories
+      db.ref('categories').once('value').then(snap => {
+        const list = document.getElementById('categoriesList');
+        list.innerHTML = '<h3>Current Categories</h3>';
+        const data = snap.val();
+        if (!data) return list.innerHTML += '<p>None</p>';
+        Object.entries(data).forEach(([key, item]) => {
+          const div = document.createElement('div');
+          div.className = 'item-preview';
+          div.innerHTML = `
+            <img class="item-img" src="${item.image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
+            <div>
+              <strong>${item.name}</strong><br>
+              <button class="save-btn" onclick="editItem('categories','${key}',${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
+              <button class="delete-btn" onclick="deleteItem('categories','${key}')">Delete</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      });
+
+      // Menu
+      db.ref('menu').once('value').then(snap => {
+        const list = document.getElementById('menuList');
+        list.innerHTML = '<h3>Current Menu Items</h3>';
+        const data = snap.val();
+        if (!data) return list.innerHTML += '<p>None</p>';
+        Object.entries(data).forEach(([key, item]) => {
+          const div = document.createElement('div');
+          div.className = 'item-preview';
+          div.innerHTML = `
+            <img class="item-img" src="${item.image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
+            <div>
+              <strong>${item.name}</strong> — ₹${item.price} ${item.offer ? '🔥' : ''}<br>
+              <button class="save-btn" onclick="editItem('menu','${key}',${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
+              <button class="delete-btn" onclick="deleteItem('menu','${key}')">Delete</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      });
+
+      // Offers
+      db.ref('offers').once('value').then(snap => {
+        const list = document.getElementById('offersList');
+        list.innerHTML = '<h3>Current Offers</h3>';
+        const data = snap.val();
+        if (!data) return list.innerHTML += '<p>None</p>';
+        Object.entries(data).forEach(([key, item]) => {
+          const div = document.createElement('div');
+          div.className = 'item-preview';
+          div.innerHTML = `
+            <div>
+              <strong>${item.title}</strong> — ${item.description} ${item.active ? '🟢' : '🔴'}<br>
+              <button class="save-btn" onclick="editItem('offers','${key}',${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
+              <button class="delete-btn" onclick="deleteItem('offers','${key}')">Delete</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      });
+    }
+
+    // Edit (pre-fill form and replace add with save)
+    function editItem(type, key, item) {
+      if (type === 'categories') {
+        document.getElementById('catName').value = item.name;
+        document.getElementById('catImage').value = item.image;
+        document.querySelector('.section:nth-child(2) .add-btn').textContent = 'Save';
+        document.querySelector('.section:nth-child(2) .add-btn').onclick = () => saveEdit(type, key);
+      } else if (type === 'menu') {
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemPrice').value = item.price;
+        document.getElementById('itemImage').value = item.image;
+        document.getElementById('itemOffer').checked = item.offer;
+        document.querySelector('.section:nth-child(3) .add-btn').textContent = 'Save';
+        document.querySelector('.section:nth-child(3) .add-btn').onclick = () => saveEdit(type, key);
+      } else if (type === 'offers') {
+        document.getElementById('offerTitle').value = item.title;
+        document.getElementById('offerDesc').value = item.description;
+        document.getElementById('offerActive').checked = item.active;
+        document.querySelector('.section:nth-child(4) .add-btn').textContent = 'Save';
+        document.querySelector('.section:nth-child(4) .add-btn').onclick = () => saveEdit(type, key);
+      }
+    }
+
+    function saveEdit(type, key) {
+      let updates = {};
+      if (type === 'categories') {
+        updates = {
+          name: document.getElementById('catName').value.trim(),
+          image: document.getElementById('catImage').value.trim()
+        };
+      } else if (type === 'menu') {
+        updates = {
+          name: document.getElementById('itemName').value.trim(),
+          price: parseFloat(document.getElementById('itemPrice').value),
+          image: document.getElementById('itemImage').value.trim(),
+          offer: document.getElementById('itemOffer').checked
+        };
+      } else if (type === 'offers') {
+        updates = {
+          title: document.getElementById('offerTitle').value.trim(),
+          description: document.getElementById('offerDesc').value.trim(),
+          active: document.getElementById('offerActive').checked
+        };
+      }
+
+      db.ref(type).child(key).update(updates)
+        .then(() => {
+          showStatus('Updated!', true);
+          resetForm(type);
+          // Restore button text
+          document.querySelectorAll('.add-btn').forEach(btn => btn.textContent = 'Add ' + 
+            (btn.closest('.section').querySelector('h2').textContent.includes('Category') ? 'Category' :
+             btn.closest('.section').querySelector('h2').textContent.includes('Menu') ? 'Menu Item' : 'Offer'));
+          loadAllData();
+        })
+        .catch(err => {
+          console.error(err);
+          showStatus('Update failed.', false);
+        });
+    }
+
+    function deleteItem(type, key) {
+      if (confirm(`Delete this ${type.slice(0, -1)}?`)) {
+        db.ref(type).child(key).remove()
+          .then(() => {
+            showStatus('Deleted!', true);
+            loadAllData();
+          })
+          .catch(err => {
+            console.error(err);
+            showStatus('Delete failed.', false);
+          });
+      }
+    }
+
+    // Load on start
+    window.addEventListener('load', loadAllData);
+  </script>
+
+</body>
+</html>
