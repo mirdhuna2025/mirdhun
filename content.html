@@ -14,24 +14,22 @@
       display: flex;
       overflow-x: auto;
       scroll-behavior: smooth;
-      gap: 5px;
-      padding: 5px 0 5px;
+      gap: 20px;
+      padding: 10px 0 20px;
       scrollbar-width: none;
     }
     .category-carousel::-webkit-scrollbar { display: none; }
     .category-item {
       flex: 0 0 auto;
-      width: 90px;
+      width: 80px;
       text-align: center;
     }
     .category-img {
-      width: 90px;
-      height: 90px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid #ddd;
-      flex-shrink: 0; /* ← ADD THIS */
-  display: block;
     }
     .category-name { font-size: 12px; margin-top: 6px; }
 
@@ -167,16 +165,17 @@
   <div id="cart-popup">
     <div class="cart-header">
       <h3>Your Cart</h3>
-      <button onclick="closeCart()">✕</button>
+      <button id="close-cart">✕</button>
     </div>
     <div id="cartItems"></div>
     <div class="total-bar">
       <span>Total: ₹<span id="cartTotal">0</span></span>
-      <button class="checkout-btn" onclick="placeOrder()">Place Order</button>
+      <button id="checkout-btn" class="checkout-btn">Place Order</button>
     </div>
   </div>
 
-  <button style="position:fixed; bottom:20px; right:20px; background:#4CAF50; color:white; border:none; width:50px; height:50px; border-radius:50%; font-size:24px; cursor:pointer; z-index:999;" onclick="toggleCart()">🛒</button>
+  <!-- Fixed Cart Button -->
+  <button id="cart-toggle-btn" style="position:fixed; bottom:20px; right:20px; background:#4CAF50; color:white; border:none; width:50px; height:50px; border-radius:50%; font-size:24px; cursor:pointer; z-index:999;">🛒</button>
 
   <script type="module" src="content.js"></script>
 </body>
