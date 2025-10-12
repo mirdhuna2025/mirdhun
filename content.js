@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -19,12 +19,10 @@ let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentOffer = null;
 
-// DOM Elements
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 
-// Load data
 onValue(ref(db, 'categories'), snapshot => {
   categories = snapshot.val() ? Object.values(snapshot.val()) : [];
   renderCategories();
@@ -62,13 +60,12 @@ function renderCategories() {
     const div = document.createElement('div');
     div.className = 'category-item';
     div.innerHTML = `
-      <img class="category-img" src="${cat.image}" alt="${cat.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
+      <img class="category-img" src="${cat.image}" alt="${cat.name}" onerror="this.src='image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
       <div class="category-name">${cat.name}</div>
     `;
     categoryCarousel.appendChild(div);
   });
 
-  // Auto-scroll categories (optional smooth rotation)
   let scrollPos = 0;
   const scrollInterval = setInterval(() => {
     scrollPos += 1;
@@ -90,14 +87,13 @@ function renderMenu() {
         <div class="menu-name">${item.name}</div>
         <div class="menu-price">₹${item.price}</div>
         ${item.offer ? `<div class="offer-tag">OFFER</div>` : ''}
-        <button class="add-cart-btn" onclick="addToCart('${item.id}', '${item.name}', ${item.price}, '${item.image}')">Add to Cart</button>
+        <button class="add-cart-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-image="${item.image}">Add to Cart</button>
       </div>
     `;
     menuGrid.appendChild(card);
   });
 }
 
-// Cart Functions
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
@@ -129,7 +125,11 @@ function updateCartUI() {
       <img class="cart-img" src="${item.image}" />
       <div class="cart-info">
         <div>${item.name}</div>
-        <div>₹${item.price} × <button class="qty-btn" onclick="changeQty('${item.id}', -1)">-</button> ${item.qty} <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button></div>
+        <div>₹${item.price} × 
+          <button class="qty-btn" data-id="${item.id}" data-action="dec">-</button>
+          ${item.qty}
+          <button class="qty-btn" data-id="${item.id}" data-action="inc">+</button>
+        </div>
         <div>₹${subtotal}</div>
       </div>
     `;
@@ -160,14 +160,12 @@ function closeCart() {
   document.getElementById('cart-popup').style.display = 'none';
 }
 
-// Checkout
 function placeOrder() {
   if (!cart || cart.length === 0) {
     alert("Cart is empty!");
     return;
   }
 
-  // Check login
   if (localStorage.getItem("isLoggedIn") !== "true") {
     alert("Please login to place order.");
     window.location.href = "login.html";
@@ -195,5 +193,34 @@ function placeOrder() {
     });
 }
 
-// Initialize cart UI
 updateCartUI();
+
+// ✅ FIX: Attach event listeners (no inline onclick)
+document.addEventListener('DOMContentLoaded', () => {
+  // Add to cart (event delegation)
+  document.getElementById('menuGrid').addEventListener('click', (e) => {
+    if (e.target.classList.contains('add-cart-btn')) {
+      const btn = e.target;
+      addToCart(
+        btn.dataset.id,
+        btn.dataset.name,
+        parseFloat(btn.dataset.price),
+        btn.dataset.image
+      );
+    }
+  });
+
+  // Cart buttons
+  document.getElementById('cart-toggle-btn')?.addEventListener('click', toggleCart);
+  document.getElementById('close-cart')?.addEventListener('click', closeCart);
+  document.getElementById('checkout-btn')?.addEventListener('click', placeOrder);
+
+  // Quantity change (event delegation)
+  document.getElementById('cartItems').addEventListener('click', (e) => {
+    if (e.target.classList.contains('qty-btn')) {
+      const id = e.target.dataset.id;
+      const action = e.target.dataset.action;
+      changeQty(id, action === 'inc' ? 1 : -1);
+    }
+  });
+});
