@@ -12,11 +12,15 @@
       max-width: 900px;
       margin: 0 auto;
     }
-    h2 {
+    h1, h2 {
       color: #d40000;
-      margin: 20px 0 10px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 5px;
+    }
+    .auth-bar {
+      background: #ffebee;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      text-align: center;
     }
     .section {
       background: white;
@@ -25,7 +29,7 @@
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    input, textarea {
+    input, select {
       width: 100%;
       padding: 8px;
       margin: 6px 0;
@@ -68,15 +72,12 @@
     }
     .success { background: #d4edda; color: #155724; display: block; }
     .error { background: #f8d7da; color: #721c24; display: block; }
-    .offer-toggle {
-      display: inline-block;
-      margin-top: 6px;
-    }
-    label { display: inline-block; margin-right: 10px; }
+    label { display: inline-block; margin-right: 10px; margin-top: 6px; }
   </style>
 </head>
 <body>
 
+  <div class="auth-bar" id="authBar">Loading...</div>
   <h1>🛠️ Content Admin Panel</h1>
 
   <!-- Categories -->
@@ -85,7 +86,7 @@
     <div>
       <input type="text" id="catName" placeholder="Category Name" />
       <input type="url" id="catImage" placeholder="Image URL" />
-      <button class="add-btn" onclick="addItem('categories')">Add Category</button>
+      <button class="add-btn" id="addCategoryBtn">Add Category</button>
     </div>
     <div id="categoriesList"></div>
   </div>
@@ -97,10 +98,12 @@
       <input type="text" id="itemName" placeholder="Item Name" />
       <input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01" />
       <input type="url" id="itemImage" placeholder="Image URL" />
-      <div class="offer-toggle">
-        <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
-      </div>
-      <button class="add-btn" onclick="addItem('menu')">Add Menu Item</button>
+      <select id="itemCategory">
+        <option value="">-- Select Category --</option>
+        <!-- Populated dynamically -->
+      </select>
+      <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
+      <button class="add-btn" id="addMenuItemBtn">Add Menu Item</button>
     </div>
     <div id="menuList"></div>
   </div>
@@ -109,18 +112,19 @@
   <div class="section">
     <h2>🎁 Offers</h2>
     <div>
-      <input type="text" id="offerTitle" placeholder="Offer Title (e.g., Festive Sale)" />
-      <input type="text" id="offerDesc" placeholder="Description (e.g., 20% off)" />
+      <input type="text" id="offerTitle" placeholder="Offer Title" />
+      <input type="text" id="offerDesc" placeholder="Description" />
       <label><input type="checkbox" id="offerActive" checked /> Active</label>
-      <button class="add-btn" onclick="addItem('offers')">Add Offer</button>
+      <button class="add-btn" id="addOfferBtn">Add Offer</button>
     </div>
     <div id="offersList"></div>
   </div>
 
   <div id="status"></div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
     // 🔥 Firebase Config
@@ -135,7 +139,34 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
+    let currentUser = null;
+    let categories = [];
+
+    const authBar = document.getElementById('authBar');
+
+    // Google Sign-In
+    function signIn() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(console.error);
+    }
+
+    function signOut() {
+      auth.signOut();
+    }
+
+    // Auth state listener
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (user) {
+        authBar.innerHTML = `Admin: ${user.email} <button onclick="signOut()">Logout</button>`;
+        loadAllData();
+      } else {
+        authBar.innerHTML = `🔒 Admin access required <button onclick="signIn()">Sign In with Google</button>`;
+        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      }
+    });
 
     function showStatus(msg, isSuccess) {
       const el = document.getElementById('status');
@@ -144,60 +175,78 @@
       setTimeout(() => el.textContent = '', 3000);
     }
 
-    // Generic add function
-    function addItem(type) {
-      let data = {};
-      if (type === 'categories') {
-        const name = document.getElementById('catName').value.trim();
-        const image = document.getElementById('catImage').value.trim();
-        if (!name || !image) return showStatus('Name and image required for category.', false);
-        data = { name, image };
-      } else if (type === 'menu') {
-        const name = document.getElementById('itemName').value.trim();
-        const price = parseFloat(document.getElementById('itemPrice').value);
-        const image = document.getElementById('itemImage').value.trim();
-        const offer = document.getElementById('itemOffer').checked;
-        if (!name || !image || isNaN(price)) return showStatus('Valid name, price & image required.', false);
-        // Generate simple ID (you can use push().key in production)
-        data = { id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, offer };
-      } else if (type === 'offers') {
-        const title = document.getElementById('offerTitle').value.trim();
-        const description = document.getElementById('offerDesc').value.trim();
-        const active = document.getElementById('offerActive').checked;
-        if (!title || !description) return showStatus('Title and description required.', false);
-        data = { title, description, active };
-      }
-
-      db.ref(type).push(data)
-        .then(() => {
-          showStatus(`${type.slice(0, -1)} added!`, true);
-          resetForm(type);
-          loadAllData();
-        })
-        .catch(err => {
-          console.error(err);
-          showStatus('Failed to add.', false);
+    // Load categories for menu dropdown
+    function loadCategoriesForDropdown() {
+      db.ref('categories').once('value').then(snap => {
+        categories = snap.val() ? Object.values(snap.val()) : [];
+        const select = document.getElementById('itemCategory');
+        select.innerHTML = '<option value="">-- Select Category --</option>';
+        categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.name;
+          opt.textContent = cat.name;
+          select.appendChild(opt);
         });
+      });
     }
 
-    function resetForm(type) {
-      if (type === 'categories') {
-        document.getElementById('catName').value = '';
-        document.getElementById('catImage').value = '';
-      } else if (type === 'menu') {
-        document.getElementById('itemName').value = '';
-        document.getElementById('itemPrice').value = '';
-        document.getElementById('itemImage').value = '';
-        document.getElementById('itemOffer').checked = false;
-      } else if (type === 'offers') {
-        document.getElementById('offerTitle').value = '';
-        document.getElementById('offerDesc').value = '';
-        document.getElementById('offerActive').checked = true;
+    // Add Functions
+    document.getElementById('addCategoryBtn').addEventListener('click', () => {
+      const name = document.getElementById('catName').value.trim();
+      const image = document.getElementById('catImage').value.trim();
+      if (!name || !image) return showStatus('Name and image required.', false);
+      db.ref('categories').push({ name, image })
+        .then(() => {
+          showStatus('Category added!', true);
+          document.getElementById('catName').value = '';
+          document.getElementById('catImage').value = '';
+          loadAllData();
+        });
+    });
+
+    document.getElementById('addMenuItemBtn').addEventListener('click', () => {
+      const name = document.getElementById('itemName').value.trim();
+      const price = parseFloat(document.getElementById('itemPrice').value);
+      const image = document.getElementById('itemImage').value.trim();
+      const category = document.getElementById('itemCategory').value;
+      const offer = document.getElementById('itemOffer').checked;
+      if (!name || !image || isNaN(price) || !category) {
+        return showStatus('All fields required.', false);
       }
-    }
+      db.ref('menu').push({ id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, category, offer })
+        .then(() => {
+          showStatus('Menu item added!', true);
+          document.getElementById('itemName').value = '';
+          document.getElementById('itemPrice').value = '';
+          document.getElementById('itemImage').value = '';
+          document.getElementById('itemCategory').value = '';
+          document.getElementById('itemOffer').checked = false;
+          loadAllData();
+        });
+    });
 
-    // Load all data
+    document.getElementById('addOfferBtn').addEventListener('click', () => {
+      const title = document.getElementById('offerTitle').value.trim();
+      const description = document.getElementById('offerDesc').value.trim();
+      const active = document.getElementById('offerActive').checked;
+      if (!title || !description) return showStatus('Title and description required.', false);
+      db.ref('offers').push({ title, description, active })
+        .then(() => {
+          showStatus('Offer added!', true);
+          document.getElementById('offerTitle').value = '';
+          document.getElementById('offerDesc').value = '';
+          document.getElementById('offerActive').checked = true;
+          loadAllData();
+        });
+    });
+
+    // Load All Data
     function loadAllData() {
+      if (!currentUser) return;
+
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'block');
+      loadCategoriesForDropdown();
+
       // Categories
       db.ref('categories').once('value').then(snap => {
         const list = document.getElementById('categoriesList');
@@ -211,7 +260,7 @@
             <img class="item-img" src="${item.image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
             <div>
               <strong>${item.name}</strong><br>
-              <button class="save-btn" onclick="editItem('categories','${key}',${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
+              <button class="save-btn" onclick="editCategory('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
               <button class="delete-btn" onclick="deleteItem('categories','${key}')">Delete</button>
             </div>
           `;
@@ -229,10 +278,10 @@
           const div = document.createElement('div');
           div.className = 'item-preview';
           div.innerHTML = `
-            <img class="item-img" src="${item.image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
+            <img class="item-img" src="${item.image}" onerror="this.src='image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
             <div>
-              <strong>${item.name}</strong> — ₹${item.price} ${item.offer ? '🔥' : ''}<br>
-              <button class="save-btn" onclick="editItem('menu','${key}',${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
+              <strong>${item.name}</strong> — ₹${item.price} (${item.category}) ${item.offer ? '🔥' : ''}<br>
+              <button class="save-btn" onclick="editMenuItem('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
               <button class="delete-btn" onclick="deleteItem('menu','${key}')">Delete</button>
             </div>
           `;
@@ -252,7 +301,7 @@
           div.innerHTML = `
             <div>
               <strong>${item.title}</strong> — ${item.description} ${item.active ? '🟢' : '🔴'}<br>
-              <button class="save-btn" onclick="editItem('offers','${key}',${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
+              <button class="save-btn" onclick="editOffer('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
               <button class="delete-btn" onclick="deleteItem('offers','${key}')">Delete</button>
             </div>
           `;
@@ -261,29 +310,33 @@
       });
     }
 
-    // Edit (pre-fill form and replace add with save)
-    function editItem(type, key, item) {
-      if (type === 'categories') {
-        document.getElementById('catName').value = item.name;
-        document.getElementById('catImage').value = item.image;
-        document.querySelector('.section:nth-child(2) .add-btn').textContent = 'Save';
-        document.querySelector('.section:nth-child(2) .add-btn').onclick = () => saveEdit(type, key);
-      } else if (type === 'menu') {
-        document.getElementById('itemName').value = item.name;
-        document.getElementById('itemPrice').value = item.price;
-        document.getElementById('itemImage').value = item.image;
-        document.getElementById('itemOffer').checked = item.offer;
-        document.querySelector('.section:nth-child(3) .add-btn').textContent = 'Save';
-        document.querySelector('.section:nth-child(3) .add-btn').onclick = () => saveEdit(type, key);
-      } else if (type === 'offers') {
-        document.getElementById('offerTitle').value = item.title;
-        document.getElementById('offerDesc').value = item.description;
-        document.getElementById('offerActive').checked = item.active;
-        document.querySelector('.section:nth-child(4) .add-btn').textContent = 'Save';
-        document.querySelector('.section:nth-child(4) .add-btn').onclick = () => saveEdit(type, key);
-      }
-    }
+    // ✅ FIXED: Edit functions now update form AND change button to "Save"
+    window.editCategory = function(key, item) {
+      document.getElementById('catName').value = item.name;
+      document.getElementById('catImage').value = item.image;
+      document.getElementById('addCategoryBtn').textContent = 'Save Category';
+      document.getElementById('addCategoryBtn').onclick = () => saveEdit('categories', key);
+    };
 
+    window.editMenuItem = function(key, item) {
+      document.getElementById('itemName').value = item.name;
+      document.getElementById('itemPrice').value = item.price;
+      document.getElementById('itemImage').value = item.image;
+      document.getElementById('itemCategory').value = item.category;
+      document.getElementById('itemOffer').checked = item.offer;
+      document.getElementById('addMenuItemBtn').textContent = 'Save Menu Item';
+      document.getElementById('addMenuItemBtn').onclick = () => saveEdit('menu', key);
+    };
+
+    window.editOffer = function(key, item) {
+      document.getElementById('offerTitle').value = item.title;
+      document.getElementById('offerDesc').value = item.description;
+      document.getElementById('offerActive').checked = item.active;
+      document.getElementById('addOfferBtn').textContent = 'Save Offer';
+      document.getElementById('addOfferBtn').onclick = () => saveEdit('offers', key);
+    };
+
+    // Save Edit
     function saveEdit(type, key) {
       let updates = {};
       if (type === 'categories') {
@@ -291,29 +344,31 @@
           name: document.getElementById('catName').value.trim(),
           image: document.getElementById('catImage').value.trim()
         };
+        document.getElementById('addCategoryBtn').textContent = 'Add Category';
+        document.getElementById('addCategoryBtn').onclick = () => document.getElementById('addCategoryBtn').click();
       } else if (type === 'menu') {
         updates = {
           name: document.getElementById('itemName').value.trim(),
           price: parseFloat(document.getElementById('itemPrice').value),
           image: document.getElementById('itemImage').value.trim(),
+          category: document.getElementById('itemCategory').value,
           offer: document.getElementById('itemOffer').checked
         };
+        document.getElementById('addMenuItemBtn').textContent = 'Add Menu Item';
+        document.getElementById('addMenuItemBtn').onclick = () => document.getElementById('addMenuItemBtn').click();
       } else if (type === 'offers') {
         updates = {
           title: document.getElementById('offerTitle').value.trim(),
           description: document.getElementById('offerDesc').value.trim(),
           active: document.getElementById('offerActive').checked
         };
+        document.getElementById('addOfferBtn').textContent = 'Add Offer';
+        document.getElementById('addOfferBtn').onclick = () => document.getElementById('addOfferBtn').click();
       }
 
       db.ref(type).child(key).update(updates)
         .then(() => {
           showStatus('Updated!', true);
-          resetForm(type);
-          // Restore button text
-          document.querySelectorAll('.add-btn').forEach(btn => btn.textContent = 'Add ' + 
-            (btn.closest('.section').querySelector('h2').textContent.includes('Category') ? 'Category' :
-             btn.closest('.section').querySelector('h2').textContent.includes('Menu') ? 'Menu Item' : 'Offer'));
           loadAllData();
         })
         .catch(err => {
@@ -322,7 +377,7 @@
         });
     }
 
-    function deleteItem(type, key) {
+    window.deleteItem = function(type, key) {
       if (confirm(`Delete this ${type.slice(0, -1)}?`)) {
         db.ref(type).child(key).remove()
           .then(() => {
@@ -334,10 +389,7 @@
             showStatus('Delete failed.', false);
           });
       }
-    }
-
-    // Load on start
-    window.addEventListener('load', loadAllData);
+    };
   </script>
 
 </body>
