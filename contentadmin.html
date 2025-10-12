@@ -11,17 +11,67 @@
       background: #f9f9f9;
       max-width: 900px;
       margin: 0 auto;
+      transition: filter 0.3s;
     }
-    h1, h2 {
+    /* Blur everything until login */
+    body.protected {
+      filter: blur(10px);
+      pointer-events: none;
+    }
+
+    /* Login Overlay */
+    #login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+    .login-box h2 {
+      margin-bottom: 20px;
       color: #d40000;
     }
-    .auth-bar {
-      background: #ffebee;
-      padding: 10px;
+    .login-box input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
       border-radius: 6px;
-      margin-bottom: 20px;
-      text-align: center;
+      font-size: 16px;
+      box-sizing: border-box;
     }
+    .login-box button {
+      width: 100%;
+      padding: 12px;
+      background: #d40000;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .login-error {
+      color: #f44336;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    /* Rest of styles */
+    h1, h2 { color: #d40000; }
     .section {
       background: white;
       padding: 16px;
@@ -75,9 +125,19 @@
     label { display: inline-block; margin-right: 10px; margin-top: 6px; }
   </style>
 </head>
-<body>
+<body class="protected">
 
-  <div class="auth-bar" id="authBar">Loading...</div>
+  <!-- Password Login Overlay -->
+  <div id="login-overlay">
+    <div class="login-box">
+      <h2>🔐 Admin Login</h2>
+      <input type="password" id="password-input" placeholder="Enter password" />
+      <button onclick="attemptLogin()">Login</button>
+      <div id="login-error" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- Admin Content (blurred until login) -->
   <h1>🛠️ Content Admin Panel</h1>
 
   <!-- Categories -->
@@ -100,7 +160,6 @@
       <input type="url" id="itemImage" placeholder="Image URL" />
       <select id="itemCategory">
         <option value="">-- Select Category --</option>
-        <!-- Populated dynamically -->
       </select>
       <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
       <button class="add-btn" id="addMenuItemBtn">Add Menu Item</button>
@@ -122,12 +181,14 @@
 
   <div id="status"></div>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // 🔥 Firebase Config
+    // 🔑 Password
+    const ADMIN_PASSWORD = "Sanu.0000";
+
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -139,35 +200,29 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.database();
-    let currentUser = null;
     let categories = [];
 
-    const authBar = document.getElementById('authBar');
-
-    // Google Sign-In
-    function signIn() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(console.error);
-    }
-
-    function signOut() {
-      auth.signOut();
-    }
-
-    // Auth state listener
-    auth.onAuthStateChanged(user => {
-      currentUser = user;
-      if (user) {
-        authBar.innerHTML = `Admin: ${user.email} <button onclick="signOut()">Logout</button>`;
+    // Login function
+    function attemptLogin() {
+      const input = document.getElementById('password-input').value;
+      const errorEl = document.getElementById('login-error');
+      if (input === ADMIN_PASSWORD) {
+        document.body.classList.remove('protected');
+        document.getElementById('login-overlay').style.display = 'none';
         loadAllData();
       } else {
-        authBar.innerHTML = `🔒 Admin access required <button onclick="signIn()">Sign In with Google</button>`;
-        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+        errorEl.textContent = "❌ Incorrect password";
+        setTimeout(() => errorEl.textContent = "", 2000);
       }
+    }
+
+    // Allow Enter key
+    document.getElementById('password-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') attemptLogin();
     });
 
+    // Rest of admin logic
     function showStatus(msg, isSuccess) {
       const el = document.getElementById('status');
       el.textContent = msg;
@@ -175,7 +230,6 @@
       setTimeout(() => el.textContent = '', 3000);
     }
 
-    // Load categories for menu dropdown
     function loadCategoriesForDropdown() {
       db.ref('categories').once('value').then(snap => {
         categories = snap.val() ? Object.values(snap.val()) : [];
@@ -190,18 +244,17 @@
       });
     }
 
-    // Add Functions
+    // Add listeners
     document.getElementById('addCategoryBtn').addEventListener('click', () => {
       const name = document.getElementById('catName').value.trim();
       const image = document.getElementById('catImage').value.trim();
       if (!name || !image) return showStatus('Name and image required.', false);
-      db.ref('categories').push({ name, image })
-        .then(() => {
-          showStatus('Category added!', true);
-          document.getElementById('catName').value = '';
-          document.getElementById('catImage').value = '';
-          loadAllData();
-        });
+      db.ref('categories').push({ name, image }).then(() => {
+        showStatus('Category added!', true);
+        document.getElementById('catName').value = '';
+        document.getElementById('catImage').value = '';
+        loadAllData();
+      });
     });
 
     document.getElementById('addMenuItemBtn').addEventListener('click', () => {
@@ -213,16 +266,15 @@
       if (!name || !image || isNaN(price) || !category) {
         return showStatus('All fields required.', false);
       }
-      db.ref('menu').push({ id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, category, offer })
-        .then(() => {
-          showStatus('Menu item added!', true);
-          document.getElementById('itemName').value = '';
-          document.getElementById('itemPrice').value = '';
-          document.getElementById('itemImage').value = '';
-          document.getElementById('itemCategory').value = '';
-          document.getElementById('itemOffer').checked = false;
-          loadAllData();
-        });
+      db.ref('menu').push({ id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, category, offer }).then(() => {
+        showStatus('Menu item added!', true);
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemPrice').value = '';
+        document.getElementById('itemImage').value = '';
+        document.getElementById('itemCategory').value = '';
+        document.getElementById('itemOffer').checked = false;
+        loadAllData();
+      });
     });
 
     document.getElementById('addOfferBtn').addEventListener('click', () => {
@@ -230,21 +282,16 @@
       const description = document.getElementById('offerDesc').value.trim();
       const active = document.getElementById('offerActive').checked;
       if (!title || !description) return showStatus('Title and description required.', false);
-      db.ref('offers').push({ title, description, active })
-        .then(() => {
-          showStatus('Offer added!', true);
-          document.getElementById('offerTitle').value = '';
-          document.getElementById('offerDesc').value = '';
-          document.getElementById('offerActive').checked = true;
-          loadAllData();
-        });
+      db.ref('offers').push({ title, description, active }).then(() => {
+        showStatus('Offer added!', true);
+        document.getElementById('offerTitle').value = '';
+        document.getElementById('offerDesc').value = '';
+        document.getElementById('offerActive').checked = true;
+        loadAllData();
+      });
     });
 
-    // Load All Data
     function loadAllData() {
-      if (!currentUser) return;
-
-      document.querySelectorAll('.section').forEach(s => s.style.display = 'block');
       loadCategoriesForDropdown();
 
       // Categories
@@ -310,7 +357,7 @@
       });
     }
 
-    // ✅ FIXED: Edit functions now update form AND change button to "Save"
+    // Edit functions (exposed globally for inline onclick)
     window.editCategory = function(key, item) {
       document.getElementById('catName').value = item.name;
       document.getElementById('catImage').value = item.image;
@@ -336,7 +383,6 @@
       document.getElementById('addOfferBtn').onclick = () => saveEdit('offers', key);
     };
 
-    // Save Edit
     function saveEdit(type, key) {
       let updates = {};
       if (type === 'categories') {
@@ -344,8 +390,7 @@
           name: document.getElementById('catName').value.trim(),
           image: document.getElementById('catImage').value.trim()
         };
-        document.getElementById('addCategoryBtn').textContent = 'Add Category';
-        document.getElementById('addCategoryBtn').onclick = () => document.getElementById('addCategoryBtn').click();
+        resetButton('addCategoryBtn', 'Add Category');
       } else if (type === 'menu') {
         updates = {
           name: document.getElementById('itemName').value.trim(),
@@ -354,40 +399,47 @@
           category: document.getElementById('itemCategory').value,
           offer: document.getElementById('itemOffer').checked
         };
-        document.getElementById('addMenuItemBtn').textContent = 'Add Menu Item';
-        document.getElementById('addMenuItemBtn').onclick = () => document.getElementById('addMenuItemBtn').click();
+        resetButton('addMenuItemBtn', 'Add Menu Item');
       } else if (type === 'offers') {
         updates = {
           title: document.getElementById('offerTitle').value.trim(),
           description: document.getElementById('offerDesc').value.trim(),
           active: document.getElementById('offerActive').checked
         };
-        document.getElementById('addOfferBtn').textContent = 'Add Offer';
-        document.getElementById('addOfferBtn').onclick = () => document.getElementById('addOfferBtn').click();
+        resetButton('addOfferBtn', 'Add Offer');
       }
 
-      db.ref(type).child(key).update(updates)
-        .then(() => {
-          showStatus('Updated!', true);
-          loadAllData();
-        })
-        .catch(err => {
-          console.error(err);
-          showStatus('Update failed.', false);
-        });
+      db.ref(type).child(key).update(updates).then(() => {
+        showStatus('Updated!', true);
+        loadAllData();
+      }).catch(err => {
+        console.error(err);
+        showStatus('Update failed.', false);
+      });
+    }
+
+    function resetButton(id, text) {
+      const btn = document.getElementById(id);
+      btn.textContent = text;
+      // Rebind original click
+      if (id === 'addCategoryBtn') {
+        btn.onclick = () => document.getElementById(id).click();
+      } else if (id === 'addMenuItemBtn') {
+        btn.onclick = () => document.getElementById(id).click();
+      } else if (id === 'addOfferBtn') {
+        btn.onclick = () => document.getElementById(id).click();
+      }
     }
 
     window.deleteItem = function(type, key) {
       if (confirm(`Delete this ${type.slice(0, -1)}?`)) {
-        db.ref(type).child(key).remove()
-          .then(() => {
-            showStatus('Deleted!', true);
-            loadAllData();
-          })
-          .catch(err => {
-            console.error(err);
-            showStatus('Delete failed.', false);
-          });
+        db.ref(type).child(key).remove().then(() => {
+          showStatus('Deleted!', true);
+          loadAllData();
+        }).catch(err => {
+          console.error(err);
+          showStatus('Delete failed.', false);
+        });
       }
     };
   </script>
