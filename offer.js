@@ -92,5 +92,5 @@ function setupOfferSlider() {
 
   autoSlideInterval = setInterval(() => {
     goToSlide((index + 1) % slides.length);
-  }, 5000);
+  }, 2500);
 }
