@@ -4,7 +4,7 @@ import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebas
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
-  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com", // ✅ Fixed: no trailing spaces
   projectId: "mirdhuna-25542",
   storageBucket: "mirdhuna-25542.appspot.com",
   messagingSenderId: "575924409876",
@@ -26,17 +26,9 @@ const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
+// ✅ Updated: matches your login.js
 function isLoggedIn() {
-  const session = localStorage.getItem('mirdhuna_session');
-  if (session) {
-    try {
-      const data = JSON.parse(session);
-      return data.isLoggedIn === true;
-    } catch (e) {
-      return false;
-    }
-  }
-  return false;
+  return localStorage.getItem("isLoggedIn") === "true";
 }
 
 function updateAuthUI() {
@@ -48,7 +40,8 @@ function updateAuthUI() {
 }
 
 window.logout = () => {
-  localStorage.removeItem('mirdhuna_session');
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("userPhone");
   updateAuthUI();
 };
 
@@ -224,9 +217,9 @@ function placeOrder() {
     return;
   }
 
-  const session = JSON.parse(localStorage.getItem('mirdhuna_session'));
+  const phoneNumber = localStorage.getItem("userPhone") || "unknown";
   const order = {
-    phoneNumber: session.phoneNumber,
+    phoneNumber: phoneNumber,
     items: cart,
     total: parseFloat(document.getElementById('cartTotal').textContent),
     timestamp: new Date().toISOString(),
@@ -242,7 +235,7 @@ function placeOrder() {
       closeCart();
     })
     .catch(err => {
-      console.error(err);
+      console.error("Order error:", err);
       showToast("Failed to place order. Please try again.");
     });
 }
@@ -276,10 +269,12 @@ function showToast(message) {
   }, 2500);
 }
 
+// Initialize
 updateAuthUI();
 updateCartUI();
 loadShopData();
 
+// Event delegation
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
