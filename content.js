@@ -1,4 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -12,38 +13,67 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
 
 let categories = [];
 let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentOffer = null;
+let selectedCategory = null;
+let currentUser = null;
 
+const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 
-onValue(ref(db, 'categories'), snapshot => {
-  categories = snapshot.val() ? Object.values(snapshot.val()) : [];
-  renderCategories();
-});
-
-onValue(ref(db, 'menu'), snapshot => {
-  menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
-  renderMenu();
-});
-
-onValue(ref(db, 'offers'), snapshot => {
-  const offers = snapshot.val();
-  currentOffer = null;
-  if (offers) {
-    const activeOffers = Object.values(offers).filter(o => o.active);
-    if (activeOffers.length > 0) {
-      currentOffer = activeOffers[0];
-    }
+// Auth state listener
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    authBar.innerHTML = `Hello, ${user.displayName || 'User'}! <button onclick="signOut()">Logout</button>`;
+  } else {
+    authBar.innerHTML = `Welcome! <button onclick="signIn()">Login to Order</button>`;
   }
-  renderOffer();
+  loadShopData();
 });
+
+function signIn() {
+  signInWithPopup(auth, provider).catch(console.error);
+}
+
+function signOut() {
+  auth.signOut();
+}
+
+function loadShopData() {
+  // Load categories
+  onValue(ref(db, 'categories'), snapshot => {
+    categories = snapshot.val() ? Object.values(snapshot.val()) : [];
+    renderCategories();
+  });
+
+  // Load menu
+  onValue(ref(db, 'menu'), snapshot => {
+    menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
+    renderMenu();
+  });
+
+  // Load offers
+  onValue(ref(db, 'offers'), snapshot => {
+    const offers = snapshot.val();
+    currentOffer = null;
+    if (offers) {
+      const activeOffers = Object.values(offers).filter(o => o.active);
+      if (activeOffers.length > 0) {
+        currentOffer = activeOffers[0];
+      }
+    }
+    renderOffer();
+  });
+}
 
 function renderOffer() {
   if (currentOffer) {
@@ -63,11 +93,15 @@ function renderCategories() {
       <img class="category-img" src="${cat.image}" alt="${cat.name}" onerror="this.src='image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
       <div class="category-name">${cat.name}</div>
     `;
+    div.addEventListener('click', () => {
+      selectedCategory = cat.name;
+      renderMenu();
+    });
     categoryCarousel.appendChild(div);
   });
 
   let scrollPos = 0;
-  const scrollInterval = setInterval(() => {
+  setInterval(() => {
     scrollPos += 1;
     categoryCarousel.scrollLeft = scrollPos;
     if (scrollPos >= categoryCarousel.scrollWidth - categoryCarousel.clientWidth) {
@@ -78,7 +112,18 @@ function renderCategories() {
 
 function renderMenu() {
   menuGrid.innerHTML = '';
-  menuItems.forEach(item => {
+  let itemsToRender = menuItems;
+
+  if (selectedCategory) {
+    itemsToRender = menuItems.filter(item => item.category === selectedCategory);
+  }
+
+  if (itemsToRender.length === 0) {
+    menuGrid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#999;">No items available</p>';
+    return;
+  }
+
+  itemsToRender.forEach(item => {
     const card = document.createElement('div');
     card.className = 'menu-card';
     card.innerHTML = `
@@ -94,6 +139,7 @@ function renderMenu() {
   });
 }
 
+// Cart Functions
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
@@ -166,13 +212,14 @@ function placeOrder() {
     return;
   }
 
-  if (localStorage.getItem("isLoggedIn") !== "true") {
+  if (!currentUser) {
     alert("Please login to place order.");
-    window.location.href = "login.html";
+    signIn();
     return;
   }
 
   const order = {
+    userId: currentUser.uid,
     items: cart,
     total: parseFloat(document.getElementById('cartTotal').textContent),
     timestamp: new Date().toISOString(),
@@ -195,9 +242,8 @@ function placeOrder() {
 
 updateCartUI();
 
-// ✅ FIX: Attach event listeners (no inline onclick)
+// Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-  // Add to cart (event delegation)
   document.getElementById('menuGrid').addEventListener('click', (e) => {
     if (e.target.classList.contains('add-cart-btn')) {
       const btn = e.target;
@@ -210,12 +256,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Cart buttons
   document.getElementById('cart-toggle-btn')?.addEventListener('click', toggleCart);
   document.getElementById('close-cart')?.addEventListener('click', closeCart);
   document.getElementById('checkout-btn')?.addEventListener('click', placeOrder);
 
-  // Quantity change (event delegation)
   document.getElementById('cartItems').addEventListener('click', (e) => {
     if (e.target.classList.contains('qty-btn')) {
       const id = e.target.dataset.id;
