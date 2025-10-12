@@ -1,101 +1,100 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kaithi → Hindi OCR (All-in-one)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kaithi to Hindi OCR Converter</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; background: #fafafa; color: #222; }
-.card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
-h2 { margin-top: 0; }
-input, button, textarea { font-size: 15px; }
-textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
-button { background: #0078ff; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-progress { width: 100%; height: 12px; margin-top: 6px; }
-#imgPreview { max-width: 100%; margin-top: 10px; border-radius: 8px; }
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+  }
+  .box {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    max-width: 400px;
+    width: 100%;
+  }
+  button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    cursor: pointer;
+  }
+  button:disabled { background: #aaa; }
+  textarea {
+    width: 100%;
+    height: 120px;
+    margin-top: 1rem;
+  }
 </style>
 </head>
 <body>
-<div class="card">
-  <h2>📜 Kaithi → Hindi OCR (All-in-one)</h2>
-  <p>Upload an image with Kaithi script. It will extract text and open Hindi translation.</p>
-  <input type="file" id="fileInput" accept="image/*"><br><br>
-  <img id="imgPreview" />
-  <br>
-  <button id="startBtn" disabled>Start OCR</button>
-  <progress id="progress" value="0" max="1"></progress>
-  <p id="status">Idle</p>
-  <h3>OCR Output</h3>
-  <textarea id="result" placeholder="Recognized text will appear here..."></textarea><br>
-  <button id="translateBtn" disabled>Translate to Hindi</button>
-</div>
+  <h2>📷 Kaithi Image to Hindi Text</h2>
+  <div class="box">
+    <input type="file" id="imageInput" accept="image/*" />
+    <button id="startBtn">Start OCR</button>
+    <p id="status"></p>
+    <textarea id="output" placeholder="Recognized Hindi text will appear here..."></textarea>
+  </div>
 
-<!-- Tesseract.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 <script>
-const fileInput = document.getElementById('fileInput');
-const startBtn = document.getElementById('startBtn');
-const translateBtn = document.getElementById('translateBtn');
-const result = document.getElementById('result');
-const status = document.getElementById('status');
-const progress = document.getElementById('progress');
-const imgPreview = document.getElementById('imgPreview');
+  const startBtn = document.getElementById('startBtn');
+  const imageInput = document.getElementById('imageInput');
+  const output = document.getElementById('output');
+  const status = document.getElementById('status');
 
-let imageData = null;
-
-fileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    imageData = ev.target.result;
-    imgPreview.src = imageData;
-    startBtn.disabled = false;
-  };
-  reader.readAsDataURL(file);
-});
-
-startBtn.addEventListener('click', async () => {
-  if (!imageData) return;
-  startBtn.disabled = true;
-  status.textContent = "Processing...";
-  progress.value = 0;
-  result.value = "";
-  translateBtn.disabled = true;
-
-  const worker = Tesseract.createWorker({
-    logger: m => {
-      if (m.status) status.textContent = m.status;
-      if (m.progress) progress.value = m.progress;
-    },
-    langPath: 'https://tessdata.projectnaptha.com/4.0.0'
-  });
-
-  try {
-    await worker.load();
-    await worker.loadLanguage('kaithi');
-    await worker.initialize('kaithi');
-    const { data: { text } } = await worker.recognize(imageData);
-    result.value = text.trim();
-    translateBtn.disabled = text.trim() === "";
-    status.textContent = "Done ✅";
-  } catch (e) {
-    console.error(e);
-    alert("Error: " + e.message);
-    status.textContent = "Error occurred.";
-  } finally {
-    await worker.terminate();
-    startBtn.disabled = false;
+  async function translateToHindi(text) {
+    const encodedText = encodeURIComponent(text);
+    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=hi&dt=t&q=${encodedText}`);
+    const data = await res.json();
+    return data[0].map(x => x[0]).join('');
   }
-});
 
-translateBtn.addEventListener('click', () => {
-  const text = result.value.trim();
-  if (!text) return;
-  const url = `https://translate.google.com/?sl=auto&tl=hi&text=${encodeURIComponent(text)}&op=translate`;
-  window.open(url, '_blank');
-});
+  function downloadText(text, filename) {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }
+
+  startBtn.addEventListener('click', async () => {
+    if (!imageInput.files[0]) {
+      alert("Please upload an image first!");
+      return;
+    }
+
+    startBtn.disabled = true;
+    status.textContent = "⏳ Processing OCR...";
+    output.value = "";
+
+    try {
+      const { data: { text } } = await Tesseract.recognize(imageInput.files[0], 'deu+hin', {
+        logger: m => status.textContent = `Progress: ${(m.progress*100).toFixed(1)}%`
+      });
+      status.textContent = "✅ OCR Complete. Translating...";
+      const translated = await translateToHindi(text);
+      output.value = translated;
+      status.textContent = "✅ Done! File downloaded.";
+      downloadText(translated, "hindi_text.txt");
+    } catch (err) {
+      console.error(err);
+      status.textContent = "❌ Error: " + err.message;
+    }
+
+    startBtn.disabled = false;
+  });
 </script>
 </body>
 </html>
