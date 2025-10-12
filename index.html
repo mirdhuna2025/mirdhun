@@ -1,206 +1,101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kaithi → Hindi OCR (Client-side)</title>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:18px;background:#f7f7fb;color:#111}
-    h1{font-size:20px;margin-bottom:6px}
-    .card{background:white;border-radius:10px;padding:16px;box-shadow:0 6px 18px rgba(20,20,40,0.06);max-width:900px;margin:auto}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .preview{width:320px;max-width:100%;border:1px dashed #ddd;padding:8px;border-radius:8px;background:#fafafa}
-    img#imgPreview{max-width:100%;height:auto;display:block}
-    textarea{width:100%;min-height:160px;padding:10px;border-radius:8px;border:1px solid #ddd;resize:vertical}
-    .controls{display:flex;gap:8px;align-items:center}
-    button{background:#0b74ff;color:white;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
-    button:disabled{opacity:0.55;cursor:not-allowed}
-    .muted{color:#666;font-size:13px}
-    progress{width:100%;height:14px}
-    .footer{font-size:13px;color:#444;margin-top:10px}
-    @media (max-width:720px){.row{flex-direction:column}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaithi → Hindi OCR (All-in-one)</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background: #fafafa; color: #222; }
+.card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+h2 { margin-top: 0; }
+input, button, textarea { font-size: 15px; }
+textarea { width: 100%; height: 140px; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
+button { background: #0078ff; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+progress { width: 100%; height: 12px; margin-top: 6px; }
+#imgPreview { max-width: 100%; margin-top: 10px; border-radius: 8px; }
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Kaithi → Hindi OCR (client-side)</h1>
-    <p class="muted">Upload an image containing Kaithi script. This page uses <strong>Tesseract.js</strong> to run OCR in your browser and then lets you open the recognized text in Google Translate (target: Hindi).</p>
+<div class="card">
+  <h2>📜 Kaithi → Hindi OCR (All-in-one)</h2>
+  <p>Upload an image with Kaithi script. It will extract text and open Hindi translation.</p>
+  <input type="file" id="fileInput" accept="image/*"><br><br>
+  <img id="imgPreview" />
+  <br>
+  <button id="startBtn" disabled>Start OCR</button>
+  <progress id="progress" value="0" max="1"></progress>
+  <p id="status">Idle</p>
+  <h3>OCR Output</h3>
+  <textarea id="result" placeholder="Recognized text will appear here..."></textarea><br>
+  <button id="translateBtn" disabled>Translate to Hindi</button>
+</div>
 
-    <div style="margin-top:12px" class="row">
-      <div style="width:340px;min-width:220px">
-        <label class="muted">Choose image (PNG, JPG, etc.)</label>
-        <input id="fileInput" type="file" accept="image/*" />
-        <div style="margin-top:10px" class="preview">
-          <img id="imgPreview" alt="preview" />
-        </div>
+<!-- Tesseract.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+<script>
+const fileInput = document.getElementById('fileInput');
+const startBtn = document.getElementById('startBtn');
+const translateBtn = document.getElementById('translateBtn');
+const result = document.getElementById('result');
+const status = document.getElementById('status');
+const progress = document.getElementById('progress');
+const imgPreview = document.getElementById('imgPreview');
 
-        <div style="margin-top:10px">
-          <div class="controls">
-            <button id="startBtn" disabled>Start OCR</button>
-            <button id="stopBtn" disabled>Stop</button>
-            <button id="clearBtn">Clear</button>
-          </div>
-          <div style="margin-top:8px">
-            <label class="muted">Progress</label>
-            <progress id="progress" value="0" max="1"></progress>
-            <div id="log" class="muted" style="margin-top:6px">Idle</div>
-          </div>
-        </div>
-      </div>
+let imageData = null;
 
-      <div style="flex:1;min-width:220px">
-        <label class="muted">Recognized text (Kaithi → raw OCR)</label>
-        <textarea id="ocrResult" placeholder="OCR result will appear here..."></textarea>
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageData = ev.target.result;
+    imgPreview.src = imageData;
+    startBtn.disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
 
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="copyBtn">Copy</button>
-          <button id="downloadBtn">Download .txt</button>
-          <button id="translateBtn" disabled>Open in Google Translate (→ Hindi)</button>
-        </div>
+startBtn.addEventListener('click', async () => {
+  if (!imageData) return;
+  startBtn.disabled = true;
+  status.textContent = "Processing...";
+  progress.value = 0;
+  result.value = "";
+  translateBtn.disabled = true;
 
-        <p class="footer">Notes: 1) Tesseract needs the Kaithi traineddata file; the page attempts to fetch it from a public CDN. 2) OCR accuracy depends on image quality. 3) If you want an automatic Devanagari transliteration/translation inside the page, I can add it — tell me and I'll include an offline transliteration step or call translation APIs.</p>
-      </div>
-    </div>
-  </div>
+  const worker = Tesseract.createWorker({
+    logger: m => {
+      if (m.status) status.textContent = m.status;
+      if (m.progress) progress.value = m.progress;
+    },
+    langPath: 'https://tessdata.projectnaptha.com/4.0.0'
+  });
 
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
-  <script>
-    // Elements
-    const fileInput = document.getElementById('fileInput');
-    const imgPreview = document.getElementById('imgPreview');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const progressEl = document.getElementById('progress');
-    const logEl = document.getElementById('log');
-    const ocrResult = document.getElementById('ocrResult');
-    const copyBtn = document.getElementById('copyBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const translateBtn = document.getElementById('translateBtn');
+  try {
+    await worker.load();
+    await worker.loadLanguage('kaithi');
+    await worker.initialize('kaithi');
+    const { data: { text } } = await worker.recognize(imageData);
+    result.value = text.trim();
+    translateBtn.disabled = text.trim() === "";
+    status.textContent = "Done ✅";
+  } catch (e) {
+    console.error(e);
+    alert("Error: " + e.message);
+    status.textContent = "Error occurred.";
+  } finally {
+    await worker.terminate();
+    startBtn.disabled = false;
+  }
+});
 
-    let currentImageDataUrl = null;
-    let worker = null;
-    let abortRequested = false;
-
-    fileInput.addEventListener('change', (e)=>{
-      const f = e.target.files && e.target.files[0];
-      if(!f) return;
-      const reader = new FileReader();
-      reader.onload = (ev)=>{
-        currentImageDataUrl = ev.target.result;
-        imgPreview.src = currentImageDataUrl;
-        startBtn.disabled = false;
-        ocrResult.value = '';
-        translateBtn.disabled = true;
-        progressEl.value = 0;
-        logEl.textContent = 'Image loaded. Ready.';
-      }
-      reader.readAsDataURL(f);
-    });
-
-    clearBtn.addEventListener('click', ()=>{
-      fileInput.value = '';
-      imgPreview.src = '';
-      currentImageDataUrl = null;
-      startBtn.disabled = true;
-      stopBtn.disabled = true;
-      ocrResult.value = '';
-      progressEl.value = 0;
-      logEl.textContent = 'Cleared.';
-    });
-
-    startBtn.addEventListener('click', async ()=>{
-      if(!currentImageDataUrl) return;
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-      abortRequested = false;
-      ocrResult.value = '';
-      logEl.textContent = 'Initializing OCR...';
-
-      // Create Tesseract worker and point to a public tessdata CDN
-      worker = Tesseract.createWorker({
-        logger: m => {
-          // m.stage, m.progress
-          if(m.status) logEl.textContent = (m.status + (m.progress ? ' — ' + Math.round(m.progress*100) + '%' : ''));
-          if(typeof m.progress === 'number') progressEl.value = m.progress;
-        },
-        langPath: 'https://tessdata.projectnaptha.com/4.0.0' // public tessdata CDN
-      });
-
-      try{
-        await worker.load();
-        // Try to load Kaithi language. If not available on CDN this will fail.
-        await worker.loadLanguage('kaithi');
-        await worker.initialize('kaithi');
-
-        logEl.textContent = 'Recognizing...';
-        const { data: { text } } = await worker.recognize(currentImageDataUrl);
-        if(abortRequested){
-          logEl.textContent = 'Aborted.';
-        } else {
-          ocrResult.value = text.trim();
-          translateBtn.disabled = (ocrResult.value.trim()==='');
-          logEl.textContent = 'Done.';
-        }
-      }catch(err){
-        console.error(err);
-        logEl.textContent = 'Error during OCR. See console. The Kaithi traineddata file might not be available on the CDN.\n' + (err && err.message ? err.message : err);
-        alert('OCR error. Check browser console. If the Kaithi traineddata cannot be fetched from the CDN, you can download the kaithi.traineddata and host it, or ask me and I\'ll provide an alternate version.');
-      }finally{
-        try{ await worker.terminate(); }catch(e){}
-        worker = null;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-        progressEl.value = 0;
-      }
-    });
-
-    stopBtn.addEventListener('click', ()=>{
-      abortRequested = true;
-      if(worker){
-        // Tesseract v2 doesn't offer a direct "cancel" API on the worker, but terminate will stop it.
-        worker.terminate();
-        worker = null;
-      }
-      stopBtn.disabled = true;
-      startBtn.disabled = false;
-      logEl.textContent = 'Stopped by user.';
-    });
-
-    copyBtn.addEventListener('click', async ()=>{
-      try{
-        await navigator.clipboard.writeText(ocrResult.value);
-        logEl.textContent = 'Copied to clipboard.';
-      }catch(e){
-        logEl.textContent = 'Could not copy. Select and copy manually.';
-      }
-    });
-
-    downloadBtn.addEventListener('click', ()=>{
-      const blob = new Blob([ocrResult.value], {type: 'text/plain;charset=utf-8'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'kaithi-ocr.txt';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      logEl.textContent = 'Downloaded as kaithi-ocr.txt';
-    });
-
-    translateBtn.addEventListener('click', ()=>{
-      const txt = ocrResult.value.trim();
-      if(!txt) return;
-      // Open Google Translate in a new tab with the recognized text as input and target=hi (Hindi)
-      const url = 'https://translate.google.com/?sl=auto&tl=hi&text=' + encodeURIComponent(txt) + '&op=translate';
-      window.open(url, '_blank');
-      logEl.textContent = 'Opened Google Translate in new tab.';
-    });
-
-    // Helpful hint for users: if the traineddata is not found, instruct how to host it locally
-    // This page is intentionally simple and runs entirely on the client. For very large images or many requests,
-    // consider using a server-side OCR service or a dedicated OCR API.
-  </script>
+translateBtn.addEventListener('click', () => {
+  const text = result.value.trim();
+  if (!text) return;
+  const url = `https://translate.google.com/?sl=auto&tl=hi&text=${encodeURIComponent(text)}&op=translate`;
+  window.open(url, '_blank');
+});
+</script>
 </body>
 </html>
