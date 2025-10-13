@@ -1,447 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Content Admin</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f0f0f0;
-    }
-
-    /* 🔒 Only blur the admin panel */
-    #admin-container {
-      padding: 15px;
-      max-width: 900px;
-      margin: 0 auto;
-      transition: filter 0.3s, opacity 0.3s;
-    }
-    body.protected #admin-container {
-      filter: blur(8px);
-      pointer-events: none;
-      opacity: 0.7;
-    }
-
-    /* Login Overlay */
-    #login-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    }
-    .login-box {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      text-align: center;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-    .login-box h2 {
-      margin-bottom: 20px;
-      color: #d40000;
-    }
-    .login-box input {
-      width: 100%;
-      padding: 12px;
-      margin: 12px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    .login-box button {
-      width: 100%;
-      padding: 12px;
-      background: #d40000;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .login-error {
-      color: #e74c3c;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    /* Admin Styles */
-    h1, h2 {
-      color: #d40000;
-    }
-    .section {
-      background: white;
-      padding: 16px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin: 6px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    button {
-      padding: 8px 14px;
-      margin: 4px 4px 4px 0;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .add-btn { background: #d40000; color: white; }
-    .save-btn { background: #4CAF50; color: white; }
-    .delete-btn { background: #f44336; color: white; }
-    .item-preview {
-      display: flex;
-      gap: 10px;
-      padding: 10px;
-      border: 1px solid #eee;
-      border-radius: 6px;
-      margin: 8px 0;
-      align-items: flex-start;
-    }
-    .item-img {
-      width: 60px;
-      height: 60px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-    .status {
-      padding: 8px;
-      margin: 10px 0;
-      border-radius: 4px;
-      display: none;
-    }
-    .success { background: #d4edda; color: #155724; display: block; }
-    .error { background: #f8d7da; color: #721c24; display: block; }
-    label { display: inline-block; margin-right: 10px; margin-top: 6px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+<style>
+body {font-family: Arial,sans-serif;margin:0;padding:0;background:#f0f0f0;}
+#admin-container {padding:15px;max-width:900px;margin:0 auto;transition:filter 0.3s,opacity 0.3s;}
+body.protected #admin-container {filter:blur(8px);pointer-events:none;opacity:0.7;}
+#login-overlay {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;justify-content:center;align-items:center;z-index:9999;}
+.login-box {background:white;padding:30px;border-radius:12px;text-align:center;width:90%;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+.login-box h2 {margin-bottom:20px;color:#d40000;}
+.login-box input {width:100%;padding:12px;margin:12px 0;border:1px solid #ccc;border-radius:6px;font-size:16px;box-sizing:border-box;}
+.login-box button {width:100%;padding:12px;background:#d40000;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;}
+.login-error {color:#e74c3c;margin-top:10px;font-weight:bold;}
+h1,h2 {color:#d40000;}
+.section {background:white;padding:16px;margin-bottom:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+input,select {width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:4px;font-size:14px;box-sizing:border-box;}
+button {padding:8px 14px;margin:4px 4px 4px 0;border:none;border-radius:4px;cursor:pointer;font-size:14px;}
+.add-btn {background:#d40000;color:white;}
+.save-btn {background:#4CAF50;color:white;}
+.delete-btn {background:#f44336;color:white;}
+.item-preview {display:flex;gap:10px;padding:10px;border:1px solid #eee;border-radius:6px;margin:8px 0;align-items:flex-start;}
+.item-img {width:60px;height:60px;object-fit:cover;border-radius:6px;}
+.status {padding:8px;margin:10px 0;border-radius:4px;display:none;}
+.success {background:#d4edda;color:#155724;display:block;}
+.error {background:#f8d7da;color:#721c24;display:block;}
+label {display:inline-block;margin-right:10px;margin-top:6px;}
+</style>
 </head>
 <body class="protected">
 
-  <!-- 🔑 Login Overlay (NOT blurred) -->
-  <div id="login-overlay">
-    <div class="login-box">
-      <h2>🔐 Admin Login</h2>
-      <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
-      <button onclick="attemptLogin()">Login</button>
-      <div id="login-error" class="login-error"></div>
-    </div>
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>🔐 Admin Login</h2>
+    <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
+    <button onclick="attemptLogin()">Login</button>
+    <div id="login-error" class="login-error"></div>
   </div>
+</div>
 
-  <!-- 🛠️ Admin Content (blurred until login) -->
-  <div id="admin-container">
-    <h1>🛠️ Content Admin Panel</h1>
+<div id="admin-container">
+<h1>🛠️ Content Admin Panel</h1>
 
-    <!-- Categories -->
-    <div class="section">
-      <h2>📁 Categories</h2>
-      <div>
-        <input type="text" id="catName" placeholder="Category Name" />
-        <input type="url" id="catImage" placeholder="Image URL" />
-        <button class="add-btn" id="addCategoryBtn">Add Category</button>
-      </div>
-      <div id="categoriesList"></div>
-    </div>
+<div class="section">
+<h2>📁 Categories</h2>
+<div>
+<input type="text" id="catName" placeholder="Category Name">
+<input type="url" id="catImage" placeholder="Image URL">
+<button class="add-btn" id="addCategoryBtn">Add Category</button>
+</div>
+<div id="categoriesList"></div>
+</div>
 
-    <!-- Menu Items -->
-    <div class="section">
-      <h2>🍲 Menu Items</h2>
-      <div>
-        <input type="text" id="itemName" placeholder="Item Name" />
-        <input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01" />
-        <input type="url" id="itemImage" placeholder="Image URL" />
-        <select id="itemCategory">
-          <option value="">-- Select Category --</option>
-        </select>
-        <label><input type="checkbox" id="itemOffer" /> Offer Item</label>
-        <button class="add-btn" id="addMenuItemBtn">Add Menu Item</button>
-      </div>
-      <div id="menuList"></div>
-    </div>
+<div class="section">
+<h2>🍲 Menu Items</h2>
+<div>
+<input type="text" id="itemName" placeholder="Item Name">
+<input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01">
+<input type="url" id="itemImage" placeholder="Image URL">
+<select id="itemCategory"><option value="">-- Select Category --</option></select>
+<label><input type="checkbox" id="itemOffer"> Offer Item</label>
+<button class="add-btn" id="addMenuItemBtn">Add Menu Item</button>
+</div>
+<div id="menuList"></div>
+</div>
 
-    <!-- Offers -->
-    <div class="section">
-      <h2>🎁 Offers</h2>
-      <div>
-        <input type="text" id="offerTitle" placeholder="Offer Title" />
-        <input type="text" id="offerDesc" placeholder="Description" />
-        <label><input type="checkbox" id="offerActive" checked /> Active</label>
-        <button class="add-btn" id="addOfferBtn">Add Offer</button>
-      </div>
-      <div id="offersList"></div>
-    </div>
+<div class="section">
+<h2>🎁 Offers</h2>
+<div>
+<input type="text" id="offerTitle" placeholder="Offer Title">
+<input type="text" id="offerDesc" placeholder="Description">
+<label><input type="checkbox" id="offerActive" checked> Active</label>
+<button class="add-btn" id="addOfferBtn">Add Offer</button>
+</div>
+<div id="offersList"></div>
+</div>
 
-    <div id="status"></div>
-  </div>
+<div id="status"></div>
+</div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script>
-    const ADMIN_PASSWORD = "Sanu.0000";
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const ADMIN_PASSWORD="Sanu.0000";
+const firebaseConfig={
+apiKey:"AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+authDomain:"mirdhuna-25542.firebaseapp.com",
+databaseURL:"https://mirdhuna-25542-default-rtdb.firebaseio.com",
+projectId:"mirdhuna-25542",
+storageBucket:"mirdhuna-25542.appspot.com",
+messagingSenderId:"575924409876",
+appId:"1:575924409876:web:6ba1ed88ce941d9c83b901"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+let categories=[];
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-      authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
-      projectId: "mirdhuna-25542",
-      storageBucket: "mirdhuna-25542.appspot.com",
-      messagingSenderId: "575924409876",
-      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
-    };
+function attemptLogin(){
+let input=document.getElementById('password-input').value;
+let errorEl=document.getElementById('login-error');
+if(input===ADMIN_PASSWORD){
+document.body.classList.remove('protected');
+document.getElementById('login-overlay').style.display='none';
+loadAllData();
+}else{
+errorEl.textContent="❌ Incorrect password";
+setTimeout(()=>errorEl.textContent="",2000);
+}
+}
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let categories = [];
+document.getElementById('password-input').addEventListener('keypress',e=>{if(e.key==='Enter')attemptLogin();});
 
-    function attemptLogin() {
-      const input = document.getElementById('password-input').value;
-      const errorEl = document.getElementById('login-error');
-      if (input === ADMIN_PASSWORD) {
-        document.body.classList.remove('protected');
-        document.getElementById('login-overlay').style.display = 'none';
-        loadAllData();
-      } else {
-        errorEl.textContent = "❌ Incorrect password";
-        setTimeout(() => errorEl.textContent = "", 2000);
-      }
-    }
+function showStatus(msg,isSuccess){let el=document.getElementById('status');el.textContent=msg;el.className=isSuccess?'success':'error';setTimeout(()=>el.textContent='',3000);}
 
-    document.getElementById('password-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') attemptLogin();
-    });
+function loadCategoriesForDropdown(){
+db.ref('categories').once('value').then(snap=>{
+categories=snap.val()?Object.values(snap.val()):[];
+let select=document.getElementById('itemCategory');
+select.innerHTML='<option value="">-- Select Category --</option>';
+categories.forEach(cat=>{let opt=document.createElement('option');opt.value=cat.name;opt.textContent=cat.name;select.appendChild(opt);});
+});
+}
 
-    function showStatus(msg, isSuccess) {
-      const el = document.getElementById('status');
-      el.textContent = msg;
-      el.className = isSuccess ? 'success' : 'error';
-      setTimeout(() => el.textContent = '', 3000);
-    }
+// ---------- Add / Save Functions ----------
+function resetButton(btnId,label){
+document.getElementById(btnId).textContent=label;
+}
 
-    function loadCategoriesForDropdown() {
-      db.ref('categories').once('value').then(snap => {
-        categories = snap.val() ? Object.values(snap.val()) : [];
-        const select = document.getElementById('itemCategory');
-        select.innerHTML = '<option value="">-- Select Category --</option>';
-        categories.forEach(cat => {
-          const opt = document.createElement('option');
-          opt.value = cat.name;
-          opt.textContent = cat.name;
-          select.appendChild(opt);
-        });
-      });
-    }
+document.getElementById('addCategoryBtn').addEventListener('click',()=>{
+const name=document.getElementById('catName').value.trim();
+const image=document.getElementById('catImage').value.trim();
+if(!name||!image)return showStatus('Name and image required.',false);
+db.ref('categories').push({name,image}).then(()=>{showStatus('Category added!',true);document.getElementById('catName').value='';document.getElementById('catImage').value='';loadAllData();});
+});
 
-    document.getElementById('addCategoryBtn').addEventListener('click', () => {
-      const name = document.getElementById('catName').value.trim();
-      const image = document.getElementById('catImage').value.trim();
-      if (!name || !image) return showStatus('Name and image required.', false);
-      db.ref('categories').push({ name, image }).then(() => {
-        showStatus('Category added!', true);
-        document.getElementById('catName').value = '';
-        document.getElementById('catImage').value = '';
-        loadAllData();
-      });
-    });
+document.getElementById('addMenuItemBtn').addEventListener('click',()=>{
+const name=document.getElementById('itemName').value.trim();
+const price=parseFloat(document.getElementById('itemPrice').value);
+const image=document.getElementById('itemImage').value.trim();
+const category=document.getElementById('itemCategory').value;
+const offer=document.getElementById('itemOffer').checked;
+if(!name||!image||isNaN(price)||!category)return showStatus('All fields required.',false);
+db.ref('menu').push({id:name.toLowerCase().replace(/\s+/g,'-'),name,price,image,category,offer}).then(()=>{showStatus('Menu item added!',true);document.getElementById('itemName').value='';document.getElementById('itemPrice').value='';document.getElementById('itemImage').value='';document.getElementById('itemCategory').value='';document.getElementById('itemOffer').checked=false;loadAllData();});
+});
 
-    document.getElementById('addMenuItemBtn').addEventListener('click', () => {
-      const name = document.getElementById('itemName').value.trim();
-      const price = parseFloat(document.getElementById('itemPrice').value);
-      const image = document.getElementById('itemImage').value.trim();
-      const category = document.getElementById('itemCategory').value;
-      const offer = document.getElementById('itemOffer').checked;
-      if (!name || !image || isNaN(price) || !category) {
-        return showStatus('All fields required.', false);
-      }
-      db.ref('menu').push({ id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, category, offer }).then(() => {
-        showStatus('Menu item added!', true);
-        document.getElementById('itemName').value = '';
-        document.getElementById('itemPrice').value = '';
-        document.getElementById('itemImage').value = '';
-        document.getElementById('itemCategory').value = '';
-        document.getElementById('itemOffer').checked = false;
-        loadAllData();
-      });
-    });
+document.getElementById('addOfferBtn').addEventListener('click',()=>{
+const title=document.getElementById('offerTitle').value.trim();
+const desc=document.getElementById('offerDesc').value.trim();
+const active=document.getElementById('offerActive').checked;
+if(!title||!desc)return showStatus('Title and description required.',false);
+db.ref('offers').push({title,description:desc,active}).then(()=>{showStatus('Offer added!',true);document.getElementById('offerTitle').value='';document.getElementById('offerDesc').value='';document.getElementById('offerActive').checked=true;loadAllData();});
+});
 
-    document.getElementById('addOfferBtn').addEventListener('click', () => {
-      const title = document.getElementById('offerTitle').value.trim();
-      const description = document.getElementById('offerDesc').value.trim();
-      const active = document.getElementById('offerActive').checked;
-      if (!title || !description) return showStatus('Title and description required.', false);
-      db.ref('offers').push({ title, description, active }).then(() => {
-        showStatus('Offer added!', true);
-        document.getElementById('offerTitle').value = '';
-        document.getElementById('offerDesc').value = '';
-        document.getElementById('offerActive').checked = true;
-        loadAllData();
-      });
-    });
+// ---------- Load Data ----------
+function loadAllData(){
+loadCategoriesForDropdown();
 
-    function loadAllData() {
-      loadCategoriesForDropdown();
+// Categories
+db.ref('categories').once('value').then(snap=>{
+const list=document.getElementById('categoriesList');
+list.innerHTML='<h3>Current Categories</h3>';
+const data=snap.val();
+if(!data)return list.innerHTML+='<p>None</p>';
+Object.entries(data).forEach(([key,item])=>{
+const div=document.createElement('div');
+div.className='item-preview';
+div.innerHTML=`<img class="item-img" src="${item.image}" onerror="this.src='https://via.placeholder.com/60'"/>
+<div>
+<strong>${item.name}</strong><br>
+<button class="save-btn" onclick="editCategory('${key}','${item.name}','${item.image}')">Edit</button>
+<button class="delete-btn" onclick="deleteItem('categories','${key}')">Delete</button>
+</div>`;
+list.appendChild(div);
+});
+});
 
-      db.ref('categories').once('value').then(snap => {
-        const list = document.getElementById('categoriesList');
-        list.innerHTML = '<h3>Current Categories</h3>';
-        const data = snap.val();
-        if (!data) return list.innerHTML += '<p>None</p>';
-        Object.entries(data).forEach(([key, item]) => {
-          const div = document.createElement('div');
-          div.className = 'item-preview';
-          div.innerHTML = `
-            <img class="item-img" src="${item.image}" onerror="this.src='image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
-            <div>
-              <strong>${item.name}</strong><br>
-              <button class="save-btn" onclick="editCategory('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
-              <button class="delete-btn" onclick="deleteItem('categories','${key}')">Delete</button>
-            </div>
-          `;
-          list.appendChild(div);
-        });
-      });
+// Menu Items
+db.ref('menu').once('value').then(snap=>{
+const list=document.getElementById('menuList');
+list.innerHTML='<h3>Current Menu Items</h3>';
+const data=snap.val();
+if(!data)return list.innerHTML+='<p>None</p>';
+Object.entries(data).forEach(([key,item])=>{
+const div=document.createElement('div');
+div.className='item-preview';
+div.innerHTML=`<img class="item-img" src="${item.image}" onerror="this.src='https://via.placeholder.com/60'"/>
+<div><strong>${item.name}</strong> — ₹${item.price} (${item.category}) ${item.offer?'🔥':''}<br>
+<button class="save-btn" onclick="editMenuItem('${key}','${item.name}',${item.price},'${item.image}','${item.category}',${item.offer})">Edit</button>
+<button class="delete-btn" onclick="deleteItem('menu','${key}')">Delete</button></div>`;
+list.appendChild(div);
+});
+});
 
-      db.ref('menu').once('value').then(snap => {
-        const list = document.getElementById('menuList');
-        list.innerHTML = '<h3>Current Menu Items</h3>';
-        const data = snap.val();
-        if (!data) return list.innerHTML += '<p>None</p>';
-        Object.entries(data).forEach(([key, item]) => {
-          const div = document.createElement('div');
-          div.className = 'item-preview';
-          div.innerHTML = `
-            <img class="item-img" src="${item.image}" onerror="this.src='image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'" />
-            <div>
-              <strong>${item.name}</strong> — ₹${item.price} (${item.category}) ${item.offer ? '🔥' : ''}<br>
-              <button class="save-btn" onclick="editMenuItem('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
-              <button class="delete-btn" onclick="deleteItem('menu','${key}')">Delete</button>
-            </div>
-          `;
-          list.appendChild(div);
-        });
-      });
+// Offers
+db.ref('offers').once('value').then(snap=>{
+const list=document.getElementById('offersList');
+list.innerHTML='<h3>Current Offers</h3>';
+const data=snap.val();
+if(!data)return list.innerHTML+='<p>None</p>';
+Object.entries(data).forEach(([key,item])=>{
+const div=document.createElement('div');
+div.className='item-preview';
+div.innerHTML=`<div><strong>${item.title}</strong> — ${item.description} ${item.active?'🟢':'🔴'}<br>
+<button class="save-btn" onclick="editOffer('${key}','${item.title}','${item.description}',${item.active})">Edit</button>
+<button class="delete-btn" onclick="deleteItem('offers','${key}')">Delete</button></div>`;
+list.appendChild(div);
+});
+});
+}
 
-      db.ref('offers').once('value').then(snap => {
-        const list = document.getElementById('offersList');
-        list.innerHTML = '<h3>Current Offers</h3>';
-        const data = snap.val();
-        if (!data) return list.innerHTML += '<p>None</p>';
-        Object.entries(data).forEach(([key, item]) => {
-          const div = document.createElement('div');
-          div.className = 'item-preview';
-          div.innerHTML = `
-            <div>
-              <strong>${item.title}</strong> — ${item.description} ${item.active ? '🟢' : '🔴'}<br>
-              <button class="save-btn" onclick="editOffer('${key}', ${JSON.stringify(item).replace(/'/g, "\\'")})">Edit</button>
-              <button class="delete-btn" onclick="deleteItem('offers','${key}')">Delete</button>
-            </div>
-          `;
-          list.appendChild(div);
-        });
-      });
-    }
+// ---------- Edit Functions ----------
+function editCategory(key,name,image){
+document.getElementById('catName').value=name;
+document.getElementById('catImage').value=image;
+let btn=document.getElementById('addCategoryBtn');
+btn.textContent='Save Category';
+btn.onclick=function(){
+db.ref('categories/'+key).update({name, image:document.getElementById('catImage').value.trim()});
+showStatus('Category updated!',true);
+document.getElementById('catName').value='';document.getElementById('catImage').value='';
+resetButton('addCategoryBtn','Add Category');
+loadAllData();
+}
+}
 
-    window.editCategory = function(key, item) {
-      document.getElementById('catName').value = item.name;
-      document.getElementById('catImage').value = item.image;
-      document.getElementById('addCategoryBtn').textContent = 'Save Category';
-      document.getElementById('addCategoryBtn').onclick = () => saveEdit('categories', key);
-    };
+function editMenuItem(key,name,price,image,category,offer){
+document.getElementById('itemName').value=name;
+document.getElementById('itemPrice').value=price;
+document.getElementById('itemImage').value=image;
+document.getElementById('itemCategory').value=category;
+document.getElementById('itemOffer').checked=offer;
+let btn=document.getElementById('addMenuItemBtn');
+btn.textContent='Save Menu Item';
+btn.onclick=function(){
+db.ref('menu/'+key).update({
+name:document.getElementById('itemName').value.trim(),
+price:parseFloat(document.getElementById('itemPrice').value),
+image:document.getElementById('itemImage').value.trim(),
+category:document.getElementById('itemCategory').value,
+offer:document.getElementById('itemOffer').checked
+});
+showStatus('Menu Item updated!',true);
+document.getElementById('itemName').value='';document.getElementById('itemPrice').value='';document.getElementById('itemImage').value='';document.getElementById('itemCategory').value='';document.getElementById('itemOffer').checked=false;
+resetButton('addMenuItemBtn','Add Menu Item');
+loadAllData();
+}
+}
 
-    window.editMenuItem = function(key, item) {
-      document.getElementById('itemName').value = item.name;
-      document.getElementById('itemPrice').value = item.price;
-      document.getElementById('itemImage').value = item.image;
-      document.getElementById('itemCategory').value = item.category;
-      document.getElementById('itemOffer').checked = item.offer;
-      document.getElementById('addMenuItemBtn').textContent = 'Save Menu Item';
-      document.getElementById('addMenuItemBtn').onclick = () => saveEdit('menu', key);
-    };
+function editOffer(key,title,desc,active){
+document.getElementById('offerTitle').value=title;
+document.getElementById('offerDesc').value=desc;
+document.getElementById('offerActive').checked=active;
+let btn=document.getElementById('addOfferBtn');
+btn.textContent='Save Offer';
+btn.onclick=function(){
+db.ref('offers/'+key).update({
+title:document.getElementById('offerTitle').value.trim(),
+description:document.getElementById('offerDesc').value.trim(),
+active:document.getElementById('offerActive').checked
+});
+showStatus('Offer updated!',true);
+document.getElementById('offerTitle').value='';document.getElementById('offerDesc').value='';document.getElementById('offerActive').checked=true;
+resetButton('addOfferBtn','Add Offer');
+loadAllData();
+}
+}
 
-    window.editOffer = function(key, item) {
-      document.getElementById('offerTitle').value = item.title;
-      document.getElementById('offerDesc').value = item.description;
-      document.getElementById('offerActive').checked = item.active;
-      document.getElementById('addOfferBtn').textContent = 'Save Offer';
-      document.getElementById('addOfferBtn').onclick = () => saveEdit('offers', key);
-    };
+// ---------- Delete ----------
+function deleteItem(type,key){
+if(confirm('Are you sure you want to delete?')){
+db.ref(type+'/'+key).remove();
+showStatus('Deleted!',true);
+loadAllData();
+}
+}
 
-    function saveEdit(type, key) {
-      let updates = {};
-      if (type === 'categories') {
-        updates = {
-          name: document.getElementById('catName').value.trim(),
-          image: document.getElementById('catImage').value.trim()
-        };
-        resetButton('addCategoryBtn', 'Add Category');
-      } else if (type === 'menu') {
-        updates = {
-          name: document.getElementById('itemName').value.trim(),
-          price: parseFloat(document.getElementById('itemPrice').value),
-          image: document.getElementById('itemImage').value.trim(),
-          category: document.getElementById('itemCategory').value,
-          offer: document.getElementById('itemOffer').checked
-        };
-        resetButton('addMenuItemBtn', 'Add Menu Item');
-      } else if (type === 'offers') {
-        updates = {
-          title: document.getElementById('offerTitle').value.trim(),
-          description: document.getElementById('offerDesc').value.trim(),
-          active: document.getElementById('offerActive').checked
-        };
-        resetButton('addOfferBtn', 'Add Offer');
-      }
-
-      db.ref(type).child(key).update(updates).then(() => {
-        showStatus('Updated!', true);
-        loadAllData();
-      }).catch(err => {
-        console.error(err);
-        showStatus('Update failed.', false);
-      });
-    }
-
-    function resetButton(id, text) {
-      const btn = document.getElementById(id);
-      btn.textContent = text;
-      if (id === 'addCategoryBtn') {
-        btn.onclick = () => document.getElementById('addCategoryBtn').click();
-      } else if (id === 'addMenuItemBtn') {
-        btn.onclick = () => document.getElementById('addMenuItemBtn').click();
-      } else if (id === 'addOfferBtn') {
-        btn.onclick = () => document.getElementById('addOfferBtn').click();
-      }
-    }
-
-    window.deleteItem = function(type, key) {
-      if (confirm(`Delete this ${type.slice(0, -1)}?`)) {
-        db.ref(type).child(key).remove().then(() => {
-          showStatus('Deleted!', true);
-          loadAllData();
-        }).catch(err => {
-          console.error(err);
-          showStatus('Delete failed.', false);
-        });
-      }
-    };
-  </script>
-
+</script>
 </body>
 </html>
