@@ -6,14 +6,17 @@
   <title>Login – MIRDHUNA</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ---------- Base ---------- */
     body {
       margin: 0;
       padding: 0;
       font-family: 'Poppins', sans-serif;
       background: #fafafa;
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
+    /* ---------- Floating Login Button ---------- */
     #login-btn {
       position: fixed;
       top: 20px;
@@ -27,49 +30,79 @@
       z-index: 9999;
       font-weight: 600;
       font-size: 16px;
-      box-shadow: 0 6px 20px rgba(212, 0, 0, 0.35);
+      box-shadow: 0 0 20px rgba(212, 0, 0, 0.4);
       transition: all 0.3s ease;
+      animation: pulse 2s infinite;
     }
 
     #login-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(212, 0, 0, 0.45);
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 0 35px rgba(255, 76, 76, 0.7);
+      background: linear-gradient(135deg, #ff4c4c, #ff7070);
     }
 
+    /* Subtle glowing animation */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 10px rgba(212, 0, 0, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(255, 76, 76, 0.7); }
+      100% { box-shadow: 0 0 10px rgba(212, 0, 0, 0.3); }
+    }
+
+    /* ---------- Popup Overlay ---------- */
     #login-popup {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
       justify-content: center;
       align-items: center;
       z-index: 10000;
+      animation: fadeIn 0.3s ease forwards;
     }
 
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* ---------- Popup Content ---------- */
     .popup-content {
       background: white;
-      padding: 40px 32px;
+      padding: 45px 36px;
       border-radius: 24px;
       box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3);
       width: 90%;
       max-width: 440px;
       text-align: center;
       position: relative;
+      transform: scale(0.9);
+      opacity: 0;
+      animation: popUp 0.4s ease forwards;
     }
 
+    @keyframes popUp {
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* ---------- Brand ---------- */
     .brand {
-      font-size: 28px;
+      font-size: 30px;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       -webkit-background-clip: text;
-      background-clip: text;
       color: transparent;
       letter-spacing: -0.5px;
+      animation: textGlow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes textGlow {
+      from { text-shadow: 0 0 5px rgba(255, 76, 76, 0.3); }
+      to { text-shadow: 0 0 15px rgba(255, 76, 76, 0.7); }
     }
 
     .popup-content h3 {
@@ -79,6 +112,7 @@
       font-weight: 600;
     }
 
+    /* ---------- Input ---------- */
     .popup-content input {
       width: 100%;
       padding: 15px 18px;
@@ -89,17 +123,19 @@
       box-sizing: border-box;
       outline: none;
       font-family: 'Poppins', sans-serif;
+      transition: all 0.25s ease;
     }
 
     .popup-content input:focus {
       border-color: #d40000;
-      box-shadow: 0 0 0 3px rgba(212, 0, 0, 0.15);
+      box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
     }
 
     .popup-content input::placeholder {
       color: #aaa;
     }
 
+    /* ---------- Buttons ---------- */
     .button-group {
       display: flex;
       gap: 14px;
@@ -115,36 +151,37 @@
       cursor: pointer;
       flex: 1;
       min-width: 110px;
+      transition: all 0.25s ease;
       font-family: 'Poppins', sans-serif;
     }
 
     #submit-login {
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
-      box-shadow: 0 4px 12px rgba(212, 0, 0, 0.3);
+      box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
     }
 
     #submit-login:hover:not(:disabled) {
       background: linear-gradient(135deg, #ff4c4c, #ff7070);
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(212, 0, 0, 0.4);
+      box-shadow: 0 0 18px rgba(255, 76, 76, 0.6);
     }
 
     #submit-login:disabled {
       opacity: 0.75;
       cursor: not-allowed;
-      transform: none;
     }
 
     #close-popup {
       background: #f8f9fa;
-      color: #555;
+      color: #444;
       border: 1px solid #ddd;
     }
 
     #close-popup:hover {
       background: #e9ecef;
       transform: translateY(-2px);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
     }
   </style>
 </head>
@@ -164,6 +201,19 @@
     </div>
   </div>
 
-  <script type="module" src="login.js"></script>
+  <script>
+    // Popup logic
+    const loginBtn = document.getElementById("login-btn");
+    const popup = document.getElementById("login-popup");
+    const closeBtn = document.getElementById("close-popup");
+
+    loginBtn.addEventListener("click", () => popup.style.display = "flex");
+    closeBtn.addEventListener("click", () => popup.style.display = "none");
+
+    // Optional: close popup when clicking outside content
+    popup.addEventListener("click", (e) => {
+      if (e.target === popup) popup.style.display = "none";
+    });
+  </script>
 </body>
 </html>
