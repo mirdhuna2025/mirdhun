@@ -1,100 +1,167 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Kaithi to Hindi OCR Converter</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<style>
-  body {
-    font-family: sans-serif;
-    background: #fafafa;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem;
-  }
-  .box {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    max-width: 400px;
-    width: 100%;
-  }
-  button {
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    margin-top: 1rem;
-    cursor: pointer;
-  }
-  button:disabled { background: #aaa; }
-  textarea {
-    width: 100%;
-    height: 120px;
-    margin-top: 1rem;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Language Learner</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #f8f8f8;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 { color: #ffd700; }
+    input, textarea, button {
+      margin: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+    }
+    input[type="file"] { background: #222; color: #ccc; }
+    textarea {
+      width: 80%;
+      height: 100px;
+      background: #222;
+      color: #fff;
+      resize: none;
+    }
+    button {
+      background: linear-gradient(135deg, #d40000, #f9c300);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover { transform: scale(1.05); }
+    #output {
+      margin-top: 20px;
+      background: #222;
+      padding: 20px;
+      border-radius: 15px;
+      min-height: 50px;
+      width: 80%;
+      display: inline-block;
+      text-align: left;
+    }
+    .section {
+      background: #1b1b1b;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 20px;
+      width: 85%;
+    }
+  </style>
 </head>
 <body>
-  <h2>📷 Kaithi Image to Hindi Text</h2>
-  <div class="box">
-    <input type="file" id="imageInput" accept="image/*" />
-    <button id="startBtn">Start OCR</button>
-    <p id="status"></p>
-    <textarea id="output" placeholder="Recognized Hindi text will appear here..."></textarea>
+  <h1>🌍 AI Language Learner</h1>
+  <p>Upload your custom language PDF (alphabet + words) and let this page learn it!</p>
+
+  <div class="section">
+    <h2>📘 Step 1: Upload Language PDF</h2>
+    <input type="file" id="pdfUpload" accept="application/pdf">
+    <p id="learn-status"></p>
   </div>
 
-<script>
-  const startBtn = document.getElementById('startBtn');
-  const imageInput = document.getElementById('imageInput');
-  const output = document.getElementById('output');
-  const status = document.getElementById('status');
+  <div class="section">
+    <h2>💬 Step 2: Text Translator</h2>
+    <textarea id="input" placeholder="Enter text to translate..."></textarea><br>
+    <button onclick="showToNew()">Translate → New Language</button>
+    <button onclick="showToEng()">Translate → English</button>
+    <div id="output"></div>
+  </div>
 
-  async function translateToHindi(text) {
-    const encodedText = encodeURIComponent(text);
-    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=hi&dt=t&q=${encodedText}`);
-    const data = await res.json();
-    return data[0].map(x => x[0]).join('');
-  }
+  <div class="section">
+    <h2>🖼️ Step 3: Translate Text from Image</h2>
+    <input type="file" id="imgUpload" accept="image/*"><br>
+    <div id="imgResult"></div>
+  </div>
 
-  function downloadText(text, filename) {
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-  }
+  <script>
+    // ===== STEP 1: Upload & Learn Language =====
+    document.getElementById("pdfUpload").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-  startBtn.addEventListener('click', async () => {
-    if (!imageInput.files[0]) {
-      alert("Please upload an image first!");
-      return;
+      let text = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(" ") + "\n";
+      }
+
+      learnLanguage(text);
+    });
+
+    function learnLanguage(text) {
+      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+      const dictionary = {};
+      const alphabet = {};
+
+      for (const line of lines) {
+        if (line.includes("=")) {
+          const [left, right] = line.split("=").map(s => s.trim());
+          if (left.length === 1) alphabet[left] = right;
+          else dictionary[left.toLowerCase()] = right;
+        }
+      }
+
+      const data = { alphabet, dictionary };
+      localStorage.setItem("myLanguage", JSON.stringify(data));
+      document.getElementById("learn-status").textContent = "✅ Language learned and saved locally!";
+      console.log("Learned:", data);
     }
 
-    startBtn.disabled = true;
-    status.textContent = "⏳ Processing OCR...";
-    output.value = "";
-
-    try {
-      const { data: { text } } = await Tesseract.recognize(imageInput.files[0], 'deu+hin', {
-        logger: m => status.textContent = `Progress: ${(m.progress*100).toFixed(1)}%`
-      });
-      status.textContent = "✅ OCR Complete. Translating...";
-      const translated = await translateToHindi(text);
-      output.value = translated;
-      status.textContent = "✅ Done! File downloaded.";
-      downloadText(translated, "hindi_text.txt");
-    } catch (err) {
-      console.error(err);
-      status.textContent = "❌ Error: " + err.message;
+    // ===== STEP 2: Translation Functions =====
+    function translateToNewLang(inputText) {
+      const data = JSON.parse(localStorage.getItem("myLanguage"));
+      if (!data) return "⚠️ No language learned yet!";
+      const { dictionary } = data;
+      return inputText
+        .split(" ")
+        .map(w => dictionary[w.toLowerCase()] || w)
+        .join(" ");
     }
 
-    startBtn.disabled = false;
-  });
-</script>
+    function translateToEnglish(inputText) {
+      const data = JSON.parse(localStorage.getItem("myLanguage"));
+      if (!data) return "⚠️ No language learned yet!";
+      const { dictionary } = data;
+      const reversed = Object.fromEntries(Object.entries(dictionary).map(([k, v]) => [v, k]));
+      return inputText
+        .split(" ")
+        .map(w => reversed[w.toLowerCase()] || w)
+        .join(" ");
+    }
+
+    function showToNew() {
+      const text = document.getElementById("input").value;
+      document.getElementById("output").textContent = translateToNewLang(text);
+    }
+
+    function showToEng() {
+      const text = document.getElementById("input").value;
+      document.getElementById("output").textContent = translateToEnglish(text);
+    }
+
+    // ===== STEP 3: Image OCR + Translate =====
+    document.getElementById("imgUpload").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById("imgResult").textContent = "🔍 Reading image...";
+      const result = await Tesseract.recognize(file, 'eng');
+      const text = result.data.text.trim();
+      const translated = translateToNewLang(text);
+      document.getElementById("imgResult").innerHTML =
+        `<p><b>Extracted Text:</b> ${text}</p>
+         <p><b>Translated:</b> ${translated}</p>`;
+    });
+  </script>
 </body>
 </html>
