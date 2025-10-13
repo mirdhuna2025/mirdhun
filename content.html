@@ -15,31 +15,9 @@
       font-weight: 600;
     }
 
-    /* Auth Bar */
+    /* Auth Bar - Hidden as requested */
     #auth-bar {
-      background: #d40000;
-      color: white;
-      padding: 10px;
-      text-align: center;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      display: none;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    #auth-bar button {
-      background: white;
-      color: #d40000;
-      border: none;
-      padding: 5px 12px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-      margin-left: 8px;
-    }
-    #auth-bar a {
-      color: white;
-      text-decoration: underline;
-      margin-left: 8px;
+      display: none !important;
     }
 
     /* View Toggle */
@@ -103,18 +81,19 @@
       max-width: 80px;
     }
 
-    /* Offer Banner */
+    /* Offer Banner - Shorter & Cleaner */
     .offer-banner {
       background: linear-gradient(135deg, #ffebee, #ffcdd2);
       color: #c62828;
       text-align: center;
-      padding: 12px;
-      border-radius: 12px;
-      margin: 16px 0;
+      padding: 8px;
+      border-radius: 8px;
+      margin: 12px 0;
       font-weight: bold;
       display: none;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
       border: 1px solid #ef9a9a;
+      font-size: 14px;
     }
 
     /* Menu Grid */
@@ -195,21 +174,21 @@
       background: #45a049;
     }
 
-    /* ✨ Cart Popup - FIXED TO RIGHT ✨ */
+    /* ✅ FIXED CART POPUP - STAYS ON RIGHT FOREVER */
     #cart-popup {
       display: none;
       position: fixed;
       bottom: 100px;
-      right: 20px;
+      right: 20px !important; /* 👈 LOCKED TO RIGHT */
       width: 360px;
       max-width: 90vw;
       background: white;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      z-index: 1000;
+      z-index: 9999 !important; /* 👈 FLOATS ABOVE EVERYTHING */
       overflow: hidden;
       animation: slideUp 0.3s ease-out;
-      transform: translateX(0);
+      transform: translateX(0) !important;
       will-change: transform, opacity;
     }
 
@@ -346,20 +325,21 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* Toast */
+    /* Toast - Compact & Attractive */
     #toast {
       position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: #333;
+      background: rgba(51, 51, 51, 0.92);
       color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
       z-index: 9999;
-      font-size: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 90%;
+      font-size: 14px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px);
+      max-width: 80%;
       text-align: center;
       opacity: 0;
       transition: opacity 0.3s;
@@ -370,7 +350,6 @@
 
   <!-- Auth Status -->
   <div id="auth-bar"></div>
-  <style> #auth-bar { display: none;} </style>
 
   <!-- Offer Banner -->
   <div class="offer-banner" id="offerBanner"></div>
