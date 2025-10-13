@@ -77,8 +77,23 @@ function renderOffer() {
 
 function renderCategories() {
   categoryCarousel.innerHTML = '';
+
+  // Add "All" category first
+  const allCategoryImg = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23d40000%22 stroke=%22%23fff%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23fff%22 text-anchor=%22middle%22%3EALL%3C/text%3E%3C/svg%3E";
+  const allDiv = document.createElement('div');
+  allDiv.className = 'category-item';
+  allDiv.innerHTML = `
+    <img class="category-img" src="${allCategoryImg}" alt="All" />
+    <div class="category-name">All</div>
+  `;
+  allDiv.addEventListener('click', () => {
+    selectedCategory = null;
+    renderMenu();
+  });
+  categoryCarousel.appendChild(allDiv);
+
+  // Add real categories
   categories.forEach(cat => {
-    // Safe fallback SVG (pre-encoded)
     const fallback = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22%3F%3C/text%3E%3C/svg%3E';
     const div = document.createElement('div');
     div.className = 'category-item';
