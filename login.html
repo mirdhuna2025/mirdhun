@@ -3,22 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login</title>
+  <title>Login – MIRDHUNA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #fafafa;
+      min-height: 100vh;
+    }
+
     #login-btn {
       position: fixed;
       top: 20px;
-      right: 2px;
-      background: #d40000;
+      right: 20px;
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
       border: none;
-      padding: 10px 20px;
+      padding: 12px 28px;
       border-radius: 50px;
       cursor: pointer;
       z-index: 9999;
-      font-weight: bold;
+      font-weight: 600;
       font-size: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 6px 20px rgba(212, 0, 0, 0.35);
+      transition: all 0.3s ease;
+    }
+
+    #login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(212, 0, 0, 0.45);
     }
 
     #login-popup {
@@ -28,7 +43,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
       justify-content: center;
       align-items: center;
       z-index: 10000;
@@ -36,59 +52,99 @@
 
     .popup-content {
       background: white;
-      padding: 32px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      padding: 40px 32px;
+      border-radius: 24px;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3);
       width: 90%;
-      max-width: 400px;
+      max-width: 440px;
       text-align: center;
+      position: relative;
+    }
+
+    .brand {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
     }
 
     .popup-content h3 {
-      margin-top: 0;
+      margin: 0 0 24px 0;
       color: #333;
+      font-size: 20px;
+      font-weight: 600;
     }
 
     .popup-content input {
       width: 100%;
-      padding: 12px;
-      margin: 16px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      padding: 15px 18px;
+      margin: 12px 0 24px;
+      border: 2px solid #eee;
+      border-radius: 14px;
       font-size: 16px;
       box-sizing: border-box;
+      outline: none;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .popup-content input:focus {
+      border-color: #d40000;
+      box-shadow: 0 0 0 3px rgba(212, 0, 0, 0.15);
+    }
+
+    .popup-content input::placeholder {
+      color: #aaa;
     }
 
     .button-group {
       display: flex;
-      gap: 10px;
+      gap: 14px;
       justify-content: center;
     }
 
     .popup-content button {
-      padding: 10px 20px;
+      padding: 13px 20px;
       border: none;
-      border-radius: 6px;
-      font-weight: bold;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 16px;
       cursor: pointer;
+      flex: 1;
+      min-width: 110px;
+      font-family: 'Poppins', sans-serif;
     }
 
     #submit-login {
-      background: #d40000;
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
-      flex: 1;
+      box-shadow: 0 4px 12px rgba(212, 0, 0, 0.3);
     }
-    #submit-login:hover {
-      background: #ff4c4c;
+
+    #submit-login:hover:not(:disabled) {
+      background: linear-gradient(135deg, #ff4c4c, #ff7070);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(212, 0, 0, 0.4);
+    }
+
+    #submit-login:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
+      transform: none;
     }
 
     #close-popup {
-      background: #f0f0f0;
-      color: #333;
-      flex: 1;
+      background: #f8f9fa;
+      color: #555;
+      border: 1px solid #ddd;
     }
+
     #close-popup:hover {
-      background: #e0e0e0;
+      background: #e9ecef;
+      transform: translateY(-2px);
     }
   </style>
 </head>
@@ -98,6 +154,7 @@
 
   <div id="login-popup">
     <div class="popup-content">
+      <div class="brand">MIRDHUNA</div>
       <h3>Enter Mobile Number</h3>
       <input type="tel" id="mob-number" placeholder="10-digit mobile number" maxlength="10" />
       <div class="button-group">
