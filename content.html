@@ -17,6 +17,7 @@
       text-align: center;
       border-radius: 6px;
       margin-bottom: 16px;
+      display: none;
     }
     #auth-bar button {
       background: white;
@@ -26,6 +27,31 @@
       border-radius: 4px;
       cursor: pointer;
       font-weight: bold;
+    }
+    #auth-bar a {
+      color: white;
+      text-decoration: underline;
+    }
+
+    /* View Toggle */
+    #view-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      justify-content: flex-end;
+    }
+    .view-btn {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .view-btn.active {
+      background: #d40000;
+      color: white;
+      border-color: #d40000;
     }
 
     /* Category Carousel */
@@ -77,6 +103,20 @@
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+    .menu-card.list-view {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .menu-card.list-view .menu-img {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+    .menu-card.list-view .menu-info {
+      padding: 8px 0;
+    }
     .menu-img {
       width: 100%;
       height: 140px;
@@ -109,10 +149,11 @@
     }
 
     /* Cart Popup */
-    #cart-popup { display: none;
+    #cart-popup {
+      display: none;
       position: fixed;
       bottom: 100px;
-      left: 50px; right:50px;
+      left: 50px; right: 50px;
       width: 70%;
       background: white;
       max-height: 70vh;
@@ -120,10 +161,7 @@
       z-index: 1000;
       box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
       padding: 10px;
-      
     }
-     
-    
     .cart-header {
       display: flex;
       justify-content: space-between;
@@ -168,13 +206,48 @@
       cursor: pointer;
       font-weight: bold;
     }
+
+    /* Cart Badge */
+    .cart-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-size: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      max-width: 90%;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
   </style>
 </head>
 <body>
 
   <!-- Auth Status -->
-  <div id="auth-bar">Loading...</div>
-  <style> #auth-bar { display: none;} </style>
+  <div id="auth-bar"></div>
 
   <!-- Offer Banner -->
   <div class="offer-banner" id="offerBanner"></div>
@@ -183,8 +256,12 @@
   <h2>Categories</h2>
   <div class="category-carousel" id="categoryCarousel"></div>
 
-  <!-- Menu Items -->
+  <!-- Menu View Toggle + Grid -->
   <h2>Menu</h2>
+  <div id="view-toggle">
+    <button id="grid-view" class="view-btn active">Grid</button>
+    <button id="list-view" class="view-btn">List</button>
+  </div>
   <div class="menu-grid" id="menuGrid"></div>
 
   <!-- Cart Popup -->
