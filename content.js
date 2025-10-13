@@ -79,7 +79,7 @@ function renderCategories() {
   categoryCarousel.innerHTML = '';
 
   // Add "All" category first
-  const allCategoryImg = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23d40000%22 stroke=%22%23fff%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23fff%22 text-anchor=%22middle%22%3EALL%3C/text%3E%3C/svg%3E";
+  const allCategoryImg = "image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23d40000%22 stroke=%22%23fff%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23fff%22 text-anchor=%22middle%22%3EALL%3C/text%3E%3C/svg%3E";
   const allDiv = document.createElement('div');
   allDiv.className = 'category-item';
   allDiv.innerHTML = `
@@ -150,7 +150,7 @@ function addToCart(id, name, price, image) {
   }
   saveCart();
   updateCartUI();
-  showToast("Item added to cart!");
+  showToast("Added!"); // ✅ Short message
 }
 
 function saveCart() {
