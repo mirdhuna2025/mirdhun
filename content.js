@@ -19,9 +19,8 @@ let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentOffer = null;
 let selectedCategory = null;
-let viewMode = 'grid'; // 'grid' or 'list'
+let viewMode = 'grid';
 
-// DOM Elements
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
@@ -48,7 +47,7 @@ window.logout = () => {
   updateAuthUI();
 };
 
-// Data Loading
+// Load data
 function loadShopData() {
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -79,11 +78,13 @@ function renderOffer() {
 function renderCategories() {
   categoryCarousel.innerHTML = '';
   categories.forEach(cat => {
+    // Safe fallback SVG (pre-encoded)
+    const fallback = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22%3F%3C/text%3E%3C/svg%3E';
     const div = document.createElement('div');
     div.className = 'category-item';
     div.innerHTML = `
-      <img class="category-img" src="${cat.image || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22><circle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22>?<tspan x=%2245%22 dy=%2216%22>${cat.name?.slice(0,6) || ''}</tspan></text></svg>'}" alt="${cat.name}" />
-      <div class="category-name">${cat.name}</div>
+      <img class="category-img" src="${cat.image || fallback}" alt="${cat.name || 'Category'}" />
+      <div class="category-name">${cat.name || 'Unknown'}</div>
     `;
     div.addEventListener('click', () => {
       selectedCategory = cat.name;
@@ -101,19 +102,21 @@ function renderMenu() {
 
   if (items.length === 0) {
     menuGrid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#999;">No items available</p>';
+    menuGrid.style.gridTemplateColumns = '1fr';
     return;
   }
 
   items.forEach(item => {
+    const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22140%22%3E%3Crect width=%22100%22 height=%22140%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
     const card = document.createElement('div');
     card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
-      <img class="menu-img" src="${item.image || ''}" alt="${item.name}" onerror="this.style.display='none'" />
+      <img class="menu-img" src="${item.image || fallbackImg}" alt="${item.name}" />
       <div class="menu-info">
-        <div class="menu-name">${item.name}</div>
-        <div class="menu-price">₹${item.price}</div>
+        <div class="menu-name">${item.name || 'Unnamed Item'}</div>
+        <div class="menu-price">₹${item.price || '0'}</div>
         ${item.offer ? `<div class="offer-tag">OFFER</div>` : ''}
-        <button class="add-cart-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-image="${item.image || ''}">Add to Cart</button>
+        <button class="add-cart-btn" data-id="${item.id}" data-name="${item.name || 'Item'}" data-price="${item.price || 0}" data-image="${item.image || ''}">Add to Cart</button>
       </div>
     `;
     menuGrid.appendChild(card);
@@ -122,13 +125,13 @@ function renderMenu() {
   menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
-// Cart
+// Cart functions
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ id, name, price, image, qty: 1 });
+    cart.push({ id, name, price: parseFloat(price), image, qty: 1 });
   }
   saveCart();
   updateCartUI();
@@ -147,6 +150,8 @@ function updateCartUI() {
   let total = 0;
   let totalCount = 0;
 
+  const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
+
   cart.forEach(item => {
     const subtotal = item.price * item.qty;
     total += subtotal;
@@ -155,7 +160,7 @@ function updateCartUI() {
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
-      <img class="cart-img" src="${item.image || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/></svg>'}" />
+      <img class="cart-img" src="${item.image || fallbackImg}" />
       <div class="cart-info">
         <div>${item.name}</div>
         <div>₹${item.price} × 
@@ -169,7 +174,7 @@ function updateCartUI() {
     cartItemsEl.appendChild(div);
   });
 
-  totalEl.textContent = total;
+  totalEl.textContent = total.toFixed(2);
   updateCartBadge(totalCount);
 }
 
@@ -220,7 +225,7 @@ function placeOrder() {
 
   const phoneNumber = localStorage.getItem("userPhone") || "unknown";
   const order = {
-    phoneNumber: phoneNumber,
+    phoneNumber,
     items: cart,
     total: parseFloat(document.getElementById('cartTotal').textContent),
     timestamp: new Date().toISOString(),
@@ -237,7 +242,7 @@ function placeOrder() {
     })
     .catch(err => {
       console.error("Order error:", err);
-      showToast("Failed to place order. Please try again.");
+      showToast("Failed to place order.");
     });
 }
 
@@ -264,12 +269,7 @@ loadShopData();
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
-    addToCart(
-      btn.dataset.id,
-      btn.dataset.name,
-      parseFloat(btn.dataset.price),
-      btn.dataset.image
-    );
+    addToCart(btn.dataset.id, btn.dataset.name, btn.dataset.price, btn.dataset.image);
   } else if (e.target.classList.contains('qty-btn')) {
     const id = e.target.dataset.id;
     const action = e.target.dataset.action;
