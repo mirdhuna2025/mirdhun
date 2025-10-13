@@ -4,7 +4,7 @@ import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebas
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
-  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com", // ✅ Fixed: no trailing spaces
+  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
   projectId: "mirdhuna-25542",
   storageBucket: "mirdhuna-25542.appspot.com",
   messagingSenderId: "575924409876",
@@ -19,14 +19,16 @@ let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentOffer = null;
 let selectedCategory = null;
+let viewMode = 'grid'; // 'grid' or 'list'
 
+// DOM Elements
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-// ✅ Updated: matches your login.js
+// Auth
 function isLoggedIn() {
   return localStorage.getItem("isLoggedIn") === "true";
 }
@@ -37,6 +39,7 @@ function updateAuthUI() {
   } else {
     authBar.innerHTML = `Welcome! <a href="login.html" style="color:white;text-decoration:underline">Login to Order</a>`;
   }
+  authBar.style.display = 'block';
 }
 
 window.logout = () => {
@@ -45,6 +48,7 @@ window.logout = () => {
   updateAuthUI();
 };
 
+// Data Loading
 function loadShopData() {
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -78,7 +82,7 @@ function renderCategories() {
     const div = document.createElement('div');
     div.className = 'category-item';
     div.innerHTML = `
-      <img class="category-img" src="${cat.image || 'image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2228%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2230%22 y=%2235%22 font-size=%2210%22 fill=%22%23999%22 text-anchor=%22middle%22>?</text></svg>'}" alt="${cat.name}" />
+      <img class="category-img" src="${cat.image || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22><circle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/><text x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22>?<tspan x=%2245%22 dy=%2216%22>${cat.name?.slice(0,6) || ''}</tspan></text></svg>'}" alt="${cat.name}" />
       <div class="category-name">${cat.name}</div>
     `;
     div.addEventListener('click', () => {
@@ -102,7 +106,7 @@ function renderMenu() {
 
   items.forEach(item => {
     const card = document.createElement('div');
-    card.className = 'menu-card';
+    card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
       <img class="menu-img" src="${item.image || ''}" alt="${item.name}" onerror="this.style.display='none'" />
       <div class="menu-info">
@@ -114,8 +118,11 @@ function renderMenu() {
     `;
     menuGrid.appendChild(card);
   });
+
+  menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
+// Cart
 function addToCart(id, name, price, image) {
   const existing = cart.find(item => item.id === id);
   if (existing) {
@@ -148,7 +155,7 @@ function updateCartUI() {
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
-      <img class="cart-img" src="${item.image || 'image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/></svg>'}" />
+      <img class="cart-img" src="${item.image || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/></svg>'}" />
       <div class="cart-info">
         <div>${item.name}</div>
         <div>₹${item.price} × 
@@ -173,12 +180,6 @@ function updateCartBadge(count) {
   if (count > 0) {
     const badge = document.createElement('span');
     badge.className = 'cart-badge';
-    badge.style.cssText = `
-      position: absolute; top: -8px; right: -8px;
-      background: red; color: white; font-size: 12px; font-weight: bold;
-      width: 20px; height: 20px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-    `;
     badge.textContent = count > 9 ? '9+' : count;
     cartToggleBtn.style.position = 'relative';
     cartToggleBtn.appendChild(badge);
@@ -245,21 +246,6 @@ function showToast(message) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toast';
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #333;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
-      z-index: 9999;
-      font-size: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 90%;
-      text-align: center;
-    `;
     document.body.appendChild(toast);
   }
   toast.textContent = message;
@@ -294,5 +280,15 @@ document.addEventListener('click', (e) => {
     closeCart();
   } else if (e.target.id === 'checkout-btn') {
     placeOrder();
+  } else if (e.target.id === 'grid-view') {
+    viewMode = 'grid';
+    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+    e.target.classList.add('active');
+    renderMenu();
+  } else if (e.target.id === 'list-view') {
+    viewMode = 'list';
+    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+    e.target.classList.add('active');
+    renderMenu();
   }
 });
