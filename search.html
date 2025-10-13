@@ -3,178 +3,393 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Search</title>
+  <title>Mirdhuna Shop</title>
   <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: Arial, sans-serif;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f9f9f9; padding: 10px; color: #333; }
+
+    h2 {
+      margin: 16px 0;
+      color: #d40000;
+      font-size: 1.4rem;
+      font-weight: 600;
     }
-    .search-box {
-      display: flex;
-      gap: 8px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    #search-input {
-      width: 80%; /* ✅ 80% of container */
-      padding: 10px 14px;
+
+    /* Auth Bar - Hidden */
+    #auth-bar { display: none !important; }
+
+    /* Search Box */
+    #search-box {
+      width: 90%;
+      max-width: 400px;
+      padding: 10px 16px;
       border: 1px solid #ccc;
       border-radius: 20px;
       font-size: 15px;
       outline: none;
+      margin: 12px auto;
+      display: block;
     }
-    #search-btn {
-      width: 70%; /* ✅ Relative to its own space — visually smaller */
-      padding: 10px;
+    #search-box:focus {
+      border-color: #d40000;
+    }
+
+    /* View Toggle */
+    #view-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      justify-content: flex-end;
+    }
+    .view-btn {
+      padding: 6px 14px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      cursor: pointer;
+      border-radius: 20px;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .view-btn.active {
+      background: #d40000;
+      color: white;
+      border-color: #d40000;
+    }
+
+    /* Category Grid */
+    .category-carousel {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 12px;
+      padding: 8px 0;
+      justify-items: center;
+      align-items: flex-start;
+    }
+    .category-item {
+      width: 80px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .category-item:hover {
+      transform: scale(1.05);
+    }
+    .category-img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #eee;
+      background: #fff;
+      margin-bottom: 6px;
+    }
+    .category-name {
+      font-size: 12px;
+      margin-top: 0;
+      font-weight: 500;
+      text-align: center;
+      word-wrap: break-word;
+      max-width: 80px;
+    }
+
+    /* Offer Banner */
+    .offer-banner {
+      background: linear-gradient(135deg, #ffebee, #ffcdd2);
+      color: #c62828;
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+      margin: 12px 0;
+      font-weight: bold;
+      display: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      border: 1px solid #ef9a9a;
+      font-size: 14px;
+    }
+
+    /* Menu Grid */
+    .menu-grid {
+      display: grid;
+      gap: 18px;
+    }
+    .menu-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .menu-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+    .menu-card.list-view {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .menu-card.list-view .menu-img {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+    .menu-card.list-view .menu-info {
+      padding: 12px 0;
+    }
+    .menu-img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      background: #f5f5f5;
+    }
+    .menu-info {
+      padding: 14px;
+    }
+    .menu-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #222;
+    }
+    .menu-price {
+      color: #d40000;
+      font-weight: bold;
+      font-size: 16px;
+      margin: 4px 0;
+    }
+    .offer-tag {
+      background: #d40000;
+      color: white;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-top: 4px;
+      font-weight: bold;
+    }
+    .add-cart-btn {
+      width: 44%;
+      padding: 8px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 24px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 8px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .add-cart-btn:hover {
+      background: #45a049;
+    }
+
+    /* Cart Popup */
+    #cart-popup {
+      display: none;
+      position: fixed;
+      bottom: 100px;
+      right: 20px !important;
+      width: 360px;
+      max-width: 90vw;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      z-index: 9999 !important;
+      overflow: hidden;
+      animation: slideUp 0.3s ease-out;
+      transform: translateX(0) !important;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background: #d40000;
+      color: white;
+      font-weight: 600;
+    }
+    .cart-header button {
+      background: white;
+      color: #d40000;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #cartItems {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 0 12px;
+    }
+    .cart-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .cart-img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 10px;
+      background: #f9f9f9;
+    }
+    .cart-info {
+      flex: 1;
+      font-size: 14px;
+    }
+    .cart-info > div:first-child {
+      font-weight: 600;
+      color: #222;
+    }
+    .qty-btn {
+      padding: 4px 10px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 0 4px;
+    }
+    .qty-btn:hover {
+      background: #e0e0e0;
+    }
+    .total-bar {
+      background: white;
+      padding: 16px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 18px;
+      color: #d40000;
+    }
+    .checkout-btn {
       background: #d40000;
       color: white;
       border: none;
-      border-radius: 20px;
-      font-size: 14px;
+      padding: 12px 20px;
+      border-radius: 24px;
       cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      flex-shrink: 0;
+      transition: background 0.2s;
     }
-    #search-btn:hover {
+    .checkout-btn:hover {
       background: #b00000;
     }
-    .results {
-      max-width: 500px;
-      margin: 20px auto 0;
-      padding: 0 10px;
+
+    /* Cart Toggle Button */
+    #cart-toggle-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      font-size: 26px;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
     }
-    .result-item {
-      display: block;
-      padding: 10px 0;
-      text-decoration: none;
-      color: #d40000;
-      font-weight: 600;
-      border-bottom: 1px solid #eee;
+    #cart-toggle-btn:hover {
+      transform: scale(1.08);
     }
-    .result-item span {
-      color: #555;
-      font-weight: normal;
-      font-size: 13px;
+
+    .cart-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    .no-results {
-      text-align: center;
-      color: #999;
-      padding: 15px;
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(51, 51, 51, 0.92);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      z-index: 9999;
       font-size: 14px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px);
+      max-width: 80%;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
   </style>
 </head>
 <body>
 
-  <div class="search-box">
-    <input type="text" id="search-input" placeholder="Search..." autocomplete="off" />
-    <button id="search-btn">Go</button>
+  <div id="auth-bar"></div>
+  <div class="offer-banner" id="offerBanner"></div>
+
+  <h2>Categories</h2>
+  <div class="category-carousel" id="categoryCarousel"></div>
+
+  <!-- 🔍 Search Box -->
+  <input type="text" id="search-box" placeholder="Search menu..." />
+
+  <h2>Menu</h2>
+  <div id="view-toggle">
+    <button id="grid-view" class="view-btn active">Grid</button>
+    <button id="list-view" class="view-btn">List</button>
+  </div>
+  <div class="menu-grid" id="menuGrid"></div>
+
+  <div id="cart-popup">
+    <div class="cart-header">
+      <span>Your Cart</span>
+      <button id="close-cart">✕</button>
+    </div>
+    <div id="cartItems"></div>
+    <div class="total-bar">
+      <span>Total: ₹<span id="cartTotal">0</span></span>
+      <button id="checkout-btn" class="checkout-btn">Place Order</button>
+    </div>
   </div>
 
-  <div class="results" id="results"></div>
+  <button id="cart-toggle-btn">🛒</button>
 
-  <script type="module">
-    // Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-      authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
-      projectId: "mirdhuna-25542",
-      storageBucket: "mirdhuna-25542.appspot.com",
-      messagingSenderId: "575924409876",
-      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    let categories = [];
-    let menuItems = [];
-    let dataLoaded = false;
-
-    // Load data
-    onValue(ref(db, 'categories'), snapshot => {
-      categories = snapshot.val() ? Object.values(snapshot.val()) : [];
-      checkReady();
-    });
-
-    onValue(ref(db, 'menu'), snapshot => {
-      menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
-      checkReady();
-    });
-
-    function checkReady() {
-      if (categories.length >= 0 && menuItems.length >= 0) {
-        dataLoaded = true;
-        performSearch(); // in case user typed while loading
-      }
-    }
-
-    function performSearch() {
-      const input = document.getElementById('search-input');
-      const resultsDiv = document.getElementById('results');
-      const query = input.value.trim().toLowerCase();
-
-      resultsDiv.innerHTML = '';
-
-      if (!dataLoaded) {
-        resultsDiv.innerHTML = '<div class="no-results">Loading...</div>';
-        return;
-      }
-
-      if (!query) return;
-
-      const matches = [];
-
-      // Search categories
-      categories.forEach(cat => {
-        if (cat.name && cat.name.toLowerCase().includes(query)) {
-          matches.push({
-            type: 'category',
-            name: cat.name,
-            url: `index.html?category=${encodeURIComponent(cat.name)}`
-          });
-        }
-      });
-
-      // Search menu items
-      menuItems.forEach(item => {
-        if (item.name && item.name.toLowerCase().includes(query)) {
-          matches.push({
-            type: 'item',
-            name: item.name,
-            category: item.category || '',
-            url: `index.html?q=${encodeURIComponent(item.name)}`
-          });
-        }
-      });
-
-      if (matches.length === 0) {
-        resultsDiv.innerHTML = '<div class="no-results">No results</div>';
-        return;
-      }
-
-      matches.forEach(match => {
-        const a = document.createElement('a');
-        a.href = match.url;
-        a.className = 'result-item';
-        if (match.type === 'category') {
-          a.innerHTML = `${match.name} <span>Category</span>`;
-        } else {
-          a.innerHTML = `${match.name} <span>${match.category || 'Item'}</span>`;
-        }
-        resultsDiv.appendChild(a);
-      });
-    }
-
-    // Events
-    document.getElementById('search-btn').onclick = performSearch;
-    document.getElementById('search-input').oninput = performSearch;
-    document.getElementById('search-input').onkeypress = (e) => {
-      if (e.key === 'Enter') performSearch();
-    };
-  </script>
+  <script type="module" src="content.js"></script>
 </body>
 </html>
