@@ -1,178 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Language Learner</title>
-
-  <!-- PDF.js + Worker -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-  </script>
-
-  <!-- Tesseract OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Language Translator</title>
   <style>
     body {
       background: #111;
-      color: #f8f8f8;
-      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      font-family: "Segoe UI", sans-serif;
       text-align: center;
-      padding: 30px;
-    }
-    h1 { color: #ffd700; }
-    input, textarea, button {
-      margin: 10px;
-      padding: 10px;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      font-size: 16px;
-    }
-    input[type="file"] { background: #222; color: #ccc; }
-    textarea {
-      width: 80%;
-      height: 100px;
-      background: #222;
-      color: #fff;
-      resize: none;
-    }
-    button {
-      background: linear-gradient(135deg, #d40000, #f9c300);
-      color: #fff;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    button:hover { transform: scale(1.05); }
-    #output {
-      margin-top: 20px;
-      background: #222;
+      margin: 0;
       padding: 20px;
-      border-radius: 15px;
-      min-height: 50px;
-      width: 80%;
-      display: inline-block;
-      text-align: left;
     }
-    .section {
-      background: #1b1b1b;
+
+    h1 {
+      color: #ffd700;
+    }
+
+    .card {
+      background: #1c1c1c;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
       margin: 20px auto;
       padding: 20px;
-      border-radius: 20px;
-      width: 85%;
+      width: 90%;
+      max-width: 700px;
+    }
+
+    textarea, pre {
+      background: #222;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 10px;
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    button {
+      background: linear-gradient(90deg, #d40000, #f9c300);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      margin: 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 15px;
+      transition: transform 0.2s ease;
+    }
+
+    button:hover {
+      transform: scale(1.05);
     }
   </style>
 </head>
 <body>
-  <h1>🌍 AI Language Learner</h1>
-  <p>Upload your custom language PDF (alphabet + words) and let this page learn it!</p>
+  <h1>🗣️ New Language Translator</h1>
 
-  <!-- ===== Step 1: Upload PDF ===== -->
-  <div class="section">
-    <h2>📘 Step 1: Upload Language PDF</h2>
-    <input type="file" id="pdfUpload" accept="application/pdf">
-    <p id="learn-status"></p>
-  </div>
+  <section class="card">
+    <h2>Step 1: Upload Language PDF</h2>
+    <input type="file" id="pdfInput" accept="application/pdf" />
+    <button id="learnBtn">Learn Language</button>
+    <pre id="learnResult">Waiting to learn...</pre>
+  </section>
 
-  <!-- ===== Step 2: Text Translator ===== -->
-  <div class="section">
-    <h2>💬 Step 2: Text Translator</h2>
-    <textarea id="input" placeholder="Enter text to translate..."></textarea><br>
-    <button onclick="showToNew()">Translate → New Language</button>
-    <button onclick="showToEng()">Translate → English</button>
-    <div id="output"></div>
-  </div>
+  <section class="card">
+    <h2>Step 2: Text Translator</h2>
+    <textarea id="inputText" rows="4" cols="60" placeholder="Type text here..."></textarea><br>
+    <button id="toNew">Translate → New Language</button>
+    <button id="toHindi">Translate → Hindi</button>
+    <pre id="outputText"></pre>
+  </section>
 
-  <!-- ===== Step 3: Image OCR + Translate ===== -->
-  <div class="section">
-    <h2>🖼️ Step 3: Translate Text from Image</h2>
-    <input type="file" id="imgUpload" accept="image/*"><br>
-    <div id="imgResult"></div>
-  </div>
+  <!-- PDF.js for reading PDFs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
   <script>
-    // ===== STEP 1: Upload & Learn Language =====
-    document.getElementById("pdfUpload").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    // ---------- STEP 1: PDF LEARNING ----------
+    async function extractTextFromPDF(file) {
+      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+      let textContent = "";
 
-      let text = "";
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(" ") + "\n";
+        textContent += content.items.map(item => item.str).join(" ");
       }
 
-      learnLanguage(text);
+      return textContent;
+    }
+
+    document.getElementById("learnBtn").addEventListener("click", async () => {
+      const file = document.getElementById("pdfInput").files[0];
+      if (!file) return alert("Please upload a PDF first!");
+
+      document.getElementById("learnResult").textContent = "📖 Learning language...";
+      const text = await extractTextFromPDF(file);
+
+      const alphabet = Array.from(new Set(text.replace(/[^a-zA-Z]/g, "").split(""))).sort();
+      const words = text.split(/\s+/).filter(w => w.length > 1 && isNaN(w));
+
+      const dictionary = {};
+      words.forEach(w => (dictionary[w.toLowerCase()] = w));
+
+      const learned = { alphabet, dictionary };
+      localStorage.setItem("learnedLanguage", JSON.stringify(learned));
+
+      document.getElementById("learnResult").textContent =
+        `✅ Learned ${alphabet.length} letters and ${words.length} words from PDF!`;
     });
 
-    // ===== Improved Learning Logic =====
-    function learnLanguage(text) {
-      const pairs = text.match(/([^\s=]+)\s*=\s*([^\s]+)/g);
-      const dictionary = {};
-      const alphabet = {};
+    // ---------- STEP 2: TRANSLATION ----------
+    function translateToNew(text) {
+      const learned = JSON.parse(localStorage.getItem("learnedLanguage") || "{}");
+      if (!learned.dictionary) return "⚠️ No language learned yet. Upload your PDF first!";
 
-      if (pairs) {
-        for (const pair of pairs) {
-          const [left, right] = pair.split("=").map(s => s.trim());
-          if (left.length === 1) alphabet[left] = right;
-          else dictionary[left.toLowerCase()] = right;
-        }
-      }
-
-      const data = { alphabet, dictionary };
-      localStorage.setItem("myLanguage", JSON.stringify(data));
-      document.getElementById("learn-status").textContent = "✅ Language learned and saved locally!";
-      console.log("Learned:", data);
+      // Dummy example: reverse text to simulate translation
+      return text.split("").reverse().join("");
     }
 
-    // ===== STEP 2: Translation Functions =====
-    function translateToNewLang(inputText) {
-      const data = JSON.parse(localStorage.getItem("myLanguage"));
-      if (!data) return "⚠️ No language learned yet!";
-      const { dictionary } = data;
-      return inputText
-        .split(" ")
-        .map(w => dictionary[w.toLowerCase()] || w)
+    function translateToHindi(text) {
+      const hindiDict = {
+        hello: "नमस्ते",
+        world: "दुनिया",
+        thanks: "धन्यवाद",
+        love: "प्यार",
+        you: "तुम",
+        how: "कैसे",
+        are: "हो",
+        i: "मैं",
+        good: "अच्छा",
+        food: "भोजन",
+        water: "पानी"
+      };
+
+      const words = text.toLowerCase().split(" ");
+      const translated = words
+        .map(w => hindiDict[w] || `[${w}]`)
         .join(" ");
+
+      return translated;
     }
 
-    function translateToEnglish(inputText) {
-      const data = JSON.parse(localStorage.getItem("myLanguage"));
-      if (!data) return "⚠️ No language learned yet!";
-      const { dictionary } = data;
-      const reversed = Object.fromEntries(Object.entries(dictionary).map(([k, v]) => [v, k]));
-      return inputText
-        .split(" ")
-        .map(w => reversed[w.toLowerCase()] || w)
-        .join(" ");
-    }
+    document.getElementById("toNew").addEventListener("click", () => {
+      const input = document.getElementById("inputText").value.trim();
+      document.getElementById("outputText").textContent = translateToNew(input);
+    });
 
-    function showToNew() {
-      const text = document.getElementById("input").value;
-      document.getElementById("output").textContent = translateToNewLang(text);
-    }
-
-    function showToEng() {
-      const text = document.getElementById("input").value;
-      document.getElementById("output").textContent = translateToEnglish(text);
-    }
-
-    // ===== STEP 3: Image OCR + Translate =====
-    document.getElementById("imgUpload").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      document.getElementById("imgResult").textContent = "🔍 Reading image...";
-      const result = await Tesseract.recognize(file, 'eng');
-      const text = result.data.text.trim();
-      const translated = translateToNewLang(text);
-      document.getElementById("imgResult").innerHTML =
-        `<p><b>Extracted Text:</b> ${text}</p>
-         <p><b>Translated:</b> ${translated}</p>`;
+    document.getElementById("toHindi").addEventListener("click", () => {
+      const input = document.getElementById("inputText").value.trim();
+      document.getElementById("outputText").textContent = translateToHindi(input);
     });
   </script>
 </body>
