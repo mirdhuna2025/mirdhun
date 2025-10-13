@@ -4,7 +4,7 @@ import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
-  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com", // ✅ Fixed: removed trailing spaces
+  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
   projectId: "mirdhuna-25542",
   storageBucket: "mirdhuna-25542.appspot.com",
   messagingSenderId: "575924409876",
@@ -23,7 +23,9 @@ const mobInput = document.getElementById("mob-number");
 function updateLoginState() {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
   loginBtn.textContent = isLoggedIn ? "Logout" : "Login";
-  loginBtn.style.background = isLoggedIn ? "#4CAF50" : "#d40000";
+  loginBtn.style.background = isLoggedIn
+    ? "linear-gradient(135deg, #4CAF50, #66bb6a)"
+    : "linear-gradient(135deg, #d40000, #ff4c4c)";
 }
 
 loginBtn.addEventListener("click", () => {
@@ -42,14 +44,16 @@ closeBtn.addEventListener("click", () => {
 
 submitBtn.addEventListener("click", async () => {
   const number = mobInput.value.trim();
-  if (!number || !/^\d{10}$/.test(number)) {
-    alert("Please enter a valid 10-digit mobile number.");
+  if (!number || !/^[6-9]\d{9}$/.test(number)) {
+    alert("Please enter a valid 10-digit Indian mobile number (starting with 6–9).");
     return;
   }
 
-  let location = { lat: null, lng: null };
-  let hasLocation = false;
+  submitBtn.disabled = true;
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Logging in...";
 
+  let location = null;
   if ("geolocation" in navigator) {
     try {
       const pos = await new Promise((resolve, reject) => {
@@ -62,7 +66,6 @@ submitBtn.addEventListener("click", async () => {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       };
-      hasLocation = true;
     } catch (err) {
       console.warn("Geolocation not available:", err);
     }
@@ -72,7 +75,7 @@ submitBtn.addEventListener("click", async () => {
     await push(ref(db, 'loginHistory'), {
       mobileNumber: number,
       timestamp: new Date().toISOString(),
-      location: hasLocation ? location : { error: "Geolocation denied or unavailable" }
+      location: location || { error: "Geolocation denied or unavailable" }
     });
 
     localStorage.setItem("isLoggedIn", "true");
@@ -82,7 +85,10 @@ submitBtn.addEventListener("click", async () => {
     updateLoginState();
   } catch (error) {
     console.error("Firebase error:", error);
-    alert("Login failed. Check console.");
+    alert("Login failed. Please try again.");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 });
 
