@@ -3,105 +3,77 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Search Menu - Mirdhuna Shop</title>
+  <title>Search</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body {
-      background: #f9f9f9;
+      margin: 0;
       padding: 20px;
-      color: #333;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    h1 {
-      text-align: center;
-      color: #d40000;
-      margin-bottom: 24px;
-      font-size: 1.6rem;
+      font-family: Arial, sans-serif;
     }
     .search-box {
       display: flex;
-      gap: 10px;
-      margin-bottom: 24px;
+      gap: 8px;
+      max-width: 500px;
+      margin: 0 auto;
     }
     #search-input {
-      flex: 1;
-      padding: 12px 16px;
+      width: 80%; /* ✅ 80% of container */
+      padding: 10px 14px;
       border: 1px solid #ccc;
-      border-radius: 24px;
-      font-size: 16px;
+      border-radius: 20px;
+      font-size: 15px;
       outline: none;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    }
-    #search-input:focus {
-      border-color: #d40000;
     }
     #search-btn {
+      width: 70%; /* ✅ Relative to its own space — visually smaller */
+      padding: 10px;
       background: #d40000;
       color: white;
       border: none;
-      padding: 0 20px;
-      border-radius: 24px;
-      font-weight: bold;
+      border-radius: 20px;
+      font-size: 14px;
       cursor: pointer;
-      font-size: 16px;
     }
     #search-btn:hover {
       background: #b00000;
     }
     .results {
-      margin-top: 20px;
+      max-width: 500px;
+      margin: 20px auto 0;
+      padding: 0 10px;
     }
     .result-item {
-      padding: 14px;
-      border-bottom: 1px solid #eee;
-      text-decoration: none;
-      color: #222;
       display: block;
-      border-radius: 10px;
-      transition: background 0.2s;
-    }
-    .result-item:hover {
-      background: #fdf6f6;
-    }
-    .result-item.category {
+      padding: 10px 0;
+      text-decoration: none;
       color: #d40000;
       font-weight: 600;
-    }
-    .result-item.item {
-      color: #333;
+      border-bottom: 1px solid #eee;
     }
     .result-item span {
-      display: block;
-      font-size: 14px;
-      color: #777;
-      margin-top: 4px;
+      color: #555;
+      font-weight: normal;
+      font-size: 13px;
     }
     .no-results {
       text-align: center;
       color: #999;
-      padding: 20px;
+      padding: 15px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🔍 Search Menu</h1>
-    <div class="search-box">
-      <input type="text" id="search-input" placeholder="Search dishes or categories..." autocomplete="off" />
-      <button id="search-btn">Search</button>
-    </div>
-    <div class="results" id="results"></div>
+
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Search..." autocomplete="off" />
+    <button id="search-btn">Go</button>
   </div>
 
+  <div class="results" id="results"></div>
+
   <script type="module">
-    // Firebase setup
+    // Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -120,48 +92,49 @@
 
     let categories = [];
     let menuItems = [];
+    let dataLoaded = false;
 
-    // Load data once
-    Promise.all([
-      new Promise(resolve => {
-        onValue(ref(db, 'categories'), snapshot => {
-          categories = snapshot.val() ? Object.values(snapshot.val()) : [];
-          resolve();
-        });
-      }),
-      new Promise(resolve => {
-        onValue(ref(db, 'menu'), snapshot => {
-          menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
-          resolve();
-        });
-      })
-    ]).then(() => {
-      // Data loaded — enable search
-      document.getElementById('search-btn').disabled = false;
-      document.getElementById('search-input').placeholder = "Search dishes or categories...";
-      performSearch(); // initial empty search
+    // Load data
+    onValue(ref(db, 'categories'), snapshot => {
+      categories = snapshot.val() ? Object.values(snapshot.val()) : [];
+      checkReady();
     });
 
+    onValue(ref(db, 'menu'), snapshot => {
+      menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
+      checkReady();
+    });
+
+    function checkReady() {
+      if (categories.length >= 0 && menuItems.length >= 0) {
+        dataLoaded = true;
+        performSearch(); // in case user typed while loading
+      }
+    }
+
     function performSearch() {
-      const query = document.getElementById('search-input').value.trim().toLowerCase();
+      const input = document.getElementById('search-input');
       const resultsDiv = document.getElementById('results');
+      const query = input.value.trim().toLowerCase();
+
       resultsDiv.innerHTML = '';
 
-      if (!query) {
-        resultsDiv.innerHTML = '<div class="no-results">Type to search menu or categories</div>';
+      if (!dataLoaded) {
+        resultsDiv.innerHTML = '<div class="no-results">Loading...</div>';
         return;
       }
 
-      const matched = [];
+      if (!query) return;
+
+      const matches = [];
 
       // Search categories
       categories.forEach(cat => {
         if (cat.name && cat.name.toLowerCase().includes(query)) {
-          const url = `index.html?category=${encodeURIComponent(cat.name)}`;
-          matched.push({
+          matches.push({
             type: 'category',
             name: cat.name,
-            url
+            url: `index.html?category=${encodeURIComponent(cat.name)}`
           });
         }
       });
@@ -169,44 +142,39 @@
       // Search menu items
       menuItems.forEach(item => {
         if (item.name && item.name.toLowerCase().includes(query)) {
-          const url = `index.html?q=${encodeURIComponent(item.name)}`;
-          matched.push({
+          matches.push({
             type: 'item',
             name: item.name,
             category: item.category || '',
-            url
+            url: `index.html?q=${encodeURIComponent(item.name)}`
           });
         }
       });
 
-      if (matched.length === 0) {
-        resultsDiv.innerHTML = '<div class="no-results">No results found</div>';
+      if (matches.length === 0) {
+        resultsDiv.innerHTML = '<div class="no-results">No results</div>';
         return;
       }
 
-      matched.forEach(result => {
+      matches.forEach(match => {
         const a = document.createElement('a');
-        a.href = result.url;
-        a.className = `result-item ${result.type}`;
-        if (result.type === 'category') {
-          a.innerHTML = `${result.name} <span>Category</span>`;
+        a.href = match.url;
+        a.className = 'result-item';
+        if (match.type === 'category') {
+          a.innerHTML = `${match.name} <span>Category</span>`;
         } else {
-          a.innerHTML = `${result.name} <span>${result.category || 'Menu Item'}</span>`;
+          a.innerHTML = `${match.name} <span>${match.category || 'Item'}</span>`;
         }
         resultsDiv.appendChild(a);
       });
     }
 
-    // Event listeners
-    document.getElementById('search-btn').addEventListener('click', performSearch);
-    document.getElementById('search-input').addEventListener('input', performSearch);
-    document.getElementById('search-input').addEventListener('keypress', (e) => {
+    // Events
+    document.getElementById('search-btn').onclick = performSearch;
+    document.getElementById('search-input').oninput = performSearch;
+    document.getElementById('search-input').onkeypress = (e) => {
       if (e.key === 'Enter') performSearch();
-    });
-
-    // Initially disable button until data loads
-    document.getElementById('search-btn').disabled = true;
-    document.getElementById('search-input').placeholder = "Loading...";
+    };
   </script>
 </body>
 </html>
