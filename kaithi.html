@@ -4,8 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Language Learner</title>
+
+  <!-- PDF.js + Worker -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+  </script>
+
+  <!-- Tesseract OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
+
   <style>
     body {
       background: #111;
@@ -61,12 +69,14 @@
   <h1>🌍 AI Language Learner</h1>
   <p>Upload your custom language PDF (alphabet + words) and let this page learn it!</p>
 
+  <!-- ===== Step 1: Upload PDF ===== -->
   <div class="section">
     <h2>📘 Step 1: Upload Language PDF</h2>
     <input type="file" id="pdfUpload" accept="application/pdf">
     <p id="learn-status"></p>
   </div>
 
+  <!-- ===== Step 2: Text Translator ===== -->
   <div class="section">
     <h2>💬 Step 2: Text Translator</h2>
     <textarea id="input" placeholder="Enter text to translate..."></textarea><br>
@@ -75,6 +85,7 @@
     <div id="output"></div>
   </div>
 
+  <!-- ===== Step 3: Image OCR + Translate ===== -->
   <div class="section">
     <h2>🖼️ Step 3: Translate Text from Image</h2>
     <input type="file" id="imgUpload" accept="image/*"><br>
@@ -99,14 +110,15 @@
       learnLanguage(text);
     });
 
+    // ===== Improved Learning Logic =====
     function learnLanguage(text) {
-      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+      const pairs = text.match(/([^\s=]+)\s*=\s*([^\s]+)/g);
       const dictionary = {};
       const alphabet = {};
 
-      for (const line of lines) {
-        if (line.includes("=")) {
-          const [left, right] = line.split("=").map(s => s.trim());
+      if (pairs) {
+        for (const pair of pairs) {
+          const [left, right] = pair.split("=").map(s => s.trim());
           if (left.length === 1) alphabet[left] = right;
           else dictionary[left.toLowerCase()] = right;
         }
