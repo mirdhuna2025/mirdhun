@@ -201,7 +201,7 @@ function updateCartBadge(count) {
     const badge = document.createElement('span');
     badge.className = 'cart-badge';
     badge.textContent = count > 9 ? '9+' : count;
-    cartToggleBtn.style.position = 'relative';
+    cartToggleBtn.style.position = 'float';
     cartToggleBtn.appendChild(badge);
   }
 }
