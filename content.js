@@ -78,12 +78,10 @@ function renderOffer() {
 function renderCategories() {
   categoryCarousel.innerHTML = '';
 
-  // "All" category first
-  const allCategoryImg = "";
   const allDiv = document.createElement('div');
   allDiv.className = 'category-item';
   allDiv.innerHTML = `
-    <img class="category-img" src="${allCategoryImg}" alt="All" />
+    <img class="category-img" src="" alt="All" />
     <div class="category-name">ALL</div>
   `;
   allDiv.addEventListener('click', () => {
@@ -92,7 +90,6 @@ function renderCategories() {
   });
   categoryCarousel.appendChild(allDiv);
 
-  // Real categories
   categories.forEach(cat => {
     const fallback = '';
     const div = document.createElement('div');
@@ -109,12 +106,29 @@ function renderCategories() {
   });
 }
 
-// 🧠 Modified renderMenu (removed heart icon)
 function renderMenu() {
   menuGrid.innerHTML = '';
-  const items = selectedCategory
+
+  let items = selectedCategory
     ? menuItems.filter(item => item.category === selectedCategory)
-    : menuItems;
+    : [...menuItems];
+
+  const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
+  if (searchTerm) {
+    items = items.filter(item =>
+      (item.name && item.name.toLowerCase().includes(searchTerm)) ||
+      (item.category && item.category.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const sortValue = document.getElementById('sort-select')?.value || 'default';
+  if (sortValue === 'price-low-high') {
+    items.sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (sortValue === 'price-high-low') {
+    items.sort((a, b) => (b.price || 0) - (a.price || 0));
+  } else if (sortValue === 'offer-first') {
+    items.sort((a, b) => (b.offer ? 1 : 0) - (a.offer ? 1 : 0));
+  }
 
   if (items.length === 0) {
     menuGrid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#999;">No items available</p>';
@@ -124,13 +138,27 @@ function renderMenu() {
 
   items.forEach(item => {
     const fallbackImg = '';
+    let mrpDisplay = '';
+    let discountDisplay = '';
+    const priceDisplay = `₹${item.price || '0'}`;
+
+    if (item.mrp && item.mrp > (item.price || 0)) {
+      mrpDisplay = `<del style="color:#999; font-size:14px;">₹${item.mrp}</del>`;
+      const discount = Math.round(((item.mrp - item.price) / item.mrp) * 100);
+      discountDisplay = `<div style="color:#d40000; font-size:13px; font-weight:600; margin-top:2px;">${discount}% OFF</div>`;
+    }
+
     const card = document.createElement('div');
     card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
       <img class="menu-img" src="${item.image || fallbackImg}" alt="${item.name}" />
       <div class="menu-info">
         <div class="menu-name">${item.name || 'Unnamed Item'}</div>
-        <div class="menu-price">₹${item.price || '0'}</div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          ${mrpDisplay}
+          <div class="menu-price">${priceDisplay}</div>
+          ${discountDisplay}
+        </div>
         ${item.offer ? `<div class="offer-tag">OFFER</div>` : ''}
         <button class="add-cart-btn" data-id="${item.id}" data-name="${item.name || 'Item'}" data-price="${item.price || 0}" data-image="${item.image || ''}">Add to Cart</button>
       </div>
@@ -138,10 +166,10 @@ function renderMenu() {
     menuGrid.appendChild(card);
   });
 
-  menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
+  menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(auto-fit, minmax(230px, 1fr))';
 }
 
-// 🛒 Everything below unchanged but add animation
+// Cart Functions (unchanged logic)
 function addToCart(id, name, price, image) {
   const btn = document.querySelector(`.add-cart-btn[data-id="${id}"]`);
   if (btn) {
@@ -169,7 +197,7 @@ function updateCartUI() {
   cartItemsEl.innerHTML = '';
   let total = 0;
   let totalCount = 0;
-  const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
+  const fallbackImg = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
 
   cart.forEach(item => {
     const subtotal = item.price * item.qty;
@@ -263,7 +291,25 @@ updateAuthUI();
 updateCartUI();
 loadShopData();
 
-// ✅ Event delegation
+// Event Listeners for Controls
+document.getElementById('search-input')?.addEventListener('input', renderMenu);
+document.getElementById('sort-select')?.addEventListener('change', renderMenu);
+
+// View Toggle
+document.getElementById('grid-view')?.addEventListener('click', () => {
+  viewMode = 'grid';
+  document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('grid-view').classList.add('active');
+  renderMenu();
+});
+document.getElementById('list-view')?.addEventListener('click', () => {
+  viewMode = 'list';
+  document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('list-view').classList.add('active');
+  renderMenu();
+});
+
+// Event delegation
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
@@ -278,15 +324,5 @@ document.addEventListener('click', (e) => {
     closeCart();
   } else if (e.target.id === 'checkout-btn') {
     placeOrder();
-  } else if (e.target.id === 'grid-view') {
-    viewMode = 'grid';
-    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-    e.target.classList.add('active');
-    renderMenu();
-  } else if (e.target.id === 'list-view') {
-    viewMode = 'list';
-    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-    e.target.classList.add('active');
-    renderMenu();
   }
 });
