@@ -84,7 +84,7 @@ function renderCategories() {
   allDiv.className = 'category-item';
   allDiv.innerHTML = `
     <img class="category-img" src="${allCategoryImg}" alt="All" />
-    <div class="category-name">All</div>
+    <div class="category-name">ALL</div>
   `;
   allDiv.addEventListener('click', () => {
     selectedCategory = null;
@@ -94,7 +94,7 @@ function renderCategories() {
 
   // Real categories
   categories.forEach(cat => {
-    const fallback = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22140%22%3E%3Crect width=%22100%22 height=%22140%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
+    const fallback = '';
     const div = document.createElement('div');
     div.className = 'category-item';
     div.innerHTML = `
@@ -123,7 +123,7 @@ function renderMenu() {
   }
 
   items.forEach(item => {
-    const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22140%22%3E%3Crect width=%22100%22 height=%22140%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
+    const fallbackImg = '';
     const card = document.createElement('div');
     card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
