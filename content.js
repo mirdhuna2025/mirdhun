@@ -109,7 +109,7 @@ function renderCategories() {
   });
 }
 
-// 🧠 Modified renderMenu (adds heart + animated Add button)
+// 🧠 Modified renderMenu (removed heart icon)
 function renderMenu() {
   menuGrid.innerHTML = '';
   const items = selectedCategory
@@ -127,7 +127,6 @@ function renderMenu() {
     const card = document.createElement('div');
     card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
-      <span class="heart-icon" title="Add to favorites">🤍</span>
       <img class="menu-img" src="${item.image || fallbackImg}" alt="${item.name}" />
       <div class="menu-info">
         <div class="menu-name">${item.name || 'Unnamed Item'}</div>
@@ -142,7 +141,7 @@ function renderMenu() {
   menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
-// 🛒 Everything below unchanged but add animation and heart toggle
+// 🛒 Everything below unchanged but add animation
 function addToCart(id, name, price, image) {
   const btn = document.querySelector(`.add-cart-btn[data-id="${id}"]`);
   if (btn) {
@@ -289,8 +288,5 @@ document.addEventListener('click', (e) => {
     document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
     e.target.classList.add('active');
     renderMenu();
-  } else if (e.target.classList.contains('heart-icon')) {
-    e.target.classList.toggle('favorited');
-    e.target.textContent = e.target.classList.contains('favorited') ? '❤️' : '🤍';
   }
 });
