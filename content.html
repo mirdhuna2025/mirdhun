@@ -20,7 +20,7 @@
       display: none !important;
     }
 
-    /* Unified Menu Controls */
+    /* Unified Controls Row */
     #menu-controls {
       display: flex;
       gap: 10px;
@@ -30,12 +30,24 @@
     }
     #search-input {
       flex: 1;
-      min-width: 120px;
+      min-width: 140px;
       padding: 6px 12px;
       border: 1px solid #ccc;
       border-radius: 20px;
       font-size: 13px;
       outline: none;
+    }
+    #search-go {
+      padding: 6px 12px;
+      background: #d40000;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    #search-go:hover {
+      background: #b00000;
     }
     #sort-select {
       padding: 6px 12px;
@@ -44,6 +56,7 @@
       font-size: 13px;
       background: white;
       cursor: pointer;
+      min-width: 140px;
     }
     .view-btn {
       padding: 6px 14px;
@@ -114,10 +127,10 @@
       font-size: 14px;
     }
 
-    /* Menu Grid */
+    /* Menu Grid — FIXED to 2 columns exactly */
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      grid-template-columns: repeat(2, 1fr); /* 🔥 YOUR ORIGINAL STYLE */
       gap: 24px;
       padding: 10px 0;
     }
@@ -245,9 +258,6 @@
     .menu-card.list-view .menu-info { padding: 8px 0; flex: 1; }
     .menu-card.list-view .add-cart-btn { 
       position: relative; 
-      left: auto; 
-      right: auto; 
-      bottom: auto; 
       opacity: 1; 
       transform: none; 
       width: 110px; 
@@ -441,14 +451,17 @@
 
   <h2>Menu</h2>
   <div id="menu-controls">
-    <input type="text" id="search-input" placeholder="Search menu..." />
+    <div style="display: flex; gap: 6px; flex: 1; min-width: 200px;">
+      <input type="text" id="search-input" placeholder="Search menu..." />
+      <button id="search-go">Go</button>
+    </div>
     <select id="sort-select">
       <option value="default">Sort By</option>
       <option value="price-low-high">Price: Low to High</option>
       <option value="price-high-low">Price: High to Low</option>
       <option value="offer-first">Offers First</option>
     </select>
-    <div id="view-buttons">
+    <div>
       <button id="grid-view" class="view-btn active">Grid</button>
       <button id="list-view" class="view-btn">List</button>
     </div>
