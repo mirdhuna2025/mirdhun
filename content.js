@@ -78,7 +78,7 @@ function renderOffer() {
 function renderCategories() {
   categoryCarousel.innerHTML = '';
 
-  // Add "All" category first
+  // "All" category first
   const allCategoryImg = "image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23d40000%22 stroke=%22%23fff%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23fff%22 text-anchor=%22middle%22%3EALL%3C/text%3E%3C/svg%3E";
   const allDiv = document.createElement('div');
   allDiv.className = 'category-item';
@@ -92,7 +92,7 @@ function renderCategories() {
   });
   categoryCarousel.appendChild(allDiv);
 
-  // Add real categories
+  // Real categories
   categories.forEach(cat => {
     const fallback = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22%3F%3C/text%3E%3C/svg%3E';
     const div = document.createElement('div');
@@ -109,6 +109,7 @@ function renderCategories() {
   });
 }
 
+// 🧠 Modified renderMenu (adds heart + animated Add button)
 function renderMenu() {
   menuGrid.innerHTML = '';
   const items = selectedCategory
@@ -126,6 +127,7 @@ function renderMenu() {
     const card = document.createElement('div');
     card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
+      <span class="heart-icon" title="Add to favorites">🤍</span>
       <img class="menu-img" src="${item.image || fallbackImg}" alt="${item.name}" />
       <div class="menu-info">
         <div class="menu-name">${item.name || 'Unnamed Item'}</div>
@@ -140,38 +142,40 @@ function renderMenu() {
   menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
-// Cart functions
+// 🛒 Everything below unchanged but add animation and heart toggle
 function addToCart(id, name, price, image) {
-  const existing = cart.find(item => item.id === id);
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    cart.push({ id, name, price: parseFloat(price), image, qty: 1 });
+  const btn = document.querySelector(`.add-cart-btn[data-id="${id}"]`);
+  if (btn) {
+    btn.classList.add("added");
+    btn.textContent = "✔ Added";
+    setTimeout(() => {
+      btn.classList.remove("added");
+      btn.textContent = "Add to Cart";
+    }, 1500);
   }
+
+  const existing = cart.find(item => item.id === id);
+  if (existing) existing.qty += 1;
+  else cart.push({ id, name, price: parseFloat(price), image, qty: 1 });
   saveCart();
   updateCartUI();
-  showToast("Added!"); // ✅ Short message
+  showToast("Added!");
 }
 
-function saveCart() {
-  localStorage.setItem('cart', JSON.stringify(cart));
-}
+function saveCart() { localStorage.setItem('cart', JSON.stringify(cart)); }
 
 function updateCartUI() {
   const cartItemsEl = document.getElementById('cartItems');
   const totalEl = document.getElementById('cartTotal');
-
   cartItemsEl.innerHTML = '';
   let total = 0;
   let totalCount = 0;
-
   const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
 
   cart.forEach(item => {
     const subtotal = item.price * item.qty;
     total += subtotal;
     totalCount += item.qty;
-
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
@@ -196,12 +200,10 @@ function updateCartUI() {
 function updateCartBadge(count) {
   const existingBadge = cartToggleBtn.querySelector('.cart-badge');
   if (existingBadge) existingBadge.remove();
-
   if (count > 0) {
     const badge = document.createElement('span');
     badge.className = 'cart-badge';
     badge.textContent = count > 9 ? '9+' : count;
-    cartToggleBtn.style.position = 'float';
     cartToggleBtn.appendChild(badge);
   }
 }
@@ -210,9 +212,7 @@ function changeQty(id, delta) {
   const item = cart.find(i => i.id === id);
   if (item) {
     item.qty += delta;
-    if (item.qty <= 0) {
-      cart = cart.filter(i => i.id !== id);
-    }
+    if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
     saveCart();
     updateCartUI();
   }
@@ -222,21 +222,11 @@ function toggleCart() {
   const popup = document.getElementById('cart-popup');
   popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
 }
-
-function closeCart() {
-  document.getElementById('cart-popup').style.display = 'none';
-}
+function closeCart() { document.getElementById('cart-popup').style.display = 'none'; }
 
 function placeOrder() {
-  if (cart.length === 0) {
-    showToast("Cart is empty!");
-    return;
-  }
-
-  if (!isLoggedIn()) {
-    showToast("Please login first to place order.");
-    return;
-  }
+  if (cart.length === 0) return showToast("Cart is empty!");
+  if (!isLoggedIn()) return showToast("Please login first to place order.");
 
   const phoneNumber = localStorage.getItem("userPhone") || "unknown";
   const order = {
@@ -246,7 +236,6 @@ function placeOrder() {
     timestamp: new Date().toISOString(),
     status: "pending"
   };
-
   push(ref(db, 'orders'), order)
     .then(() => {
       showToast("Order placed successfully!");
@@ -255,10 +244,7 @@ function placeOrder() {
       updateCartUI();
       closeCart();
     })
-    .catch(err => {
-      console.error("Order error:", err);
-      showToast("Failed to place order.");
-    });
+    .catch(() => showToast("Failed to place order."));
 }
 
 function showToast(message) {
@@ -270,9 +256,7 @@ function showToast(message) {
   }
   toast.textContent = message;
   toast.style.opacity = '1';
-  setTimeout(() => {
-    toast.style.opacity = '0';
-  }, 2500);
+  setTimeout(() => toast.style.opacity = '0', 2500);
 }
 
 // Initialize
@@ -280,7 +264,7 @@ updateAuthUI();
 updateCartUI();
 loadShopData();
 
-// Event delegation
+// ✅ Event delegation
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
@@ -305,5 +289,8 @@ document.addEventListener('click', (e) => {
     document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
     e.target.classList.add('active');
     renderMenu();
+  } else if (e.target.classList.contains('heart-icon')) {
+    e.target.classList.toggle('favorited');
+    e.target.textContent = e.target.classList.contains('favorited') ? '❤️' : '🤍';
   }
 });
