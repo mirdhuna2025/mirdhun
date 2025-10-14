@@ -79,7 +79,7 @@ function renderCategories() {
   categoryCarousel.innerHTML = '';
 
   // "All" category first
-  const allCategoryImg = "image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23d40000%22 stroke=%22%23fff%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23fff%22 text-anchor=%22middle%22%3EALL%3C/text%3E%3C/svg%3E";
+  const allCategoryImg = "";
   const allDiv = document.createElement('div');
   allDiv.className = 'category-item';
   allDiv.innerHTML = `
@@ -94,7 +94,20 @@ function renderCategories() {
 
   // Real categories
   categories.forEach(cat => {
-    const fallback = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22%3E%3Ccircle cx=%2245%22 cy=%2245%22 r=%2242%22 fill=%22%23f0f0f0%22 stroke=%22%23ddd%22 stroke-width=%222%22/%3E%3Ctext x=%2245%22 y=%2250%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22%3F%3C/text%3E%3C/svg%3E';
+    const fallback = '<svg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 90 90" aria-hidden="true" role="img">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff3b3b"/>
+      <stop offset="1" stop-color="#b60000"/>
+    </linearGradient>
+    <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <circle cx="45" cy="45" r="40" fill="url(#g)" filter="url(#s)" stroke="#fff" stroke-width="2"/>
+  <text x="45" y="46" font-family="Verdana, Arial, sans-serif" font-size="14" fill="#fff" text-anchor="middle" dominant-baseline="middle">ALL</text>
+</svg>
+;
     const div = document.createElement('div');
     div.className = 'category-item';
     div.innerHTML = `
