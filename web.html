@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanvasSite — Draw Your Website</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {}
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .fabric-canvas-wrapper {
+      border: 1px solid #e5e7eb;
+      background: white;
+      margin: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 h-screen flex">
+  <!-- Toolbar -->
+  <div class="w-16 bg-white shadow flex flex-col items-center py-4 space-y-4">
+    <button onclick="addElement('div')" title="Add Box" class="p-2 rounded hover:bg-blue-100">□</button>
+    <button onclick="addElement('text')" title="Add Text" class="p-2 rounded hover:bg-blue-100">T</button>
+    <button onclick="addElement('button')" title="Add Button" class="p-2 rounded hover:bg-blue-100">⬜</button>
+    <button onclick="addElement('image')" title="Add Image Placeholder" class="p-2 rounded hover:bg-blue-100">🖼️</button>
+  </div>
+
+  <!-- Canvas Area -->
+  <div class="flex-1 relative">
+    <div class="fabric-canvas-wrapper">
+      <canvas id="canvas" width="1200" height="800"></canvas>
+    </div>
+  </div>
+
+  <!-- Properties Panel -->
+  <div id="propertiesPanel" class="w-64 bg-white shadow p-4 overflow-y-auto">
+    <h2 class="font-bold mb-4">Properties</h2>
+    <div id="noSelection" class="text-gray-500">Select an element to edit</div>
+    <div id="propertyInputs" class="space-y-3 hidden"></div>
+
+    <div class="mt-6 space-x-2">
+      <button onclick="openPreview()" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700">Preview</button>
+      <button onclick="exportHTML()" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Export HTML</button>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="bg-white w-4/5 h-4/5 relative">
+      <button onclick="closePreview()" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center">✕</button>
+      <iframe id="previewFrame" class="w-full h-full border-none"></iframe>
+    </div>
+  </div>
+
+  <!-- Fabric.js via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script>
+    // Global state
+    let canvas;
+    let elements = [];
+    let selectedElement = null;
+
+    // Initialize canvas
+    window.onload = () => {
+      canvas = new fabric.Canvas('canvas', {
+        backgroundColor: '#f9fafb',
+        selection: true,
+        preserveObjectStacking: true
+      });
+
+      canvas.on('selection:created', handleSelection);
+      canvas.on('selection:updated', handleSelection);
+      canvas.on('selection:cleared', () => {
+        selectedElement = null;
+        updatePropertiesPanel();
+      });
+    };
+
+    function handleSelection(e) {
+      const activeObject = e.selected?.[0];
+      if (activeObject && activeObject.data) {
+        selectedElement = activeObject.data;
+        updatePropertiesPanel();
+      } else {
+        selectedElement = null;
+        updatePropertiesPanel();
+      }
+    }
+
+    function addElement(type) {
+      const id = `el_${Date.now()}`;
+      let obj;
+
+      const commonProps = {
+        left: 100,
+        top: 100,
+        width: type === 'text' ? 200 : 200,
+        height: type === 'text' ? 40 : 100,
+        fill: (type === 'text' || type === 'button') ? '#ffffff' : '#3b82f6',
+        data: { id, type: type === 'image' ? 'div' : type }
+      };
+
+      if (type === 'text' || type === 'button') {
+        const textContent = type === 'button' ? 'Click Me' : 'Your Text';
+        obj = new fabric.Textbox(textContent, {
+          ...commonProps,
+          fontSize: 16,
+          fontFamily: 'Arial',
+          fill: '#000000',
+           {
+            ...commonProps.data,
+            text: textContent,
+            fontSize: 16,
+            fontFamily: 'Arial',
+            textColor: '#000000'
+          }
+        });
+      } else if (type === 'image') {
+        obj = new fabric.Rect({
+          ...commonProps,
+          fill: '#d1d5db',
+          stroke: '#9ca3af',
+          strokeWidth: 1,
+           {
+            ...commonProps.data,
+            type: 'div'
+          }
+        });
+      } else {
+        obj = new fabric.Rect(commonProps);
+      }
+
+      canvas.add(obj);
+      canvas.setActiveObject(obj);
+
+      const newElement = {
+        id,
+        type: type === 'image' ? 'div' : type,
+        left: 100,
+        top: 100,
+        width: commonProps.width,
+        height: commonProps.height,
+        fill: commonProps.fill,
+        ...(type === 'text' || type === 'button'
+          ? {
+              text: type === 'button' ? 'Click Me' : 'Your Text',
+              fontSize: 16,
+              fontFamily: 'Arial',
+              textColor: '#000000'
+            }
+          : {})
+      };
+
+      elements.push(newElement);
+      selectedElement = newElement;
+      updatePropertiesPanel();
+    }
+
+    function updateElementProperty(key, value) {
+      if (!selectedElement) return;
+
+      // Update local state
+      selectedElement[key] = value;
+
+      // Update elements array
+      const index = elements.findIndex(el => el.id === selectedElement.id);
+      if (index !== -1) {
+        elements[index] = { ...selectedElement };
+      }
+
+      // Update fabric object
+      const fabricObj = canvas.getActiveObject();
+      if (!fabricObj) return;
+
+      if (key === 'fill') {
+        fabricObj.set('fill', value);
+      } else if (key === 'text') {
+        if ('text' in fabricObj) fabricObj.set('text', value);
+      } else if (key === 'fontSize') {
+        if ('fontSize' in fabricObj) fabricObj.set('fontSize', value);
+      } else if (key === 'fontFamily') {
+        if ('fontFamily' in fabricObj) fabricObj.set('fontFamily', value);
+      } else if (key === 'textColor') {
+        if ('fill' in fabricObj) fabricObj.set('fill', value);
+      } else if (['left', 'top', 'width', 'height'].includes(key)) {
+        fabricObj.set(key, parseFloat(value));
+      }
+
+      canvas.renderAll();
+    }
+
+    function updatePropertiesPanel() {
+      const noSel = document.getElementById('noSelection');
+      const inputs = document.getElementById('propertyInputs');
+
+      if (!selectedElement) {
+        noSel.classList.remove('hidden');
+        inputs.classList.add('hidden');
+        return;
+      }
+
+      noSel.classList.add('hidden');
+      inputs.classList.remove('hidden');
+
+      let html = '';
+
+      // Position & Size
+      html += `<div><label class="block text-sm font-medium">X</label><input type="number" value="${selectedElement.left}" onchange="updateElementProperty('left', this.value)" class="w-full p-1 border rounded"/></div>`;
+      html += `<div><label class="block text-sm font-medium">Y</label><input type="number" value="${selectedElement.top}" onchange="updateElementProperty('top', this.value)" class="w-full p-1 border rounded"/></div>`;
+      html += `<div><label class="block text-sm font-medium">Width</label><input type="number" value="${selectedElement.width}" onchange="updateElementProperty('width', this.value)" class="w-full p-1 border rounded"/></div>`;
+      html += `<div><label class="block text-sm font-medium">Height</label><input type="number" value="${selectedElement.height}" onchange="updateElementProperty('height', this.value)" class="w-full p-1 border rounded"/></div>`;
+
+      // Text-specific
+      if (selectedElement.type === 'text' || selectedElement.type === 'button') {
+        html += `<div><label class="block text-sm font-medium">Text</label><input type="text" value="${selectedElement.text || ''}" onchange="updateElementProperty('text', this.value)" class="w-full p-1 border rounded"/></div>`;
+        html += `<div><label class="block text-sm font-medium">Font Size</label><input type="number" value="${selectedElement.fontSize || 16}" onchange="updateElementProperty('fontSize', this.value)" class="w-full p-1 border rounded"/></div>`;
+        html += `<div><label class="block text-sm font-medium">Font</label><select onchange="updateElementProperty('fontFamily', this.value)" class="w-full p-1 border rounded">`;
+        html += `<option value="Arial" ${selectedElement.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>`;
+        html += `<option value="Helvetica" ${selectedElement.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>`;
+        html += `<option value="Times New Roman" ${selectedElement.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times</option>`;
+        html += `<option value="Courier New" ${selectedElement.fontFamily === 'Courier New' ? 'selected' : ''}>Courier</option>`;
+        html += `</select></div>`;
+        html += `<div><label class="block text-sm font-medium">Text Color</label><input type="color" value="${selectedElement.textColor || '#000000'}" onchange="updateElementProperty('textColor', this.value)" class="w-full h-8"/></div>`;
+      }
+
+      // Fill color
+      html += `<div><label class="block text-sm font-medium">${(selectedElement.type === 'text' || selectedElement.type === 'button') ? 'Background' : 'Color'}</label><input type="color" value="${selectedElement.fill || '#3b82f6'}" onchange="updateElementProperty('fill', this.value)" class="w-full h-8"/></div>`;
+
+      inputs.innerHTML = html;
+    }
+
+    function generateCode() {
+      let htmlStr = `<div id="canvas-site" style="position: relative; width: 100%; height: 100vh; background: #f9fafb;">\n`;
+      let cssStr = `#canvas-site {\n  position: relative;\n  width: 100%;\n  height: 100vh;\n  background: #f9fafb;\n}\n`;
+
+      elements.forEach(el => {
+        const cls = `el-${el.id}`;
+        if (el.type === 'text' || el.type === 'button') {
+          const tag = el.type === 'button' ? 'button' : 'div';
+          htmlStr += `  <${tag} class="${cls}">${el.text || ''}</${tag}>\n`;
+          cssStr += `.${cls} {\n`;
+          cssStr += `  position: absolute;\n`;
+          cssStr += `  left: ${el.left}px;\n`;
+          cssStr += `  top: ${el.top}px;\n`;
+          cssStr += `  width: ${el.width}px;\n`;
+          cssStr += `  height: ${el.height}px;\n`;
+          cssStr += `  font-size: ${el.fontSize}px;\n`;
+          cssStr += `  font-family: ${el.fontFamily};\n`;
+          cssStr += `  color: ${el.textColor};\n`;
+          cssStr += `  background: ${el.fill};\n`;
+          cssStr += `  border: none;\n`;
+          cssStr += `  padding: 8px;\n`;
+          cssStr += `  box-sizing: border-box;\n`;
+          cssStr += `}\n`;
+        } else {
+          htmlStr += `  <div class="${cls}"></div>\n`;
+          cssStr += `.${cls} {\n`;
+          cssStr += `  position: absolute;\n`;
+          cssStr += `  left: ${el.left}px;\n`;
+          cssStr += `  top: ${el.top}px;\n`;
+          cssStr += `  width: ${el.width}px;\n`;
+          cssStr += `  height: ${el.height}px;\n`;
+          cssStr += `  background: ${el.fill};\n`;
+          if (el.type === 'div') cssStr += `  border-radius: 4px;\n`;
+          cssStr += `}\n`;
+        }
+      });
+
+      htmlStr += `</div>`;
+      return { html: htmlStr, css: cssStr };
+    }
+
+    function exportHTML() {
+      const { html, css } = generateCode();
+      const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanvasSite Export</title>
+  <style>${css}</style>
+</head>
+<body>${html}</body>
+</html>`;
+
+      const blob = new Blob([fullHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'canvassite-export.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function openPreview() {
+      const { html, css } = generateCode();
+      const iframe = document.getElementById('previewFrame');
+      iframe.srcdoc = `<!DOCTYPE html><html><head><style>${css}</style></head><body>${html}</body></html>`;
+      document.getElementById('previewModal').classList.remove('hidden');
+    }
+
+    function closePreview() {
+      document.getElementById('previewModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
