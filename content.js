@@ -27,7 +27,6 @@ const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-// Auth
 function isLoggedIn() {
   return localStorage.getItem("isLoggedIn") === "true";
 }
@@ -47,7 +46,6 @@ window.logout = () => {
   updateAuthUI();
 };
 
-// Load data
 function loadShopData() {
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -113,14 +111,13 @@ function renderMenu() {
     ? menuItems.filter(item => item.category === selectedCategory)
     : [...menuItems];
 
-  const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
+  // 🔍 Search by NAME only
+  const searchTerm = document.getElementById('search-input')?.value.trim().toLowerCase() || '';
   if (searchTerm) {
-    items = items.filter(item =>
-      (item.name && item.name.toLowerCase().includes(searchTerm)) ||
-      (item.category && item.category.toLowerCase().includes(searchTerm))
-    );
+    items = items.filter(item => item.name && item.name.toLowerCase().includes(searchTerm));
   }
 
+  // 📊 Sorting
   const sortValue = document.getElementById('sort-select')?.value || 'default';
   if (sortValue === 'price-low-high') {
     items.sort((a, b) => (a.price || 0) - (b.price || 0));
@@ -166,10 +163,11 @@ function renderMenu() {
     menuGrid.appendChild(card);
   });
 
-  menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(auto-fit, minmax(230px, 1fr))';
+  // 🔥 CRITICAL: Restore your original 2-column layout
+  menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
-// Cart Functions (unchanged logic)
+// Cart Functions
 function addToCart(id, name, price, image) {
   const btn = document.querySelector(`.add-cart-btn[data-id="${id}"]`);
   if (btn) {
@@ -197,7 +195,7 @@ function updateCartUI() {
   cartItemsEl.innerHTML = '';
   let total = 0;
   let totalCount = 0;
-  const fallbackImg = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
+  const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
 
   cart.forEach(item => {
     const subtotal = item.price * item.qty;
@@ -214,7 +212,10 @@ function updateCartUI() {
           ${item.qty}
           <button class="qty-btn" data-id="${item.id}" data-action="inc">+</button>
         </div>
-        <div>₹${subtotal}</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+          <div>₹${subtotal}</div>
+          <button class="delete-item" data-id="${item.id}" style="background:none; border:none; color:#d40000; font-size:16px; cursor:pointer; padding:0;">🗑️</button>
+        </div>
       </div>
     `;
     cartItemsEl.appendChild(div);
@@ -291,11 +292,12 @@ updateAuthUI();
 updateCartUI();
 loadShopData();
 
-// Event Listeners for Controls
+// 🔍 Search & Sort Listeners
 document.getElementById('search-input')?.addEventListener('input', renderMenu);
+document.getElementById('search-go')?.addEventListener('click', renderMenu);
 document.getElementById('sort-select')?.addEventListener('change', renderMenu);
 
-// View Toggle
+// 👁️ View Toggle
 document.getElementById('grid-view')?.addEventListener('click', () => {
   viewMode = 'grid';
   document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
@@ -309,7 +311,7 @@ document.getElementById('list-view')?.addEventListener('click', () => {
   renderMenu();
 });
 
-// Event delegation
+// 🖱️ Event Delegation
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
@@ -318,6 +320,12 @@ document.addEventListener('click', (e) => {
     const id = e.target.dataset.id;
     const action = e.target.dataset.action;
     changeQty(id, action === 'inc' ? 1 : -1);
+  } else if (e.target.classList.contains('delete-item')) {
+    const id = e.target.dataset.id;
+    cart = cart.filter(item => item.id !== id);
+    saveCart();
+    updateCartUI();
+    showToast("Item removed");
   } else if (e.target.id === 'cart-toggle-btn') {
     toggleCart();
   } else if (e.target.id === 'close-cart') {
