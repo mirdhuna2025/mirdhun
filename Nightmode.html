@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIRDHUNA | Dark Mode Example</title>
+  <style>
+    /* ===== BASIC STYLES ===== */
+    body {
+      font-family: "Poppins", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #fff8f0;
+      color: #222;
+      transition: all 0.4s ease;
+    }
+
+    header {
+      background: #ff4444;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .content {
+      text-align: center;
+      padding: 30px;
+    }
+
+    .card {
+      width: 250px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: 0.3s;
+      padding: 20px;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    footer {
+      background: linear-gradient(90deg, #ff8c00, #ff4c4c);
+      color: white;
+      text-align: center;
+      padding: 15px;
+      border-radius: 15px 15px 0 0;
+    }
+
+    /* ===== DARK MODE STYLES ===== */
+    body.dark-mode {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    body.dark-mode header {
+      background: #1e1e1e;
+      color: #ffcc00;
+      box-shadow: 0 2px 5px rgba(255,255,255,0.1);
+    }
+
+    body.dark-mode .card {
+      background: #1e1e1e;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(255,255,255,0.08);
+    }
+
+    body.dark-mode footer {
+      background: linear-gradient(90deg, #222, #444);
+      color: #ffcc00;
+    }
+
+    /* ===== DARK MODE TOGGLE BUTTON ===== */
+    #darkModeToggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 25px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 9999;
+      transition: 0.3s;
+    }
+
+    #darkModeToggle:hover {
+      background: #ffcc00;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <header>MIRDHUNA 🍕</header>
+
+  <div class="content">
+    <h2>Welcome to Mirdhuna Café</h2>
+    <p>Pizza, Burgers, Sandwiches & Shakes delivered fresh to your doorstep!</p>
+
+    <div class="card">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/9/9a/Pizza_restaurant.jpg" width="100%" style="border-radius:12px;">
+      <h3>Paneer Cheese Pizza</h3>
+      <p>₹99</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 MIRDHUNA. All Rights Reserved.</p>
+  </footer>
+
+  <button id="darkModeToggle">🌙 Dark Mode</button>
+
+  <script>
+    // Get the toggle button
+    const toggle = document.getElementById("darkModeToggle");
+
+    // When clicked, switch theme
+    toggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+
+      if (document.body.classList.contains("dark-mode")) {
+        toggle.textContent = "☀️ Light Mode";
+        localStorage.setItem("theme", "dark");
+      } else {
+        toggle.textContent = "🌙 Dark Mode";
+        localStorage.setItem("theme", "light");
+      }
+    });
+
+    // Remember user choice
+    window.onload = () => {
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark-mode");
+        toggle.textContent = "☀️ Light Mode";
+      }
+    };
+  </script>
+</body>
+</html>
