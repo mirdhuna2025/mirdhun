@@ -20,12 +20,30 @@
       display: none !important;
     }
 
-    /* View Toggle */
-    #view-toggle {
+    /* Unified Menu Controls */
+    #menu-controls {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       margin-bottom: 12px;
-      justify-content: flex-end;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #search-input {
+      flex: 1;
+      min-width: 120px;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 13px;
+      outline: none;
+    }
+    #sort-select {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
     }
     .view-btn {
       padding: 6px 14px;
@@ -42,7 +60,7 @@
       border-color: #d40000;
     }
 
-    /* Category Grid (NO SCROLL - 4 per row) */
+    /* Category Grid */
     .category-carousel {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -81,7 +99,7 @@
       max-width: 80px;
     }
 
-    /* Offer Banner - Shorter & Cleaner */
+    /* Offer Banner */
     .offer-banner {
       background: linear-gradient(135deg, #ffebee, #ffcdd2);
       color: #c62828;
@@ -96,9 +114,7 @@
       font-size: 14px;
     }
 
-    /* ============================
-       ✨ MENU SECTION (Only these styles modified)
-       ============================ */
+    /* Menu Grid */
     .menu-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -119,7 +135,6 @@
       background-clip: padding-box;
     }
 
-    /* animated gradient border (subtle) */
     .menu-card::after {
       content: "";
       position: absolute;
@@ -165,19 +180,11 @@
       margin-bottom: 6px;
       color: #222;
       text-transform: capitalize;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
-.menu-name {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 6px;
-  color: #222;
-  text-transform: capitalize;
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  max-width: 150px; /* optional: controls width to test wrapping */
-}
     .menu-price {
       color: #d40000;
       font-weight: 700;
@@ -188,8 +195,8 @@
     .offer-tag {
       position: absolute;
       bottom: 12px;
-      
-      left: 10px;  width: 45px;
+      left: 10px;
+      width: 45px;
       background: #d40000;
       color: white;
       font-size: 11px;
@@ -200,9 +207,6 @@
       z-index: 3;
     }
 
-
-
-    /* Add to cart - minimal floating */
     .add-cart-btn {
       position: absolute;
       bottom: 12px;
@@ -224,15 +228,12 @@
     .menu-card:hover .add-cart-btn { opacity: 1; transform: translateY(0); }
     .add-cart-btn:hover { background: #43a047; transform: scale(1.04); }
 
-    
-
-    @keyframes addedPop {
-      0% { transform: scale(0.9); opacity: 0; }
-      60% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
+    @keyframes cardFadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* list view */
+    /* List view */
     .menu-card.list-view {
       grid-column: 1 / -1;
       display: flex;
@@ -242,32 +243,36 @@
     }
     .menu-card.list-view .menu-img { width: 140px; height: 140px; border-radius: 12px; object-fit: cover; }
     .menu-card.list-view .menu-info { padding: 8px 0; flex: 1; }
-    .menu-card.list-view .add-cart-btn { position: relative; left:80px; bottom:2px; opacity: 1; transform: none; width: 110px; align-self: flex-end; }
+    .menu-card.list-view .add-cart-btn { 
+      position: relative; 
+      left: auto; 
+      right: auto; 
+      bottom: auto; 
+      opacity: 1; 
+      transform: none; 
+      width: 110px; 
+      align-self: flex-end; 
+      margin-top: 10px;
+    }
 
-    /* small responsive improvements */
     @media (max-width: 520px) {
       .menu-img { height: 160px; }
       .menu-card { border-radius: 14px; }
       .add-cart-btn { padding: 7px 12px; font-size: 13px; }
     }
 
-    @keyframes cardFadeUp {
-      from { opacity: 0; transform: translateY(18px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ✅ FIXED CART POPUP - STAYS ON RIGHT FOREVER (unchanged) */
+    /* Cart Popup */
     #cart-popup {
       display: none;
       position: fixed;
       bottom: 120px;
-      right: 20px !important; /* 👈 LOCKED TO RIGHT */
+      right: 20px !important;
       width: 360px;
       max-width: 90vw;
       background: white;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      z-index: 9999 !important; /* 👈 FLOATS ABOVE EVERYTHING */
+      z-index: 9999 !important;
       overflow: hidden;
       animation: slideUp 0.3s ease-out;
       transform: translateX(0) !important;
@@ -365,7 +370,6 @@
       background: #b00000;
     }
 
-    /* Cart Toggle Button */
     #cart-toggle-btn {
       position: fixed;
       bottom: 50px;
@@ -389,7 +393,6 @@
       transform: scale(1.08);
     }
 
-    /* Cart Badge */
     .cart-badge {
       position: absolute;
       top: -6px;
@@ -407,7 +410,6 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* Toast - Compact & Attractive */
     #toast {
       position: fixed;
       bottom: 20px;
@@ -430,25 +432,30 @@
 </head>
 <body>
 
-  <!-- Auth Status -->
   <div id="auth-bar"></div>
 
-  <!-- Offer Banner -->
   <div class="offer-banner" id="offerBanner"></div>
 
-  <!-- Categories -->
   <h2>Categories</h2>
   <div class="category-carousel" id="categoryCarousel"></div>
 
-  <!-- Menu View Toggle + Grid -->
   <h2>Menu</h2>
-  <div id="view-toggle">
-    <button id="grid-view" class="view-btn active">Grid</button>
-    <button id="list-view" class="view-btn">List</button>
+  <div id="menu-controls">
+    <input type="text" id="search-input" placeholder="Search menu..." />
+    <select id="sort-select">
+      <option value="default">Sort By</option>
+      <option value="price-low-high">Price: Low to High</option>
+      <option value="price-high-low">Price: High to Low</option>
+      <option value="offer-first">Offers First</option>
+    </select>
+    <div id="view-buttons">
+      <button id="grid-view" class="view-btn active">Grid</button>
+      <button id="list-view" class="view-btn">List</button>
+    </div>
   </div>
+
   <div class="menu-grid" id="menuGrid"></div>
 
-  <!-- Cart Popup -->
   <div id="cart-popup">
     <div class="cart-header">
       <span>Your Cart</span>
