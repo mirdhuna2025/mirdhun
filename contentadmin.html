@@ -57,7 +57,8 @@ label {display:inline-block;margin-right:10px;margin-top:6px;}
 <h2>🍲 Menu Items</h2>
 <div>
 <input type="text" id="itemName" placeholder="Item Name">
-<input type="number" id="itemPrice" placeholder="Price (₹)" min="0" step="0.01">
+<input type="number" id="itemPrice" placeholder="Selling Price (₹)" min="0" step="0.01">
+<input type="number" id="itemMrp" placeholder="MRP (₹)" min="0" step="0.01">
 <input type="url" id="itemImage" placeholder="Image URL">
 <select id="itemCategory"><option value="">-- Select Category --</option></select>
 <label><input type="checkbox" id="itemOffer"> Offer Item</label>
@@ -83,199 +84,281 @@ label {display:inline-block;margin-right:10px;margin-top:6px;}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-const ADMIN_PASSWORD="Sanu.0000";
-const firebaseConfig={
-apiKey:"AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-authDomain:"mirdhuna-25542.firebaseapp.com",
-databaseURL:"https://mirdhuna-25542-default-rtdb.firebaseio.com",
-projectId:"mirdhuna-25542",
-storageBucket:"mirdhuna-25542.appspot.com",
-messagingSenderId:"575924409876",
-appId:"1:575924409876:web:6ba1ed88ce941d9c83b901"
+const ADMIN_PASSWORD = "Sanu.0000";
+const firebaseConfig = {
+  apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+  authDomain: "mirdhuna-25542.firebaseapp.com",
+  databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+  projectId: "mirdhuna-25542",
+  storageBucket: "mirdhuna-25542.appspot.com",
+  messagingSenderId: "575924409876",
+  appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
-let categories=[];
+const db = firebase.database();
+let categories = [];
 
-function attemptLogin(){
-let input=document.getElementById('password-input').value;
-let errorEl=document.getElementById('login-error');
-if(input===ADMIN_PASSWORD){
-document.body.classList.remove('protected');
-document.getElementById('login-overlay').style.display='none';
-loadAllData();
-}else{
-errorEl.textContent="❌ Incorrect password";
-setTimeout(()=>errorEl.textContent="",2000);
+// --- Login ---
+function attemptLogin() {
+  const input = document.getElementById('password-input').value;
+  const errorEl = document.getElementById('login-error');
+  if (input === ADMIN_PASSWORD) {
+    document.body.classList.remove('protected');
+    document.getElementById('login-overlay').style.display = 'none';
+    loadAllData();
+  } else {
+    errorEl.textContent = "❌ Incorrect password";
+    setTimeout(() => errorEl.textContent = "", 2000);
+  }
 }
-}
-
-document.getElementById('password-input').addEventListener('keypress',e=>{if(e.key==='Enter')attemptLogin();});
-
-function showStatus(msg,isSuccess){let el=document.getElementById('status');el.textContent=msg;el.className=isSuccess?'success':'error';setTimeout(()=>el.textContent='',3000);}
-
-function loadCategoriesForDropdown(){
-db.ref('categories').once('value').then(snap=>{
-categories=snap.val()?Object.values(snap.val()):[];
-let select=document.getElementById('itemCategory');
-select.innerHTML='<option value="">-- Select Category --</option>';
-categories.forEach(cat=>{let opt=document.createElement('option');opt.value=cat.name;opt.textContent=cat.name;select.appendChild(opt);});
-});
-}
-
-// ---------- Add / Save Functions ----------
-function resetButton(btnId,label){
-document.getElementById(btnId).textContent=label;
-}
-
-document.getElementById('addCategoryBtn').addEventListener('click',()=>{
-const name=document.getElementById('catName').value.trim();
-const image=document.getElementById('catImage').value.trim();
-if(!name||!image)return showStatus('Name and image required.',false);
-db.ref('categories').push({name,image}).then(()=>{showStatus('Category added!',true);document.getElementById('catName').value='';document.getElementById('catImage').value='';loadAllData();});
+document.getElementById('password-input').addEventListener('keypress', e => {
+  if (e.key === 'Enter') attemptLogin();
 });
 
-document.getElementById('addMenuItemBtn').addEventListener('click',()=>{
-const name=document.getElementById('itemName').value.trim();
-const price=parseFloat(document.getElementById('itemPrice').value);
-const image=document.getElementById('itemImage').value.trim();
-const category=document.getElementById('itemCategory').value;
-const offer=document.getElementById('itemOffer').checked;
-if(!name||!image||isNaN(price)||!category)return showStatus('All fields required.',false);
-db.ref('menu').push({id:name.toLowerCase().replace(/\s+/g,'-'),name,price,image,category,offer}).then(()=>{showStatus('Menu item added!',true);document.getElementById('itemName').value='';document.getElementById('itemPrice').value='';document.getElementById('itemImage').value='';document.getElementById('itemCategory').value='';document.getElementById('itemOffer').checked=false;loadAllData();});
-});
-
-document.getElementById('addOfferBtn').addEventListener('click',()=>{
-const title=document.getElementById('offerTitle').value.trim();
-const desc=document.getElementById('offerDesc').value.trim();
-const active=document.getElementById('offerActive').checked;
-if(!title||!desc)return showStatus('Title and description required.',false);
-db.ref('offers').push({title,description:desc,active}).then(()=>{showStatus('Offer added!',true);document.getElementById('offerTitle').value='';document.getElementById('offerDesc').value='';document.getElementById('offerActive').checked=true;loadAllData();});
-});
-
-// ---------- Load Data ----------
-function loadAllData(){
-loadCategoriesForDropdown();
-
-// Categories
-db.ref('categories').once('value').then(snap=>{
-const list=document.getElementById('categoriesList');
-list.innerHTML='<h3>Current Categories</h3>';
-const data=snap.val();
-if(!data)return list.innerHTML+='<p>None</p>';
-Object.entries(data).forEach(([key,item])=>{
-const div=document.createElement('div');
-div.className='item-preview';
-div.innerHTML=`<img class="item-img" src="${item.image}" onerror="this.src='https://via.placeholder.com/60'"/>
-<div>
-<strong>${item.name}</strong><br>
-<button class="save-btn" onclick="editCategory('${key}','${item.name}','${item.image}')">Edit</button>
-<button class="delete-btn" onclick="deleteItem('categories','${key}')">Delete</button>
-</div>`;
-list.appendChild(div);
-});
-});
-
-// Menu Items
-db.ref('menu').once('value').then(snap=>{
-const list=document.getElementById('menuList');
-list.innerHTML='<h3>Current Menu Items</h3>';
-const data=snap.val();
-if(!data)return list.innerHTML+='<p>None</p>';
-Object.entries(data).forEach(([key,item])=>{
-const div=document.createElement('div');
-div.className='item-preview';
-div.innerHTML=`<img class="item-img" src="${item.image}" onerror="this.src='https://via.placeholder.com/60'"/>
-<div><strong>${item.name}</strong> — ₹${item.price} (${item.category}) ${item.offer?'🔥':''}<br>
-<button class="save-btn" onclick="editMenuItem('${key}','${item.name}',${item.price},'${item.image}','${item.category}',${item.offer})">Edit</button>
-<button class="delete-btn" onclick="deleteItem('menu','${key}')">Delete</button></div>`;
-list.appendChild(div);
-});
-});
-
-// Offers
-db.ref('offers').once('value').then(snap=>{
-const list=document.getElementById('offersList');
-list.innerHTML='<h3>Current Offers</h3>';
-const data=snap.val();
-if(!data)return list.innerHTML+='<p>None</p>';
-Object.entries(data).forEach(([key,item])=>{
-const div=document.createElement('div');
-div.className='item-preview';
-div.innerHTML=`<div><strong>${item.title}</strong> — ${item.description} ${item.active?'🟢':'🔴'}<br>
-<button class="save-btn" onclick="editOffer('${key}','${item.title}','${item.description}',${item.active})">Edit</button>
-<button class="delete-btn" onclick="deleteItem('offers','${key}')">Delete</button></div>`;
-list.appendChild(div);
-});
-});
+// --- Status ---
+function showStatus(msg, isSuccess) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = isSuccess ? 'success' : 'error';
+  setTimeout(() => el.textContent = '', 3000);
 }
 
-// ---------- Edit Functions ----------
-function editCategory(key,name,image){
-document.getElementById('catName').value=name;
-document.getElementById('catImage').value=image;
-let btn=document.getElementById('addCategoryBtn');
-btn.textContent='Save Category';
-btn.onclick=function(){
-db.ref('categories/'+key).update({name, image:document.getElementById('catImage').value.trim()});
-showStatus('Category updated!',true);
-document.getElementById('catName').value='';document.getElementById('catImage').value='';
-resetButton('addCategoryBtn','Add Category');
-loadAllData();
-}
+// --- Load Categories for Dropdown ---
+function loadCategoriesForDropdown() {
+  db.ref('categories').once('value').then(snap => {
+    categories = snap.val() ? Object.values(snap.val()) : [];
+    const select = document.getElementById('itemCategory');
+    select.innerHTML = '<option value="">-- Select Category --</option>';
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name;
+      opt.textContent = cat.name;
+      select.appendChild(opt);
+    });
+  });
 }
 
-function editMenuItem(key,name,price,image,category,offer){
-document.getElementById('itemName').value=name;
-document.getElementById('itemPrice').value=price;
-document.getElementById('itemImage').value=image;
-document.getElementById('itemCategory').value=category;
-document.getElementById('itemOffer').checked=offer;
-let btn=document.getElementById('addMenuItemBtn');
-btn.textContent='Save Menu Item';
-btn.onclick=function(){
-db.ref('menu/'+key).update({
-name:document.getElementById('itemName').value.trim(),
-price:parseFloat(document.getElementById('itemPrice').value),
-image:document.getElementById('itemImage').value.trim(),
-category:document.getElementById('itemCategory').value,
-offer:document.getElementById('itemOffer').checked
+// --- Reset Form & Button ---
+function resetMenuItemForm() {
+  document.getElementById('itemName').value = '';
+  document.getElementById('itemPrice').value = '';
+  document.getElementById('itemMrp').value = '';
+  document.getElementById('itemImage').value = '';
+  document.getElementById('itemCategory').value = '';
+  document.getElementById('itemOffer').checked = false;
+  document.getElementById('addMenuItemBtn').textContent = 'Add Menu Item';
+}
+
+// --- Add Menu Item ---
+document.getElementById('addMenuItemBtn').addEventListener('click', function () {
+  const name = document.getElementById('itemName').value.trim();
+  const price = parseFloat(document.getElementById('itemPrice').value);
+  const mrp = parseFloat(document.getElementById('itemMrp').value) || null;
+  const image = document.getElementById('itemImage').value.trim();
+  const category = document.getElementById('itemCategory').value;
+  const offer = document.getElementById('itemOffer').checked;
+
+  if (!name || isNaN(price) || !image || !category) {
+    return showStatus('Name, price, image, and category required.', false);
+  }
+
+  const newItem = { id: name.toLowerCase().replace(/\s+/g, '-'), name, price, image, category, offer };
+  if (mrp && mrp > price) newItem.mrp = mrp;
+
+  db.ref('menu').push(newItem).then(() => {
+    showStatus('Menu item added!', true);
+    resetMenuItemForm();
+    loadAllData();
+  });
 });
-showStatus('Menu Item updated!',true);
-document.getElementById('itemName').value='';document.getElementById('itemPrice').value='';document.getElementById('itemImage').value='';document.getElementById('itemCategory').value='';document.getElementById('itemOffer').checked=false;
-resetButton('addMenuItemBtn','Add Menu Item');
-loadAllData();
-}
-}
 
-function editOffer(key,title,desc,active){
-document.getElementById('offerTitle').value=title;
-document.getElementById('offerDesc').value=desc;
-document.getElementById('offerActive').checked=active;
-let btn=document.getElementById('addOfferBtn');
-btn.textContent='Save Offer';
-btn.onclick=function(){
-db.ref('offers/'+key).update({
-title:document.getElementById('offerTitle').value.trim(),
-description:document.getElementById('offerDesc').value.trim(),
-active:document.getElementById('offerActive').checked
+// --- Add Category ---
+document.getElementById('addCategoryBtn').addEventListener('click', () => {
+  const name = document.getElementById('catName').value.trim();
+  const image = document.getElementById('catImage').value.trim();
+  if (!name || !image) return showStatus('Name and image required.', false);
+  db.ref('categories').push({ name, image }).then(() => {
+    showStatus('Category added!', true);
+    document.getElementById('catName').value = '';
+    document.getElementById('catImage').value = '';
+    loadAllData();
+  });
 });
-showStatus('Offer updated!',true);
-document.getElementById('offerTitle').value='';document.getElementById('offerDesc').value='';document.getElementById('offerActive').checked=true;
-resetButton('addOfferBtn','Add Offer');
-loadAllData();
-}
+
+// --- Add Offer ---
+document.getElementById('addOfferBtn').addEventListener('click', () => {
+  const title = document.getElementById('offerTitle').value.trim();
+  const desc = document.getElementById('offerDesc').value.trim();
+  const active = document.getElementById('offerActive').checked;
+  if (!title || !desc) return showStatus('Title and description required.', false);
+  db.ref('offers').push({ title, description: desc, active }).then(() => {
+    showStatus('Offer added!', true);
+    document.getElementById('offerTitle').value = '';
+    document.getElementById('offerDesc').value = '';
+    document.getElementById('offerActive').checked = true;
+    loadAllData();
+  });
+});
+
+// --- Load All Data ---
+function loadAllData() {
+  loadCategoriesForDropdown();
+
+  // Categories
+  db.ref('categories').once('value').then(snap => {
+    const list = document.getElementById('categoriesList');
+    list.innerHTML = '<h3>Current Categories</h3>';
+    const data = snap.val();
+    if (!data) return list.innerHTML += '<p>None</p>';
+    Object.entries(data).forEach(([key, item]) => {
+      const div = document.createElement('div');
+      div.className = 'item-preview';
+      div.innerHTML = `<img class="item-img" src="${item.image}" onerror="this.src='https://via.placeholder.com/60'"/>
+        <div>
+          <strong>${item.name}</strong><br>
+          <button class="save-btn" onclick="editCategory('${key}', '${item.name.replace(/'/g, "\\'")}', '${item.image.replace(/'/g, "\\'")}')">Edit</button>
+          <button class="delete-btn" onclick="deleteItem('categories','${key}')">Delete</button>
+        </div>`;
+      list.appendChild(div);
+    });
+  });
+
+  // Menu Items
+  db.ref('menu').once('value').then(snap => {
+    const list = document.getElementById('menuList');
+    list.innerHTML = '<h3>Current Menu Items</h3>';
+    const data = snap.val();
+    if (!data) return list.innerHTML += '<p>None</p>';
+    Object.entries(data).forEach(([key, item]) => {
+      let priceInfo = `₹${item.price}`;
+      if (item.mrp && item.mrp > item.price) {
+        const disc = Math.round(((item.mrp - item.price) / item.mrp) * 100);
+        priceInfo = `<del>₹${item.mrp}</del> ₹${item.price} (${disc}% OFF)`;
+      }
+      const div = document.createElement('div');
+      div.className = 'item-preview';
+      div.innerHTML = `<img class="item-img" src="${item.image}" onerror="this.src='https://via.placeholder.com/60'"/>
+        <div>
+          <strong>${item.name}</strong> — ${priceInfo} (${item.category}) ${item.offer ? '🔥' : ''}<br>
+          <button class="save-btn" onclick="editMenuItem('${key}', \`${item.name.replace(/`/g, '\\`')}\`, ${item.price}, ${item.mrp || 'null'}, \`${item.image.replace(/`/g, '\\`')}\`, \`${item.category.replace(/`/g, '\\`')}\`, ${item.offer})">Edit</button>
+          <button class="delete-btn" onclick="deleteItem('menu','${key}')">Delete</button>
+        </div>`;
+      list.appendChild(div);
+    });
+  });
+
+  // Offers
+  db.ref('offers').once('value').then(snap => {
+    const list = document.getElementById('offersList');
+    list.innerHTML = '<h3>Current Offers</h3>';
+    const data = snap.val();
+    if (!data) return list.innerHTML += '<p>None</p>';
+    Object.entries(data).forEach(([key, item]) => {
+      const div = document.createElement('div');
+      div.className = 'item-preview';
+      div.innerHTML = `<div>
+        <strong>${item.title}</strong> — ${item.description} ${item.active ? '🟢' : '🔴'}<br>
+        <button class="save-btn" onclick="editOffer('${key}', \`${item.title.replace(/`/g, '\\`')}\`, \`${item.description.replace(/`/g, '\\`')}\`, ${item.active})">Edit</button>
+        <button class="delete-btn" onclick="deleteItem('offers','${key}')">Delete</button>
+      </div>`;
+      list.appendChild(div);
+    });
+  });
 }
 
-// ---------- Delete ----------
-function deleteItem(type,key){
-if(confirm('Are you sure you want to delete?')){
-db.ref(type+'/'+key).remove();
-showStatus('Deleted!',true);
-loadAllData();
-}
+// --- Edit Functions (SAFE: no duplicate listeners) ---
+function editCategory(key, name, image) {
+  document.getElementById('catName').value = name;
+  document.getElementById('catImage').value = image;
+  const btn = document.getElementById('addCategoryBtn');
+  const originalText = btn.textContent;
+  btn.textContent = 'Save Category';
+  const saveFn = () => {
+    db.ref('categories/' + key).update({
+      name: document.getElementById('catName').value.trim(),
+      image: document.getElementById('catImage').value.trim()
+    }).then(() => {
+      showStatus('Category updated!', true);
+      document.getElementById('catName').value = '';
+      document.getElementById('catImage').value = '';
+      btn.textContent = 'Add Category';
+      btn.removeEventListener('click', saveFn);
+      loadAllData();
+    });
+  };
+  // Remove previous listener if any
+  btn.removeEventListener('click', saveFn);
+  btn.addEventListener('click', saveFn);
 }
 
+function editMenuItem(key, name, price, mrp, image, category, offer) {
+  document.getElementById('itemName').value = name;
+  document.getElementById('itemPrice').value = price;
+  document.getElementById('itemMrp').value = mrp || '';
+  document.getElementById('itemImage').value = image;
+  document.getElementById('itemCategory').value = category;
+  document.getElementById('itemOffer').checked = offer;
+  const btn = document.getElementById('addMenuItemBtn');
+  btn.textContent = 'Save Menu Item';
+  const saveFn = () => {
+    const updatedMrp = parseFloat(document.getElementById('itemMrp').value) || null;
+    const updateData = {
+      name: document.getElementById('itemName').value.trim(),
+      price: parseFloat(document.getElementById('itemPrice').value),
+      image: document.getElementById('itemImage').value.trim(),
+      category: document.getElementById('itemCategory').value,
+      offer: document.getElementById('itemOffer').checked
+    };
+    if (updatedMrp && updatedMrp > updateData.price) {
+      updateData.mrp = updatedMrp;
+    } else {
+      updateData.mrp = null;
+    }
+    db.ref('menu/' + key).update(updateData).then(() => {
+      showStatus('Menu item updated!', true);
+      resetMenuItemForm();
+      btn.removeEventListener('click', saveFn);
+      loadAllData();
+    });
+  };
+  btn.removeEventListener('click', saveFn);
+  btn.addEventListener('click', saveFn);
+}
+
+function editOffer(key, title, desc, active) {
+  document.getElementById('offerTitle').value = title;
+  document.getElementById('offerDesc').value = desc;
+  document.getElementById('offerActive').checked = active;
+  const btn = document.getElementById('addOfferBtn');
+  btn.textContent = 'Save Offer';
+  const saveFn = () => {
+    db.ref('offers/' + key).update({
+      title: document.getElementById('offerTitle').value.trim(),
+      description: document.getElementById('offerDesc').value.trim(),
+      active: document.getElementById('offerActive').checked
+    }).then(() => {
+      showStatus('Offer updated!', true);
+      document.getElementById('offerTitle').value = '';
+      document.getElementById('offerDesc').value = '';
+      document.getElementById('offerActive').checked = true;
+      btn.textContent = 'Add Offer';
+      btn.removeEventListener('click', saveFn);
+      loadAllData();
+    });
+  };
+  btn.removeEventListener('click', saveFn);
+  btn.addEventListener('click', saveFn);
+}
+
+// --- Delete ---
+function deleteItem(type, key) {
+  if (confirm('Are you sure you want to delete?')) {
+    db.ref(type + '/' + key).remove().then(() => {
+      showStatus('Deleted!', true);
+      loadAllData();
+    });
+  }
+}
 </script>
 </body>
 </html>
