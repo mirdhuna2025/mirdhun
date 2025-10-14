@@ -4,203 +4,231 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CanvasSite — Draw Your Website</title>
-  <!-- Tailwind CSS via CDN -->
+  <!-- Tailwind CSS (v3.3) via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {}
-      }
-    }
+    tailwind.config = { corePlugins: { preflight: false } };
   </script>
   <style>
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       overflow: hidden;
+      background-color: #f3f4f6;
     }
-    .fabric-canvas-wrapper {
+    #canvas {
       border: 1px solid #e5e7eb;
       background: white;
       margin: 16px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    .hidden { display: none !important; }
   </style>
 </head>
-<body class="bg-gray-100 h-screen flex">
+<body class="h-screen flex bg-gray-100">
+
   <!-- Toolbar -->
   <div class="w-16 bg-white shadow flex flex-col items-center py-4 space-y-4">
-    <button onclick="addElement('div')" title="Add Box" class="p-2 rounded hover:bg-blue-100">□</button>
-    <button onclick="addElement('text')" title="Add Text" class="p-2 rounded hover:bg-blue-100">T</button>
-    <button onclick="addElement('button')" title="Add Button" class="p-2 rounded hover:bg-blue-100">⬜</button>
-    <button onclick="addElement('image')" title="Add Image Placeholder" class="p-2 rounded hover:bg-blue-100">🖼️</button>
+    <button onclick="addElement('div')" title="Add Box" class="text-xl p-2 rounded hover:bg-blue-100">■</button>
+    <button onclick="addElement('text')" title="Add Text" class="text-xl p-2 rounded hover:bg-blue-100">T</button>
+    <button onclick="addElement('button')" title="Add Button" class="text-xl p-2 rounded hover:bg-blue-100">🔘</button>
+    <button onclick="addElement('image')" title="Add Image Placeholder" class="text-xl p-2 rounded hover:bg-blue-100">🖼️</button>
   </div>
 
   <!-- Canvas Area -->
-  <div class="flex-1 relative">
-    <div class="fabric-canvas-wrapper">
-      <canvas id="canvas" width="1200" height="800"></canvas>
-    </div>
+  <div class="flex-1">
+    <canvas id="canvas" width="1200" height="800"></canvas>
   </div>
 
   <!-- Properties Panel -->
-  <div id="propertiesPanel" class="w-64 bg-white shadow p-4 overflow-y-auto">
-    <h2 class="font-bold mb-4">Properties</h2>
-    <div id="noSelection" class="text-gray-500">Select an element to edit</div>
-    <div id="propertyInputs" class="space-y-3 hidden"></div>
+  <div class="w-64 bg-white shadow p-4 overflow-y-auto">
+    <h2 class="font-bold text-lg mb-3">Properties</h2>
+    <div id="noSelection" class="">Select an element to edit</div>
+    <div id="propertyInputs" class="hidden space-y-3"></div>
 
-    <div class="mt-6 space-x-2">
-      <button onclick="openPreview()" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700">Preview</button>
-      <button onclick="exportHTML()" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Export HTML</button>
+    <div class="mt-6 flex gap-2">
+      <button onclick="openPreview()" class="flex-1 py-2 bg-green-600 text-white rounded hover:bg-green-700">Preview</button>
+      <button onclick="exportHTML()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Export</button>
     </div>
   </div>
 
   <!-- Preview Modal -->
   <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-    <div class="bg-white w-4/5 h-4/5 relative">
-      <button onclick="closePreview()" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center">✕</button>
-      <iframe id="previewFrame" class="w-full h-full border-none"></iframe>
+    <div class="bg-white w-4/5 h-4/5 relative rounded">
+      <button onclick="closePreview()" class="absolute top-3 right-3 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-lg">✕</button>
+      <iframe id="previewFrame" class="w-full h-full border-none rounded"></iframe>
     </div>
   </div>
 
-  <!-- Fabric.js via CDN -->
+  <!-- Fabric.js from CDN (v5.3.1) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
   <script>
-    // Global state
+    // ======================
+    // GLOBAL STATE
+    // ======================
     let canvas;
-    let elements = [];
+    const elements = [];
     let selectedElement = null;
 
-    // Initialize canvas
-    window.onload = () => {
+    // ======================
+    // INIT CANVAS
+    // ======================
+    window.addEventListener('load', () => {
       canvas = new fabric.Canvas('canvas', {
         backgroundColor: '#f9fafb',
         selection: true,
         preserveObjectStacking: true
       });
 
-      canvas.on('selection:created', handleSelection);
-      canvas.on('selection:updated', handleSelection);
+      canvas.on('selection:created', onSelectionChange);
+      canvas.on('selection:updated', onSelectionChange);
       canvas.on('selection:cleared', () => {
         selectedElement = null;
-        updatePropertiesPanel();
+        renderPropertiesPanel();
       });
-    };
+    });
 
-    function handleSelection(e) {
-      const activeObject = e.selected?.[0];
-      if (activeObject && activeObject.data) {
-        selectedElement = activeObject.data;
-        updatePropertiesPanel();
+    function onSelectionChange(e) {
+      const obj = e.selected?.[0];
+      if (obj && obj.data) {
+        selectedElement = obj.data;
+        renderPropertiesPanel();
       } else {
         selectedElement = null;
-        updatePropertiesPanel();
+        renderPropertiesPanel();
       }
     }
 
+    // ======================
+    // ADD ELEMENTS
+    // ======================
     function addElement(type) {
-      const id = `el_${Date.now()}`;
-      let obj;
-
-      const commonProps = {
-        left: 100,
-        top: 100,
-        width: type === 'text' ? 200 : 200,
-        height: type === 'text' ? 40 : 100,
-        fill: (type === 'text' || type === 'button') ? '#ffffff' : '#3b82f6',
-        data: { id, type: type === 'image' ? 'div' : type }
-      };
+      const id = 'el_' + Date.now();
+      let fabricObj;
 
       if (type === 'text' || type === 'button') {
-        const textContent = type === 'button' ? 'Click Me' : 'Your Text';
-        obj = new fabric.Textbox(textContent, {
-          ...commonProps,
+        const text = type === 'button' ? 'Click Me' : 'Your Text';
+        fabricObj = new fabric.Textbox(text, {
+          left: 100,
+          top: 100,
+          width: 200,
           fontSize: 16,
           fontFamily: 'Arial',
           fill: '#000000',
+          backgroundColor: type === 'button' ? '#3b82f6' : 'transparent',
            {
-            ...commonProps.data,
-            text: textContent,
+            id: id,
+            type: type,
+            text: text,
             fontSize: 16,
             fontFamily: 'Arial',
-            textColor: '#000000'
+            textColor: '#000000',
+            fill: type === 'button' ? '#3b82f6' : 'transparent'
           }
         });
       } else if (type === 'image') {
-        obj = new fabric.Rect({
-          ...commonProps,
-          fill: '#d1d5db',
-          stroke: '#9ca3af',
+        fabricObj = new fabric.Rect({
+          left: 100,
+          top: 100,
+          width: 200,
+          height: 150,
+          fill: '#f3f4f6',
+          stroke: '#d1d5db',
           strokeWidth: 1,
            {
-            ...commonProps.data,
-            type: 'div'
+            id: id,
+            type: 'div',
+            fill: '#f3f4f6'
           }
         });
       } else {
-        obj = new fabric.Rect(commonProps);
+        fabricObj = new fabric.Rect({
+          left: 100,
+          top: 100,
+          width: 200,
+          height: 100,
+          fill: '#3b82f6',
+           {
+            id: id,
+            type: 'div',
+            fill: '#3b82f6'
+          }
+        });
       }
 
-      canvas.add(obj);
-      canvas.setActiveObject(obj);
+      canvas.add(fabricObj);
+      canvas.setActiveObject(fabricObj);
 
-      const newElement = {
-        id,
+      // Save to elements array
+      const el = {
+        id: id,
         type: type === 'image' ? 'div' : type,
         left: 100,
         top: 100,
-        width: commonProps.width,
-        height: commonProps.height,
-        fill: commonProps.fill,
+        width: fabricObj.width,
+        height: fabricObj.height,
+        fill: fabricObj.fill || (type === 'button' ? '#3b82f6' : 'transparent'),
         ...(type === 'text' || type === 'button'
           ? {
-              text: type === 'button' ? 'Click Me' : 'Your Text',
-              fontSize: 16,
-              fontFamily: 'Arial',
-              textColor: '#000000'
+              text: fabricObj.text,
+              fontSize: fabricObj.fontSize,
+              fontFamily: fabricObj.fontFamily,
+              textColor: fabricObj.fill
             }
           : {})
       };
 
-      elements.push(newElement);
-      selectedElement = newElement;
-      updatePropertiesPanel();
+      elements.push(el);
+      selectedElement = el;
+      renderPropertiesPanel();
     }
 
-    function updateElementProperty(key, value) {
+    // ======================
+    // UPDATE PROPERTIES
+    // ======================
+    function updateProperty(key, value) {
       if (!selectedElement) return;
 
-      // Update local state
+      // Update local element
       selectedElement[key] = value;
 
-      // Update elements array
-      const index = elements.findIndex(el => el.id === selectedElement.id);
-      if (index !== -1) {
-        elements[index] = { ...selectedElement };
-      }
+      // Sync with elements array
+      const idx = elements.findIndex(e => e.id === selectedElement.id);
+      if (idx !== -1) elements[idx] = { ...selectedElement };
 
       // Update fabric object
-      const fabricObj = canvas.getActiveObject();
-      if (!fabricObj) return;
+      const obj = canvas.getActiveObject();
+      if (!obj) return;
 
-      if (key === 'fill') {
-        fabricObj.set('fill', value);
+      if (key === 'left' || key === 'top' || key === 'width' || key === 'height') {
+        obj.set(key, parseFloat(value));
       } else if (key === 'text') {
-        if ('text' in fabricObj) fabricObj.set('text', value);
+        if (obj.setText) obj.setText(value);
       } else if (key === 'fontSize') {
-        if ('fontSize' in fabricObj) fabricObj.set('fontSize', value);
+        obj.set('fontSize', parseFloat(value));
       } else if (key === 'fontFamily') {
-        if ('fontFamily' in fabricObj) fabricObj.set('fontFamily', value);
+        obj.set('fontFamily', value);
       } else if (key === 'textColor') {
-        if ('fill' in fabricObj) fabricObj.set('fill', value);
-      } else if (['left', 'top', 'width', 'height'].includes(key)) {
-        fabricObj.set(key, parseFloat(value));
+        obj.set('fill', value);
+        if (selectedElement.type === 'button') {
+          selectedElement.fill = obj.backgroundColor || '#3b82f6';
+        }
+      } else if (key === 'fill') {
+        if (selectedElement.type === 'button') {
+          obj.set('backgroundColor', value);
+        } else {
+          obj.set('fill', value);
+        }
       }
 
       canvas.renderAll();
     }
 
-    function updatePropertiesPanel() {
+    // ======================
+    // RENDER PROPERTIES PANEL
+    // ======================
+    function renderPropertiesPanel() {
       const noSel = document.getElementById('noSelection');
       const inputs = document.getElementById('propertyInputs');
 
@@ -215,64 +243,85 @@
 
       let html = '';
 
-      // Position & Size
-      html += `<div><label class="block text-sm font-medium">X</label><input type="number" value="${selectedElement.left}" onchange="updateElementProperty('left', this.value)" class="w-full p-1 border rounded"/></div>`;
-      html += `<div><label class="block text-sm font-medium">Y</label><input type="number" value="${selectedElement.top}" onchange="updateElementProperty('top', this.value)" class="w-full p-1 border rounded"/></div>`;
-      html += `<div><label class="block text-sm font-medium">Width</label><input type="number" value="${selectedElement.width}" onchange="updateElementProperty('width', this.value)" class="w-full p-1 border rounded"/></div>`;
-      html += `<div><label class="block text-sm font-medium">Height</label><input type="number" value="${selectedElement.height}" onchange="updateElementProperty('height', this.value)" class="w-full p-1 border rounded"/></div>`;
+      html += `<div><label class="block text-xs font-medium text-gray-700">X (px)</label>`;
+      html += `<input type="number" value="${Math.round(selectedElement.left)}" onchange="updateProperty('left', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm"></div>`;
 
-      // Text-specific
+      html += `<div><label class="block text-xs font-medium text-gray-700">Y (px)</label>`;
+      html += `<input type="number" value="${Math.round(selectedElement.top)}" onchange="updateProperty('top', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm"></div>`;
+
+      html += `<div><label class="block text-xs font-medium text-gray-700">Width (px)</label>`;
+      html += `<input type="number" value="${Math.round(selectedElement.width)}" onchange="updateProperty('width', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm"></div>`;
+
+      html += `<div><label class="block text-xs font-medium text-gray-700">Height (px)</label>`;
+      html += `<input type="number" value="${Math.round(selectedElement.height)}" onchange="updateProperty('height', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm"></div>`;
+
       if (selectedElement.type === 'text' || selectedElement.type === 'button') {
-        html += `<div><label class="block text-sm font-medium">Text</label><input type="text" value="${selectedElement.text || ''}" onchange="updateElementProperty('text', this.value)" class="w-full p-1 border rounded"/></div>`;
-        html += `<div><label class="block text-sm font-medium">Font Size</label><input type="number" value="${selectedElement.fontSize || 16}" onchange="updateElementProperty('fontSize', this.value)" class="w-full p-1 border rounded"/></div>`;
-        html += `<div><label class="block text-sm font-medium">Font</label><select onchange="updateElementProperty('fontFamily', this.value)" class="w-full p-1 border rounded">`;
-        html += `<option value="Arial" ${selectedElement.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>`;
-        html += `<option value="Helvetica" ${selectedElement.fontFamily === 'Helvetica' ? 'selected' : ''}>Helvetica</option>`;
-        html += `<option value="Times New Roman" ${selectedElement.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times</option>`;
-        html += `<option value="Courier New" ${selectedElement.fontFamily === 'Courier New' ? 'selected' : ''}>Courier</option>`;
+        html += `<div><label class="block text-xs font-medium text-gray-700">Text</label>`;
+        html += `<input type="text" value="${selectedElement.text || ''}" onchange="updateProperty('text', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm"></div>`;
+
+        html += `<div><label class="block text-xs font-medium text-gray-700">Font Size</label>`;
+        html += `<input type="number" value="${selectedElement.fontSize || 16}" onchange="updateProperty('fontSize', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm"></div>`;
+
+        html += `<div><label class="block text-xs font-medium text-gray-700">Font</label>`;
+        html += `<select onchange="updateProperty('fontFamily', this.value)" class="w-full mt-1 p-1.5 border rounded text-sm">`;
+        const fonts = ['Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Verdana'];
+        fonts.forEach(font => {
+          const selected = (selectedElement.fontFamily === font) ? 'selected' : '';
+          html += `<option value="${font}" ${selected}>${font}</option>`;
+        });
         html += `</select></div>`;
-        html += `<div><label class="block text-sm font-medium">Text Color</label><input type="color" value="${selectedElement.textColor || '#000000'}" onchange="updateElementProperty('textColor', this.value)" class="w-full h-8"/></div>`;
+
+        html += `<div><label class="block text-xs font-medium text-gray-700">Text Color</label>`;
+        html += `<input type="color" value="${selectedElement.textColor || '#000000'}" onchange="updateProperty('textColor', this.value)" class="w-full mt-1 h-8"></div>`;
       }
 
-      // Fill color
-      html += `<div><label class="block text-sm font-medium">${(selectedElement.type === 'text' || selectedElement.type === 'button') ? 'Background' : 'Color'}</label><input type="color" value="${selectedElement.fill || '#3b82f6'}" onchange="updateElementProperty('fill', this.value)" class="w-full h-8"/></div>`;
+      const fillColorLabel = (selectedElement.type === 'text' || selectedElement.type === 'button') ? 'Background' : 'Fill Color';
+      html += `<div><label class="block text-xs font-medium text-gray-700">${fillColorLabel}</label>`;
+      html += `<input type="color" value="${selectedElement.fill === 'transparent' ? '#ffffff' : (selectedElement.fill || '#3b82f6')}" onchange="updateProperty('fill', this.value)" class="w-full mt-1 h-8"></div>`;
 
       inputs.innerHTML = html;
     }
 
+    // ======================
+    // CODE GENERATION
+    // ======================
     function generateCode() {
       let htmlStr = `<div id="canvas-site" style="position: relative; width: 100%; height: 100vh; background: #f9fafb;">\n`;
       let cssStr = `#canvas-site {\n  position: relative;\n  width: 100%;\n  height: 100vh;\n  background: #f9fafb;\n}\n`;
 
       elements.forEach(el => {
-        const cls = `el-${el.id}`;
+        const className = `el-${el.id}`;
         if (el.type === 'text' || el.type === 'button') {
           const tag = el.type === 'button' ? 'button' : 'div';
-          htmlStr += `  <${tag} class="${cls}">${el.text || ''}</${tag}>\n`;
-          cssStr += `.${cls} {\n`;
+          htmlStr += `  <${tag} class="${className}">${el.text || ''}</${tag}>\n`;
+          cssStr += `.${className} {\n`;
           cssStr += `  position: absolute;\n`;
-          cssStr += `  left: ${el.left}px;\n`;
-          cssStr += `  top: ${el.top}px;\n`;
-          cssStr += `  width: ${el.width}px;\n`;
-          cssStr += `  height: ${el.height}px;\n`;
-          cssStr += `  font-size: ${el.fontSize}px;\n`;
-          cssStr += `  font-family: ${el.fontFamily};\n`;
-          cssStr += `  color: ${el.textColor};\n`;
-          cssStr += `  background: ${el.fill};\n`;
+          cssStr += `  left: ${Math.round(el.left)}px;\n`;
+          cssStr += `  top: ${Math.round(el.top)}px;\n`;
+          cssStr += `  width: ${Math.round(el.width)}px;\n`;
+          cssStr += `  height: ${Math.round(el.height)}px;\n`;
+          cssStr += `  font-size: ${el.fontSize || 16}px;\n`;
+          cssStr += `  font-family: ${el.fontFamily || 'Arial'};\n`;
+          cssStr += `  color: ${el.textColor || '#000000'};\n`;
+          cssStr += `  background: ${el.fill === 'transparent' ? 'transparent' : el.fill};\n`;
           cssStr += `  border: none;\n`;
           cssStr += `  padding: 8px;\n`;
           cssStr += `  box-sizing: border-box;\n`;
+          if (el.type === 'button') {
+            cssStr += `  cursor: pointer;\n`;
+            cssStr += `  border-radius: 6px;\n`;
+          }
           cssStr += `}\n`;
         } else {
-          htmlStr += `  <div class="${cls}"></div>\n`;
-          cssStr += `.${cls} {\n`;
+          htmlStr += `  <div class="${className}"></div>\n`;
+          cssStr += `.${className} {\n`;
           cssStr += `  position: absolute;\n`;
-          cssStr += `  left: ${el.left}px;\n`;
-          cssStr += `  top: ${el.top}px;\n`;
-          cssStr += `  width: ${el.width}px;\n`;
-          cssStr += `  height: ${el.height}px;\n`;
+          cssStr += `  left: ${Math.round(el.left)}px;\n`;
+          cssStr += `  top: ${Math.round(el.top)}px;\n`;
+          cssStr += `  width: ${Math.round(el.width)}px;\n`;
+          cssStr += `  height: ${Math.round(el.height)}px;\n`;
           cssStr += `  background: ${el.fill};\n`;
-          if (el.type === 'div') cssStr += `  border-radius: 4px;\n`;
+          cssStr += `  border-radius: 4px;\n`;
           cssStr += `}\n`;
         }
       });
@@ -281,6 +330,9 @@
       return { html: htmlStr, css: cssStr };
     }
 
+    // ======================
+    // EXPORT & PREVIEW
+    // ======================
     function exportHTML() {
       const { html, css } = generateCode();
       const fullHtml = `<!DOCTYPE html>
