@@ -1,288 +1,141 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Universal Background Picker</title>
-<style>
-  /* small UI overlay in bottom-right */
-  #bg-picker {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    z-index: 2147483647; /* as high as possible */
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    background: rgba(255,255,255,0.92);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-    padding: 10px;
-    width: 320px;
-    max-width: calc(100% - 28px);
-    user-select: none;
-  }
-  #bg-picker h4 {
-    margin: 0 0 8px 0;
-    font-size: 13px;
-    letter-spacing: .2px;
-  }
-  #color-line {
-    width: 100%;
-    height: 28px;
-    border-radius: 6px;
-    display: block;
-    touch-action: none;
-    cursor: crosshair;
-    border: 1px solid rgba(0,0,0,0.08);
-  }
-  .controls {
-    display:flex;
-    gap:8px;
-    margin-top:8px;
-  }
-  button, label {
-    font-size: 13px;
-    padding:6px 8px;
-    border-radius:6px;
-    border:1px solid rgba(0,0,0,0.08);
-    background:transparent;
-    cursor:pointer;
-  }
-  button:active { transform: translateY(1px); }
-  #preview {
-    margin-top:8px;
-    height:28px;
-    border-radius:6px;
-    border:1px solid rgba(0,0,0,0.06);
-    display:flex;
-    align-items:center;
-    padding:0 8px;
-    font-size:12px;
-  }
-  a.small {
-    display:inline-block;
-    margin-left:auto;
-    font-size:11px;
-    opacity:0.7;
-    text-decoration:none;
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Color Background Picker</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    #color-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vw;
+      max-width: 800px;
+      height: 40px;
+      cursor: pointer;
+      touch-action: none;
+    }
+  </style>
 </head>
 <body>
-  <!-- Your normal page content remains here. This overlay UI will control background. -->
-  <div id="bg-picker" aria-hidden="false">
-    <h4>Background color picker</h4>
-    <canvas id="color-line" width="600" height="28" role="slider" aria-label="Color line"></canvas>
-    <div id="preview">Selected: <span id="sel-hex">—</span><a class="small" id="toggle-hint" href="#" onclick="return false;">Toggle override</a></div>
-    <div class="controls">
-      <button id="save-btn">Save</button>
-      <button id="reset-btn">Reset</button>
-      <button id="close-btn">Close</button>
-    </div>
-  </div>
+  <canvas id="color-line"></canvas>
 
-<script>
-(function(){
-  // config keys
-  const LS_KEY = 'universal_bg_color_v1';
-  const styleId = 'bg-override-style';
+  <script>
+    const canvas = document.getElementById('color-line');
+    const ctx = canvas.getContext('2d');
+    const LS_KEY = 'bg_color_simple';
 
-  // create/obtain elements
-  const canvas = document.getElementById('color-line');
-  const ctx = canvas.getContext('2d');
-  const selHexEl = document.getElementById('sel-hex');
-  const saveBtn = document.getElementById('save-btn');
-  const resetBtn = document.getElementById('reset-btn');
-  const closeBtn = document.getElementById('close-btn');
-  const toggleHint = document.getElementById('toggle-hint');
-
-  let pointerDown = false;
-  let overrideEnabled = true;
-
-  // draw a straight horizontal color line that includes black and light colors
-  function drawColorLine() {
-    const w = canvas.width = Math.max(300, Math.min(1200, Math.floor(window.innerWidth * 0.4)));
-    const h = canvas.height = 28;
-    // Create hue gradient (left-to-right) plus endpoints black and white
-    // We'll create three layered gradients: black-to-hues, hue rainbow, hues-to-white, combined by drawing rectangles.
-    // Simpler approach: draw rainbow then overlay black->transparent from left and transparent->white from right.
-    // draw rainbow
-    const rainbow = ctx.createLinearGradient(0,0,w,0);
-    const stops = [
-      [0.00, 'red'],
-      [0.14, 'yellow'],
-      [0.28, 'lime'],
-      [0.42, 'cyan'],
-      [0.56, 'blue'],
-      [0.70, 'magenta'],
-      [0.85, 'red']
-    ];
-    stops.forEach(s => rainbow.addColorStop(s[0], s[1]));
-    ctx.fillStyle = rainbow;
-    ctx.fillRect(0,0,w,h);
-
-    // overlay black to transparent from left (so far left becomes black)
-    const blackGrad = ctx.createLinearGradient(0,0,w*0.08,0);
-    blackGrad.addColorStop(0, 'rgba(0,0,0,1)');
-    blackGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = blackGrad;
-    ctx.fillRect(0,0,w,h);
-
-    // overlay transparent to white from right (so far right becomes white / light)
-    const whiteGrad = ctx.createLinearGradient(w*(1-0.08),0,w,0);
-    whiteGrad.addColorStop(0, 'rgba(255,255,255,0)');
-    whiteGrad.addColorStop(1, 'rgba(255,255,255,1)');
-    ctx.fillStyle = whiteGrad;
-    ctx.fillRect(0,0,w,h);
-
-    // subtle border
-    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-    ctx.strokeRect(0.5,0.5,w-1,h-1);
-  }
-
-  function setPreview(hex) {
-    selHexEl.textContent = hex.toUpperCase();
-    const preview = document.getElementById('preview');
-    preview.style.background = hex;
-    preview.style.color = (isLight(hex) ? '#000' : '#fff');
-  }
-
-  // read pixel from canvas, convert to hex
-  function pickColorFromEvent(ev) {
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.max(0, Math.min(canvas.width-1, Math.floor((ev.clientX - rect.left) * (canvas.width / rect.width))));
-    const y = Math.max(0, Math.min(canvas.height-1, Math.floor((ev.clientY - rect.top) * (canvas.height / rect.height))));
-    const data = ctx.getImageData(x, y, 1, 1).data;
-    const hex = rgbToHex(data[0], data[1], data[2]);
-    applyBackground(hex);
-    setPreview(hex);
-    return hex;
-  }
-
-  // helpers
-  function rgbToHex(r,g,b){
-    return "#" + [r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('');
-  }
-  function isLight(hex) {
-    const r = parseInt(hex.slice(1,3),16);
-    const g = parseInt(hex.slice(3,5),16);
-    const b = parseInt(hex.slice(5,7),16);
-    // luminance
-    const L = 0.2126*r + 0.7152*g + 0.0722*b;
-    return L > 180;
-  }
-
-  // apply background globally by injecting/updating a style tag.
-  function applyBackground(hex) {
-    removeInlineBackgroundClears(); // ensure we don't leave previous temp overrides
-    // create or update style element
-    let st = document.getElementById(styleId);
-    if(!st) {
-      st = document.createElement('style');
-      st.id = styleId;
-      document.head.appendChild(st);
+    // Resize canvas to match its display size
+    function resizeCanvas() {
+      const displayWidth = canvas.clientWidth;
+      const displayHeight = canvas.clientHeight;
+      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+        drawColorLine();
+      }
     }
-    // The large rule removes any background images/colors from page elements, then sets html/body background to chosen color.
-    st.textContent = `
-      /* override all element background images/colors */
-      * { background-image: none !important; background-color: transparent !important; }
-      html, body { height:100% !important; margin:0 !important; padding:0 !important; background: ${hex} !important; background-repeat: no-repeat !important; }
-    `;
-    overrideEnabled = true;
-  }
 
-  function removeInlineBackgroundClears() {
-    // (no-op for now) kept as a placeholder if further per-element style cleanup needed
-  }
+    function drawColorLine() {
+      const w = canvas.width;
+      const h = canvas.height;
 
-  function disableOverride() {
-    const st = document.getElementById(styleId);
-    if(st) st.remove();
-    overrideEnabled = false;
-  }
+      // Rainbow gradient
+      const rainbow = ctx.createLinearGradient(0, 0, w, 0);
+      rainbow.addColorStop(0.00, 'red');
+      rainbow.addColorStop(0.14, 'yellow');
+      rainbow.addColorStop(0.28, 'lime');
+      rainbow.addColorStop(0.42, 'cyan');
+      rainbow.addColorStop(0.56, 'blue');
+      rainbow.addColorStop(0.70, 'magenta');
+      rainbow.addColorStop(0.85, 'red');
+      ctx.fillStyle = rainbow;
+      ctx.fillRect(0, 0, w, h);
 
-  // save & load
-  function saveChoice(hex) {
-    try { localStorage.setItem(LS_KEY, hex); }
-    catch(e){}
-  }
-  function loadChoice() {
-    try { return localStorage.getItem(LS_KEY); }
-    catch(e){ return null; }
-  }
-  function clearChoice() {
-    try { localStorage.removeItem(LS_KEY); }
-    catch(e){}
-  }
+      // Fade to black on left
+      const blackGrad = ctx.createLinearGradient(0, 0, w * 0.08, 0);
+      blackGrad.addColorStop(0, 'black');
+      blackGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = blackGrad;
+      ctx.fillRect(0, 0, w, h);
 
-  // events
-  canvas.addEventListener('pointerdown', function(e){
-    pointerDown = true;
-    canvas.setPointerCapture(e.pointerId);
-    pickColorFromEvent(e);
-  });
-  canvas.addEventListener('pointermove', function(e){
-    if(pointerDown) pickColorFromEvent(e);
-  });
-  canvas.addEventListener('pointerup', function(e){
-    pointerDown = false;
-    try { canvas.releasePointerCapture(e.pointerId); } catch(_) {}
-  });
-  // also allow click
-  canvas.addEventListener('click', pickColorFromEvent);
-
-  saveBtn.addEventListener('click', function(){
-    const hex = selHexEl.textContent && selHexEl.textContent!=='—' ? selHexEl.textContent : null;
-    if(hex) { saveChoice(hex); alert('Saved background color: ' + hex); } else alert('Pick a color first.');
-  });
-  resetBtn.addEventListener('click', function(){
-    if(confirm('Reset background to original (removes saved color)?')) {
-      clearChoice();
-      disableOverride();
-      selHexEl.textContent = '—';
-      document.getElementById('preview').style.background = 'transparent';
+      // Fade to white on right
+      const whiteGrad = ctx.createLinearGradient(w * (1 - 0.08), 0, w, 0);
+      whiteGrad.addColorStop(0, 'transparent');
+      whiteGrad.addColorStop(1, 'white');
+      ctx.fillStyle = whiteGrad;
+      ctx.fillRect(0, 0, w, h);
     }
-  });
-  closeBtn.addEventListener('click', function(){
-    // hide overlay
-    document.getElementById('bg-picker').style.display = 'none';
-  });
 
-  toggleHint.addEventListener('click', function(e){
-    e.preventDefault();
-    overrideEnabled ? (disableOverride(), toggleHint.textContent='Enable override') : (applyIfSaved(), toggleHint.textContent='Toggle override');
-  });
-
-  // apply saved color on load if present
-  function applyIfSaved() {
-    const saved = loadChoice();
-    if(saved) {
-      applyBackground(saved);
-      setPreview(saved);
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
     }
-  }
 
-  // when window resized, redraw canvas nicely
-  window.addEventListener('resize', function(){ drawColorLine(); });
-
-  // init
-  drawColorLine();
-  applyIfSaved();
-
-  // expose small keyboard shortcut: Ctrl+Shift+B toggles overlay visibility
-  window.addEventListener('keydown', function(e){
-    if(e.ctrlKey && e.shiftKey && (e.key === 'B' || e.key === 'b')) {
-      const el = document.getElementById('bg-picker');
-      el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    function applyBackground(hex) {
+      document.documentElement.style.background = hex;
+      try {
+        localStorage.setItem(LS_KEY, hex);
+      } catch (e) {}
     }
-  });
 
-  // Touch: make sure page doesn't scroll when dragging color line on touch devices
-  canvas.addEventListener('touchstart', (ev)=>ev.preventDefault(), {passive:false});
-  canvas.addEventListener('touchmove', (ev)=>ev.preventDefault(), {passive:false});
+    function pickColor(x, y) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const px = Math.floor((x - rect.left) * scaleX);
+      const py = Math.floor((y - rect.top) * scaleY);
+      const data = ctx.getImageData(px, py, 1, 1).data;
+      const hex = rgbToHex(data[0], data[1], data[2]);
+      applyBackground(hex);
+    }
 
-  // friendly hint text
-  toggleHint.textContent = 'Toggle override';
-})();
-</script>
+    // Event handlers
+    function handleDown(e) {
+      e.preventDefault();
+      if (e.touches) {
+        pickColor(e.touches[0].clientX, e.touches[0].clientY);
+      } else {
+        pickColor(e.clientX, e.clientY);
+      }
+    }
+
+    function handleMove(e) {
+      if (e.buttons !== 1 && !e.touches) return;
+      e.preventDefault();
+      if (e.touches) {
+        pickColor(e.touches[0].clientX, e.touches[0].clientY);
+      } else {
+        pickColor(e.clientX, e.clientY);
+      }
+    }
+
+    canvas.addEventListener('mousedown', handleDown);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('click', handleDown);
+
+    canvas.addEventListener('touchstart', handleDown, { passive: false });
+    canvas.addEventListener('touchmove', handleMove, { passive: false });
+
+    // Initialize
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+    });
+    resizeCanvas();
+
+    // Load saved color
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        document.documentElement.style.background = saved;
+      }
+    } catch (e) {}
+  </script>
 </body>
 </html>
