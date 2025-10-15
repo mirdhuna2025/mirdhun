@@ -151,7 +151,7 @@ function renderMenu() {
       <img class="menu-img" src="${item.image || fallbackImg}" alt="${item.name}" />
       <div class="menu-info">
         <div class="menu-name">${item.name || 'Unnamed Item'}</div>
-        <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; flex-direction:row; gap:6px;">
           ${mrpDisplay}
           <div class="menu-price">${priceDisplay}</div>
           ${discountDisplay}
