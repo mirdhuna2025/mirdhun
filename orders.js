@@ -14,38 +14,50 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const ordersList = document.getElementById('ordersList');
-const phone = localStorage.getItem('userPhone');
+const ordersContainer = document.getElementById('ordersContainer');
+const userPhone = localStorage.getItem("userPhone") || null;
 
-if (!phone) {
-  ordersList.innerHTML = '<p>Please login to view your orders.</p>';
-} else {
-  onValue(ref(db, 'orders'), snap => {
-    const data = snap.val();
-    ordersList.innerHTML = '';
-    const allOrders = Object.values(data || {})
-      .filter(o => o.phoneNumber === phone)
-      .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+if (!userPhone) {
+  ordersContainer.innerHTML = "<p>Please login to view your orders.</p>";
+}
 
-    if (allOrders.length === 0) {
-      ordersList.innerHTML = '<p>No orders found.</p>';
-      return;
-    }
+// Load orders from Firebase
+onValue(ref(db, 'orders'), snapshot => {
+  const orders = snapshot.val() ? Object.values(snapshot.val()) : [];
+  renderOrders(orders.filter(o => o.phoneNumber === userPhone));
+});
 
-    allOrders.forEach(order => {
-      const div = document.createElement('div');
-      div.className = 'order';
-      div.innerHTML = `
-        <h4>Order — ₹${order.total || 0}</h4>
-        <div class="meta">${new Date(order.timestamp).toLocaleString()}</div>
-        <div class="items">${(order.items || order.cart || []).map(i => `${i.name} × ${i.qty}`).join(', ')}</div>
-        <div>Address: ${order.address || 'N/A'}</div>
-        <div>Payment: ${order.paymentMode || order.payment || 'N/A'}</div>
-        <div class="status">Status: ${order.status || 'N/A'}</div>
-        ${order.instructions ? `<div style="margin-top:6px;color:#555">Notes: ${order.instructions}</div>` : ''}
-      `;
-      ordersList.appendChild(div);
-    });
+function renderOrders(orders) {
+  ordersContainer.innerHTML = '';
+  if (orders.length === 0) {
+    ordersContainer.innerHTML = "<p>No orders found.</p>";
+    return;
+  }
+
+  orders.forEach(order => {
+    const div = document.createElement('div');
+    div.className = 'order-card';
+    div.innerHTML = `
+      <p><strong>Order Time:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
+      <p><strong>Total:</strong> ₹${order.total}</p>
+      <p class="status"><strong>Status:</strong> ${order.status}</p>
+      <p><strong>Items:</strong> ${order.items.map(i => `${i.name} x${i.qty}`).join(', ')}</p>
+      ${order.status === 'on the way' ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>` : ''}
+    `;
+    ordersContainer.appendChild(div);
   });
 }
 
+// Track Delivery Popup
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('track-btn')) {
+    const lat = e.target.dataset.lat;
+    const lng = e.target.dataset.lng;
+    document.getElementById('track-map').src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+    document.getElementById('track-popup').style.display = 'flex';
+  }
+});
+
+document.getElementById('close-track').onclick = () => {
+  document.getElementById('track-popup').style.display = 'none';
+};
