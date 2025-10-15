@@ -214,7 +214,7 @@ function updateCartUI() {
         </div>
         <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
           <div>₹${subtotal}</div>
-          <button class="delete-item" data-id="${item.id}" style="background:none; border:none; color:#d40000; font-size:16px; cursor:pointer; padding:0;">🗑️</button>
+          <button class="delete-item" data-id="${item.id}" style="background:none; border:none; color:#d40000; font-size:20px; cursor:pointer; padding:0;">🗑️</button>
         </div>
       </div>
     `;
