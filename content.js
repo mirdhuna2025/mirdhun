@@ -1,6 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+/* ---------------------------
+   Firebase config (your original)
+   --------------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -14,6 +17,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+/* ---------------------------
+   State (kept same names)
+   --------------------------- */
 let categories = [];
 let menuItems = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
@@ -21,16 +27,40 @@ let currentOffer = null;
 let selectedCategory = null;
 let viewMode = 'grid';
 
+/* DOM refs kept */
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
 const offerBanner = document.getElementById('offerBanner');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
+/* product modal elements */
+const productPopup = document.getElementById('productPopup');
+const ppImg = document.getElementById('pp-img');
+const ppName = document.getElementById('pp-name');
+const ppDesc = document.getElementById('pp-desc');
+const ppPrice = document.getElementById('pp-price');
+const ppQty = document.getElementById('pp-qty');
+const ppAdd = document.getElementById('pp-add');
+const ppClose = document.getElementById('pp-close');
+
+/* checkout modal elements */
+const checkoutModal = document.getElementById('checkoutModal');
+const checkoutAddress = document.getElementById('checkout-address');
+const checkoutPayment = document.getElementById('checkout-payment');
+const checkoutInstructions = document.getElementById('checkout-instructions');
+const checkoutPlace = document.getElementById('checkout-place');
+const checkoutCancel = document.getElementById('checkout-cancel');
+
+/* other UI */
+const toastEl = document.getElementById('toast');
+
+/* Helper - login check (same as before) */
 function isLoggedIn() {
   return localStorage.getItem("isLoggedIn") === "true";
 }
 
+/* updateAuthUI kept (but original CSS hid auth bar) */
 function updateAuthUI() {
   if (isLoggedIn()) {
     authBar.innerHTML = `Logged in! <button onclick="logout()">Logout</button>`;
@@ -39,24 +69,32 @@ function updateAuthUI() {
   }
   authBar.style.display = 'block';
 }
-
 window.logout = () => {
   localStorage.removeItem("isLoggedIn");
   localStorage.removeItem("userPhone");
   updateAuthUI();
 };
 
+/* ---------------------------
+   Load data (with session cache)
+   --------------------------- */
 function loadShopData() {
+  // categories
   onValue(ref(db, 'categories'), snapshot => {
     categories = snapshot.val() ? Object.values(snapshot.val()) : [];
     renderCategories();
   });
 
+  // menu (cache to sessionStorage)
   onValue(ref(db, 'menu'), snapshot => {
-    menuItems = snapshot.val() ? Object.values(snapshot.val()) : [];
+    const raw = snapshot.val();
+    // store raw in session for caching; keep the same structure you used earlier (values array)
+    sessionStorage.setItem('menuCache', JSON.stringify(raw || {}));
+    menuItems = raw ? Object.values(raw) : [];
     renderMenu();
   });
 
+  // offers
   onValue(ref(db, 'offers'), snapshot => {
     const offers = snapshot.val();
     currentOffer = offers ? Object.values(offers).find(o => o.active) || null : null;
@@ -64,6 +102,7 @@ function loadShopData() {
   });
 }
 
+/* Render offer banner (unchanged) */
 function renderOffer() {
   if (currentOffer) {
     offerBanner.textContent = `🔥 ${currentOffer.title} — ${currentOffer.description}`;
@@ -73,6 +112,7 @@ function renderOffer() {
   }
 }
 
+/* Render categories (same UI as before) */
 function renderCategories() {
   categoryCarousel.innerHTML = '';
 
@@ -104,6 +144,7 @@ function renderCategories() {
   });
 }
 
+/* Render menu — preserved logic, with lazy loading + product modal hook + grid/list layout kept */
 function renderMenu() {
   menuGrid.innerHTML = '';
 
@@ -111,7 +152,7 @@ function renderMenu() {
     ? menuItems.filter(item => item.category === selectedCategory)
     : [...menuItems];
 
-  // 🔍 Search by NAME only
+  // 🔍 Search by NAME only — reads from search input
   const searchTerm = document.getElementById('search-input')?.value.trim().toLowerCase() || '';
   if (searchTerm) {
     items = items.filter(item => item.name && item.name.toLowerCase().includes(searchTerm));
@@ -148,7 +189,7 @@ function renderMenu() {
     const card = document.createElement('div');
     card.className = `menu-card ${viewMode === 'list' ? 'list-view' : ''}`;
     card.innerHTML = `
-      <img class="menu-img" src="${item.image || fallbackImg}" alt="${item.name}" />
+      <img class="menu-img" loading="lazy" src="${item.image || fallbackImg}" alt="${item.name}" />
       <div class="menu-info">
         <div class="menu-name">${item.name || 'Unnamed Item'}</div>
         <div style="display:flex; flex-direction:row; gap:6px;">
@@ -160,15 +201,48 @@ function renderMenu() {
         <button class="add-cart-btn" data-id="${item.id}" data-name="${item.name || 'Item'}" data-price="${item.price || 0}" data-image="${item.image || ''}">Add to Cart</button>
       </div>
     `;
+    // show product popup when card clicked (but not when clicking add button)
+    card.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('add-cart-btn')) {
+        showProductPopup(item);
+      }
+    });
+
     menuGrid.appendChild(card);
   });
 
-  // 🔥 CRITICAL: Restore your original 2-column layout
+  // Restore your 2-column or list layout
   menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
-// Cart Functions
-function addToCart(id, name, price, image) {
+/* ---------------------------
+   Product popup (new)
+   --------------------------- */
+let currentPopupItem = null;
+
+function showProductPopup(item) {
+  currentPopupItem = item;
+  ppImg.src = item.image || '';
+  ppName.textContent = item.name || 'Unnamed';
+  ppDesc.textContent = item.description || 'No description available.';
+  ppPrice.textContent = `₹${item.price || 0}`;
+  ppQty.value = 1;
+  productPopup.style.display = 'flex';
+}
+
+ppClose.addEventListener('click', () => productPopup.style.display = 'none');
+
+ppAdd.addEventListener('click', () => {
+  if (!currentPopupItem) return;
+  const qty = parseInt(ppQty.value) || 1;
+  addToCart(currentPopupItem.id, currentPopupItem.name, currentPopupItem.price, currentPopupItem.image, qty);
+  productPopup.style.display = 'none';
+});
+
+/* ---------------------------
+   Cart functions (kept from original, extended to accept qty)
+   --------------------------- */
+function addToCart(id, name, price, image, qty = 1) {
   const btn = document.querySelector(`.add-cart-btn[data-id="${id}"]`);
   if (btn) {
     btn.classList.add("added");
@@ -180,8 +254,8 @@ function addToCart(id, name, price, image) {
   }
 
   const existing = cart.find(item => item.id === id);
-  if (existing) existing.qty += 1;
-  else cart.push({ id, name, price: parseFloat(price), image, qty: 1 });
+  if (existing) existing.qty += qty;
+  else cart.push({ id, name, price: parseFloat(price), image, qty });
   saveCart();
   updateCartUI();
   showToast("Added!");
@@ -195,7 +269,7 @@ function updateCartUI() {
   cartItemsEl.innerHTML = '';
   let total = 0;
   let totalCount = 0;
-  const fallbackImg = 'image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
+  const fallbackImg = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
 
   cart.forEach(item => {
     const subtotal = item.price * item.qty;
@@ -252,18 +326,41 @@ function toggleCart() {
 }
 function closeCart() { document.getElementById('cart-popup').style.display = 'none'; }
 
+/* ---------------------------
+   Enhanced checkout (modal) — replaces prompts
+   --------------------------- */
 function placeOrder() {
   if (cart.length === 0) return showToast("Cart is empty!");
   if (!isLoggedIn()) return showToast("Please login first to place order.");
 
+  // open checkout modal and prefill if any
+  checkoutAddress.value = '';
+  checkoutPayment.value = 'Cash on Delivery';
+  checkoutInstructions.value = '';
+  checkoutModal.style.display = 'flex';
+}
+
+checkoutCancel.addEventListener('click', () => checkoutModal.style.display = 'none');
+
+checkoutPlace.addEventListener('click', () => {
+  const address = checkoutAddress.value.trim();
+  if (!address) return showToast("Please enter delivery address.");
+  const payment = checkoutPayment.value;
+  const instructions = checkoutInstructions.value.trim();
   const phoneNumber = localStorage.getItem("userPhone") || "unknown";
+  const total = parseFloat(document.getElementById('cartTotal').textContent) || 0;
+
   const order = {
     phoneNumber,
+    address,
+    paymentMode: payment,
+    instructions,
     items: cart,
-    total: parseFloat(document.getElementById('cartTotal').textContent),
+    total,
     timestamp: new Date().toISOString(),
     status: "pending"
   };
+
   push(ref(db, 'orders'), order)
     .then(() => {
       showToast("Order placed successfully!");
@@ -271,10 +368,17 @@ function placeOrder() {
       saveCart();
       updateCartUI();
       closeCart();
+      checkoutModal.style.display = 'none';
     })
-    .catch(() => showToast("Failed to place order."));
-}
+    .catch((err) => {
+      console.error(err);
+      showToast("Failed to place order.");
+    });
+});
 
+/* ---------------------------
+   Toast helper (kept)
+   --------------------------- */
 function showToast(message) {
   let toast = document.getElementById('toast');
   if (!toast) {
@@ -287,17 +391,44 @@ function showToast(message) {
   setTimeout(() => toast.style.opacity = '0', 2500);
 }
 
-// Initialize
+/* ---------------------------
+   Initialize UI & data
+   --------------------------- */
 updateAuthUI();
 updateCartUI();
+
+/* Load from cache first (performance optimization) */
+const cachedMenu = sessionStorage.getItem('menuCache');
+if (cachedMenu) {
+  const raw = JSON.parse(cachedMenu);
+  menuItems = raw ? Object.values(raw) : [];
+  renderMenu();
+}
+
+/* Start live listeners (this will also update cache on change) */
 loadShopData();
 
-// 🔍 Search & Sort Listeners
-document.getElementById('search-input')?.addEventListener('input', renderMenu);
-document.getElementById('search-go')?.addEventListener('click', renderMenu);
+/* ---------------------------
+   Search + Sort + View listeners (debounced search)
+   --------------------------- */
+let searchTimeout;
+const searchInput = document.getElementById('search-input');
+
+searchInput?.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    // if there is cached menu, update local menuItems filter from cache to avoid extra transforms
+    const cache = sessionStorage.getItem('menuCache');
+    if (cache) {
+      const rawMenu = Object.values(JSON.parse(cache));
+      menuItems = rawMenu;
+    }
+    renderMenu();
+  }, 350);
+});
+
 document.getElementById('sort-select')?.addEventListener('change', renderMenu);
 
-// 👁️ View Toggle
 document.getElementById('grid-view')?.addEventListener('click', () => {
   viewMode = 'grid';
   document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
@@ -311,7 +442,9 @@ document.getElementById('list-view')?.addEventListener('click', () => {
   renderMenu();
 });
 
-// 🖱️ Event Delegation
+/* ---------------------------
+   Event Delegation (cart buttons, qty, delete, cart toggle) - preserved
+   --------------------------- */
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('add-cart-btn')) {
     const btn = e.target;
@@ -334,3 +467,11 @@ document.addEventListener('click', (e) => {
     placeOrder();
   }
 });
+
+/* Add some initial UI sync */
+updateCartUI();
+
+/* Expose some functions to global scope if other components expect them (keeps compatibility) */
+window.addToCart = addToCart;
+window.placeOrder = placeOrder;
+window.showProductPopup = showProductPopup;
