@@ -467,6 +467,11 @@ document.addEventListener('click', (e) => {
     placeOrder();
   }
 });
+// 🚚 Open Order Tracking Page
+document.getElementById('track-order-btn')?.addEventListener('click', () => {
+  window.open('orders.html', '_blank');
+});
+
 
 /* Add some initial UI sync */
 updateCartUI();
