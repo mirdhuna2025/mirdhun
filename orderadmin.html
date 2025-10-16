@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mirdhuna Admin Dashboard</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #d40000;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #searchPhone {
+      display: block;
+      margin: 0 auto 20px auto;
+      width: 90%;
+      max-width: 400px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    #ordersContainer {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .order-card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    }
+    .order-card p { margin: 6px 0; }
+    .order-card strong { color: #000; }
+    select.status-select {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    button.update-btn, button.track-btn {
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+    .update-btn {
+      background: #4CAF50;
+      color: white;
+    }
+    .update-btn:hover { background: #43a047; }
+    .track-btn {
+      background: #2196F3;
+      color: white;
+    }
+    .track-btn:hover { background: #1976D2; }
+
+    /* Popup */
+    #track-popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .popup-inner {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+    }
+    #track-map {
+      width: 100%;
+      height: 300px;
+      border: none;
+      border-radius: 8px;
+    }
+    #close-track {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      cursor: pointer;
+      font-size: 20px;
+      color: #d40000;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧾 Mirdhuna Admin Dashboard</h1>
+  <input type="text" id="searchPhone" placeholder="Search by phone number...">
+  <div id="ordersContainer"></div>
+
+  <!-- Delivery Tracking Popup -->
+  <div id="track-popup">
+    <div class="popup-inner">
+      <span id="close-track">✖</span>
+      <h3>🚚 Delivery Tracking</h3>
+      <iframe id="track-map" loading="lazy"></iframe>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // 🔥 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const ordersContainer = document.getElementById("ordersContainer");
+    const searchInput = document.getElementById("searchPhone");
+
+    let allOrders = [];
+
+    // 📡 Fetch Orders Live
+    onValue(ref(db, "orders"), snapshot => {
+      const orders = snapshot.val() ? Object.entries(snapshot.val()) : [];
+      allOrders = orders.map(([key, order]) => ({ key, ...order }));
+      renderOrders(allOrders);
+    });
+
+    // 🎨 Render Orders
+    function renderOrders(orders) {
+      const searchTerm = searchInput.value.trim();
+      ordersContainer.innerHTML = "";
+
+      const filtered = searchTerm
+        ? orders.filter(o => o.phoneNumber.includes(searchTerm))
+        : orders;
+
+      if (filtered.length === 0) {
+        ordersContainer.innerHTML = "<p style='text-align:center;'>No orders found.</p>";
+        return;
+      }
+
+      filtered.forEach(order => {
+        const div = document.createElement("div");
+        div.className = "order-card";
+        div.innerHTML = `
+          <p><strong>Phone:</strong> ${order.phoneNumber}</p>
+          <p><strong>Placed:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
+          <p><strong>Total:</strong> ₹${order.total}</p>
+          <p><strong>Items:</strong> ${order.items.map(i => `${i.name} ×${i.qty}`).join(", ")}</p>
+          <p><strong>Status:</strong>
+            <select class="status-select" data-key="${order.key}">
+              <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
+              <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
+              <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
+              <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
+            </select>
+            <button class="update-btn" data-key="${order.key}">Update</button>
+          </p>
+          ${
+            order.status === "on the way"
+              ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
+              : ""
+          }
+        `;
+        ordersContainer.appendChild(div);
+      });
+    }
+
+    // 🔍 Search
+    searchInput.addEventListener("input", () => renderOrders(allOrders));
+
+    // 🖱️ Click Events
+    document.addEventListener("click", e => {
+      // Update Status
+      if (e.target.classList.contains("update-btn")) {
+        const key = e.target.dataset.key;
+        const newStatus = document.querySelector(`select[data-key="${key}"]`).value;
+        update(ref(db, "orders/" + key), { status: newStatus })
+          .then(() => alert(`Order status updated to "${newStatus}"`))
+          .catch(err => alert("Error updating: " + err));
+      }
+
+      // Track Order
+      if (e.target.classList.contains("track-btn")) {
+        const lat = e.target.dataset.lat;
+        const lng = e.target.dataset.lng;
+        document.getElementById("track-map").src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+        document.getElementById("track-popup").style.display = "flex";
+      }
+    });
+
+    // ❌ Close Popup
+    document.getElementById("close-track").addEventListener("click", () => {
+      document.getElementById("track-popup").style.display = "none";
+    });
+  </script>
+</body>
+</html>
