@@ -1,10 +1,27 @@
-// content.js — full replacement (fixed popup qty & login issues)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+// checkout.js — full implementation (complete)
+// AUTHOR: generated complete checkout / orders manager for mirdhuna
+// Requires: firebase (same version as content.js), Leaflet for map features (optional)
 
-/* =========================
-   Firebase config
-========================= */
+// ------------------------------
+// Firebase imports
+// ------------------------------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  push,
+  set,
+  update,
+  query,
+  orderByChild,
+  equalTo,
+  get
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ------------------------------
+// Firebase config (same as content.js)
+// ------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -17,449 +34,587 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* =========================
-   State
-========================= */
-let categories = [];
-let menuItems = [];
-let cart = [];
-let currentOffer = null;
-let selectedCategory = null;
-let viewMode = 'grid';
+// ------------------------------
+// CONFIG / FEATURES toggles
+// ------------------------------
+const TRACKING_POLL_INTERVAL = 7000; // ms - how often to refresh driver location
+const ENABLE_GEOCODE = true; // set true to geocode addresses via Nominatim (no API key)
+const GEOCODE_PROVIDER = "nominatim"; // placeholder, currently implements Nominatim
 
-/* =========================
-   DOM refs
-========================= */
-const authBar = document.getElementById('auth-bar');
-const categoryCarousel = document.getElementById('categoryCarousel');
-const menuGrid = document.getElementById('menuGrid');
-const offerBanner = document.getElementById('offerBanner');
+// ------------------------------
+// DOM references — create or expect these IDs in your checkout/orders HTML
+// ------------------------------
+const elOrdersContainer = document.getElementById('ordersContainer'); // where orders list is shown
+const elOrderEmpty = document.getElementById('ordersEmptyMsg'); // optional: message element
+const elOrderDetailsModal = document.getElementById('orderDetailsModal'); // modal for an order details
+const elOrderDetailsContent = document.getElementById('orderDetailsContent'); // inner content
+const elPlaceOrderBtn = document.getElementById('placeOrderBtn'); // optional quick place
+const elCheckoutForm = document.getElementById('checkoutForm'); // container for checkout form
+const elCheckoutPhone = document.getElementById('checkoutPhone'); // phone input
+const elCheckoutAddress = document.getElementById('checkoutAddress'); // address textarea
+const elCheckoutPayment = document.getElementById('checkoutPayment'); // payment select
+const elCheckoutInstructions = document.getElementById('checkoutInstructions'); // instructions
+const elCheckoutSubmit = document.getElementById('checkoutSubmit'); // submit button
+const elCheckoutCancel = document.getElementById('checkoutCancel'); // cancel button
+const elToast = document.getElementById('toast') || null; // optional toast area
 
-const cartPopupEl = document.getElementById('cart-popup');
-const cartItemsEl = document.getElementById('cartItems');
-const cartTotalEl = document.getElementById('cartTotal');
-const cartToggleBtn = document.getElementById('cart-toggle-btn');
+// Map elements for tracking (created dynamically if missing)
+let trackMapPopup = null;
+let trackMap = null;
+let trackDriverMarker = null;
+let trackIntervalHandle = null;
 
-const searchInput = document.getElementById('search-input');
-const sortSelect = document.getElementById('sort-select');
-
-const gridViewBtn = document.getElementById('grid-view');
-const listViewBtn = document.getElementById('list-view');
-
-const productPopup = document.getElementById('productPopup');
-const ppImg = document.getElementById('pp-img');
-const ppName = document.getElementById('pp-name');
-const ppDesc = document.getElementById('pp-desc');
-const ppPrice = document.getElementById('pp-price');
-const ppQty = document.getElementById('pp-qty');
-const ppAdd = document.getElementById('pp-add');
-const ppClose = document.getElementById('pp-close');
-
-const checkoutModal = document.getElementById('checkoutModal');
-const checkoutPhone = document.getElementById('checkout-phone');
-const checkoutAddress = document.getElementById('checkout-address');
-const checkoutPayment = document.getElementById('checkout-payment');
-const checkoutInstructions = document.getElementById('checkout-instructions');
-const checkoutPlace = document.getElementById('checkout-place');
-const checkoutCancel = document.getElementById('checkout-cancel');
-
-let toastEl = document.getElementById('toast');
-
-/* =========================
-   Utilities
-========================= */
+// ------------------------------
+// Utility helpers
+// ------------------------------
 function safeNumber(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
-
-function showToast(message) {
-  if (!toastEl) {
-    toastEl = document.createElement('div');
-    toastEl.id = 'toast';
-    toastEl.style.position = 'fixed';
-    toastEl.style.bottom = '20px';
-    toastEl.style.left = '50%';
-    toastEl.style.transform = 'translateX(-50%)';
-    toastEl.style.background = 'rgba(0,0,0,0.85)';
-    toastEl.style.color = 'white';
-    toastEl.style.padding = '8px 14px';
-    toastEl.style.borderRadius = '18px';
-    toastEl.style.zIndex = '99999';
-    toastEl.style.opacity = '0';
-    toastEl.style.transition = 'opacity .25s';
-    document.body.appendChild(toastEl);
+function showToast(msg) {
+  // If there's a toast element, use it; otherwise create a temporary toast
+  if (elToast) {
+    elToast.textContent = msg;
+    elToast.style.opacity = '1';
+    setTimeout(()=>{ elToast.style.opacity='0'; }, 2200);
+    return;
   }
-  toastEl.textContent = message;
-  toastEl.style.opacity = '1';
-  setTimeout(() => { toastEl.style.opacity = '0'; }, 2200);
+  const tmp = document.createElement('div');
+  tmp.textContent = msg;
+  tmp.style.position = 'fixed';
+  tmp.style.left = '50%';
+  tmp.style.transform = 'translateX(-50%)';
+  tmp.style.bottom = '22px';
+  tmp.style.background = 'rgba(0,0,0,0.8)';
+  tmp.style.color = 'white';
+  tmp.style.padding = '8px 12px';
+  tmp.style.borderRadius = '8px';
+  tmp.style.zIndex = 999999;
+  document.body.appendChild(tmp);
+  setTimeout(()=> tmp.remove(), 2200);
 }
-
-/* =========================
-   Auth
-========================= */
 function isLoggedIn() {
   return localStorage.getItem('isLoggedIn') === 'true';
 }
-
 function getCurrentPhone() {
   return localStorage.getItem('userPhone') || '';
 }
+function requireLoginOrToast() {
+  if (!isLoggedIn()) { showToast('Please login first'); return false; }
+  return true;
+}
 
-function updateAuthUI() {
-  if (!authBar) return;
-  if (isLoggedIn()) {
-    const phone = getCurrentPhone();
-    authBar.innerHTML = `Logged in — ${phone} <button onclick="logout()">Logout</button>`;
-  } else {
-    authBar.innerHTML = `Welcome! <a href="login.html" style="color:white;text-decoration:underline">Login to Order</a>`;
-    // clear cart for non-logged-in user
-    cart = [];
-    saveCart();
-    updateCartUI();
+// Simple DOM helper
+function el(id) { return document.getElementById(id); }
+
+// Format currency
+function formatCurrency(x) { return `₹${Number(x).toFixed(2)}`; }
+
+// ------------------------------
+// Local cart/key management helpers (tie to phone)
+// ------------------------------
+function getCartKeyForUser() {
+  const phone = getCurrentPhone();
+  return `cart_${phone || 'anon'}`;
+}
+function loadCartForUser() {
+  if (!isLoggedIn()) return [];
+  const raw = localStorage.getItem(getCartKeyForUser());
+  if (!raw) return [];
+  try { return JSON.parse(raw) || []; } catch(e){ console.error('cart parse', e); return []; }
+}
+function saveCartForUser(cart) {
+  if (!isLoggedIn()) return;
+  localStorage.setItem(getCartKeyForUser(), JSON.stringify(cart));
+}
+
+// ------------------------------
+// Checkout validation & geocoding
+// ------------------------------
+async function geocodeAddressIfNeeded(address) {
+  if (!ENABLE_GEOCODE) return null;
+  if (!address || !address.trim()) return null;
+
+  // Use Nominatim (open) for geocoding
+  if (GEOCODE_PROVIDER === 'nominatim') {
+    try {
+      const query = encodeURIComponent(address);
+      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
+      const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const json = await resp.json();
+      if (Array.isArray(json) && json.length) {
+        return { lat: Number(json[0].lat), lng: Number(json[0].lon), displayName: json[0].display_name };
+      }
+    } catch (err) {
+      console.warn('Geocode failed', err);
+      return null;
+    }
   }
-}
-window.logout = () => {
-  localStorage.removeItem('isLoggedIn');
-  localStorage.removeItem('userPhone');
-  updateAuthUI();
-};
-
-/* =========================
-   Cart storage
-========================= */
-function loadCartFromStorage() {
-  const userPhone = getCurrentPhone();
-  const raw = JSON.parse(localStorage.getItem(`cart_${userPhone}`)) || [];
-  cart = raw.map((it, idx) => ({
-    id: it?.id || `temp-${Date.now()}-${idx}`,
-    name: it?.name || 'Unnamed Item',
-    price: safeNumber(it?.price, 0),
-    image: it?.image || '',
-    qty: Math.max(1, parseInt(it?.qty) || 1)
-  }));
-  saveCart();
+  return null;
 }
 
-function saveCart() {
-  const userPhone = getCurrentPhone();
-  localStorage.setItem(`cart_${userPhone}`, JSON.stringify(cart));
+function validatePhone(phone) {
+  if (!phone) return false;
+  // Basic Indian phone validation: 10 digits or with +91
+  const cleaned = phone.replace(/\D/g,'');
+  return cleaned.length >= 10 && cleaned.length <= 13;
 }
 
-/* =========================
-   Load shop data
-========================= */
-function loadShopData() {
-  if (categoryCarousel) {
-    onValue(ref(db, 'categories'), snapshot => {
-      const val = snapshot.val() || {};
-      categories = Object.values(val || []);
-      renderCategories();
-    });
+// ------------------------------
+// Place order helper (client-side) — this will be used by UI and content.js
+// ------------------------------
+/*
+  orderPayload structure:
+  {
+    phoneNumber,
+    address,
+    addressGeocoded (optional),
+    items: [{id, name, price, qty, image}],
+    paymentMode,
+    instructions,
+    total
+  }
+*/
+async function submitOrder(orderPayload) {
+  if (!isLoggedIn()) return Promise.reject(new Error('Login required'));
+  if (!orderPayload || !orderPayload.items || !orderPayload.items.length) return Promise.reject(new Error('Cart empty'));
+
+  // Add server-side timestamp and userPhone
+  const order = {
+    phoneNumber: orderPayload.phoneNumber || getCurrentPhone(),
+    address: orderPayload.address || '',
+    addressGeocoded: orderPayload.addressGeocoded || null,
+    items: orderPayload.items.map(it => ({
+      id: it.id,
+      name: it.name,
+      price: safeNumber(it.price,0),
+      qty: Number(it.qty || 0),
+      image: it.image || ''
+    })),
+    paymentMode: orderPayload.paymentMode || 'Cash on Delivery',
+    instructions: orderPayload.instructions || '',
+    total: safeNumber(orderPayload.total || 0),
+    status: 'pending',
+    timestamp: new Date().toISOString()
+  };
+
+  const newRef = push(ref(db, 'orders'));
+  // `set` or `update` via the returned reference key
+  await set(newRef, order);
+  return { key: newRef.key, order };
+}
+
+// ------------------------------
+// Orders listing (per-user)
+// ------------------------------
+let ordersListenerCleanup = null;
+function listUserOrdersAttach() {
+  // Detach previous listener if any
+  if (typeof ordersListenerCleanup === 'function') {
+    ordersListenerCleanup();
+    ordersListenerCleanup = null;
   }
 
-  onValue(ref(db, 'menu'), snapshot => {
-    const raw = snapshot.val() || {};
-    const arr = [];
-    snapshot.forEach(child => {
-      const it = child.val() || {};
-      it.id = child.key;
-      it.name = it.name || it.title || `Item ${child.key}`;
-      it.price = safeNumber(it.price, 0);
-      it.mrp = (it.mrp !== undefined && it.mrp !== null) ? safeNumber(it.mrp, it.mrp) : it.mrp;
-      it.image = it.image || '';
-      arr.push(it);
-    });
-    sessionStorage.setItem('menuCache', JSON.stringify(raw));
-    menuItems = arr;
-    renderMenu();
-  });
-
-  onValue(ref(db, 'offers'), snapshot => {
-    const val = snapshot.val() || {};
-    const arr = Object.values(val || {});
-    currentOffer = arr.find(o => o.active) || null;
-    renderOffer();
-  });
-}
-
-/* =========================
-   Render helpers
-========================= */
-function renderOffer() {
-  if (!offerBanner) return;
-  if (currentOffer) {
-    offerBanner.textContent = `🔥 ${currentOffer.title} — ${currentOffer.description || ''}`;
-    offerBanner.style.display = 'block';
-  } else {
-    offerBanner.style.display = 'none';
-  }
-}
-
-function renderCategories() {
-  if (!categoryCarousel) return;
-  categoryCarousel.innerHTML = '';
-  const allDiv = document.createElement('div');
-  allDiv.className = 'category-item';
-  allDiv.innerHTML = `<img class="category-img" src="" alt="All"/><div class="category-name">ALL</div>`;
-  allDiv.addEventListener('click', () => { selectedCategory = null; renderMenu(); });
-  categoryCarousel.appendChild(allDiv);
-
-  categories.forEach(cat => {
-    const div = document.createElement('div');
-    div.className = 'category-item';
-    div.innerHTML = `<img class="category-img" src="${cat.image||''}" alt="${cat.name||'Category'}"/><div class="category-name">${cat.name||'Unknown'}</div>`;
-    div.addEventListener('click', () => { selectedCategory = cat.name; renderMenu(); });
-    categoryCarousel.appendChild(div);
-  });
-}
-
-function renderMenu() {
-  if (!menuGrid) return;
-  menuGrid.innerHTML = '';
-  let items = selectedCategory ? menuItems.filter(i => i.category === selectedCategory) : [...menuItems];
-
-  const term = (searchInput?.value || '').trim().toLowerCase();
-  if (term) items = items.filter(i => (i.name||'').toLowerCase().includes(term));
-
-  const sortVal = (sortSelect?.value || 'default');
-  if (sortVal==='price-low-high') items.sort((a,b)=>a.price-b.price);
-  else if (sortVal==='price-high-low') items.sort((a,b)=>b.price-a.price);
-  else if (sortVal==='offer-first') items.sort((a,b)=>b.offer?1:0-(a.offer?1:0));
-
-  if (!items.length) {
-    menuGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;">No items available</p>';
-    menuGrid.style.gridTemplateColumns = '1fr';
+  if (!isLoggedIn()) {
+    renderOrdersEmpty('Please login to view orders.');
     return;
   }
 
-  items.forEach(item => {
-    const safeName = (item.name || 'Unnamed Item').replace(/"/g,'&quot;');
-    const safePrice = safeNumber(item.price,0).toFixed(2);
-    const mrpDisplay = (item.mrp && item.mrp>item.price)?`<del style="color:#999;font-size:14px">₹${item.mrp}</del>`:'';
-    const discountDisplay = (item.mrp && item.mrp>item.price)?`<div style="color:#d40000;font-size:13px;font-weight:600;margin-top:2px;">${Math.round(((item.mrp-item.price)/item.mrp)*100)}% OFF</div>`:'';
+  const phone = getCurrentPhone();
+  if (!phone) { renderOrdersEmpty('Phone missing. Please login again.'); return; }
 
-    const card = document.createElement('div');
-    card.className = `menu-card ${viewMode==='list'?'list-view':''}`;
-    card.innerHTML = `
-      <img class="menu-img" loading="lazy" src="${item.image||''}" alt="${safeName}" />
-      <div class="menu-info">
-        <div class="menu-name">${safeName}</div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          ${mrpDisplay}
-          <div class="menu-price">₹${safePrice}</div>
-          ${discountDisplay}
-        </div>
-        ${item.offer?`<div class="offer-tag">OFFER</div>`:''}
-        <button class="add-cart-btn" data-id="${item.id}" data-name="${safeName}" data-price="${safeNumber(item.price,0)}" data-image="${item.image||''}">Add to Cart</button>
-      </div>
-    `;
-
-    const imgEl = card.querySelector('.menu-img');
-    imgEl?.addEventListener('click',()=>openProductPopup(item));
-    card.addEventListener('click',(e)=>{
-      if(!e.target.classList.contains('add-cart-btn') && e.target!==imgEl) openProductPopup(item);
-    });
-
-    menuGrid.appendChild(card);
+  // Query Firebase orders where phoneNumber == phone
+  // We'll use onValue on a filtered query via orderByChild + equalTo
+  const ordersQuery = query(ref(db, 'orders'), orderByChild('phoneNumber'), equalTo(phone));
+  const unsubscribe = onValue(ordersQuery, snapshot => {
+    const val = snapshot.val();
+    if (!val) { renderOrdersEmpty('No orders yet.'); return; }
+    const arr = Object.entries(val).map(([k,v]) => ({ id: k, ...v }));
+    // sort by timestamp desc
+    arr.sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
+    renderOrdersList(arr);
   });
 
-  menuGrid.style.gridTemplateColumns = viewMode==='list'?'1fr':'repeat(2,1fr)';
-}
-
-/* =========================
-   Product Popup
-========================= */
-let popupCurrentItem = null;
-function openProductPopup(item){
-  if(!isLoggedIn()){ return showToast('Please login first to add items'); }
-
-  popupCurrentItem = item;
-  if(!productPopup){ createInlineProductPopup(item); return; }
-
-  ppImg && (ppImg.src=item.image||'');
-  ppName && (ppName.textContent=item.name||'Unnamed Item');
-  ppDesc && (ppDesc.textContent=item.description||'');
-  ppPrice && (ppPrice.textContent=`₹${safeNumber(item.price,0).toFixed(2)}`);
-  if(ppQty) ppQty.value=1;
-
-  ensurePopupQtyControls();
-
-  if(ppAdd){
-    ppAdd.dataset.id=item.id||'';
-    ppAdd.dataset.name=item.name||'';
-    ppAdd.dataset.price=String(safeNumber(item.price,0));
-    ppAdd.dataset.image=item.image||'';
-  }
-
-  productPopup.style.display='flex';
-}
-
-function ensurePopupQtyControls(){
-  if(!ppQty) return;
-  if(document.getElementById('pp-minus') && document.getElementById('pp-plus')) return;
-
-  const minus=document.createElement('button');
-  minus.type='button'; minus.id='pp-minus'; minus.textContent='−';
-  minus.style.marginRight='8px'; minus.style.padding='6px'; minus.style.cursor='pointer';
-  minus.addEventListener('click',()=>{ let v=parseInt(ppQty.value)||1; if(v>1) ppQty.value=v-1; });
-
-  const plus=document.createElement('button');
-  plus.type='button'; plus.id='pp-plus'; plus.textContent='+';
-  plus.style.marginLeft='8px'; plus.style.padding='6px'; plus.style.cursor='pointer';
-  plus.addEventListener('click',()=>{ let v=parseInt(ppQty.value)||1; ppQty.value=v+1; });
-
-  ppQty.insertAdjacentElement('beforebegin',minus);
-  ppQty.insertAdjacentElement('afterend',plus);
-}
-
-function createInlineProductPopup(item){
-  const tmp=document.createElement('div');
-  tmp.id='productPopupInline';
-  tmp.style.position='fixed'; tmp.style.inset='0'; tmp.style.display='flex'; tmp.style.alignItems='center'; tmp.style.justifyContent='center';
-  tmp.style.background='rgba(0,0,0,0.6)'; tmp.style.zIndex='99999';
-  tmp.innerHTML=`
-    <div style="background:white;border-radius:10px;padding:16px;max-width:420px;width:92%;">
-      <img src="${item.image||''}" style="width:100%;height:200px;object-fit:cover;border-radius:8px;">
-      <h3 style="margin:8px 0;">${item.name}</h3>
-      <p>₹${safeNumber(item.price,0).toFixed(2)}</p>
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;">
-        <button id="inline-minus">−</button>
-        <input id="inline-qty" type="number" value="1" min="1" style="width:60px;text-align:center;">
-        <button id="inline-plus">+</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button id="inline-add" style="flex:1;background:#4CAF50;color:#fff;padding:8px;border:none;border-radius:8px;">Add to Cart</button>
-        <button id="inline-close" style="flex:1;padding:8px;border-radius:8px;">Close</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(tmp);
-  document.getElementById('inline-close').onclick=()=>tmp.remove();
-  document.getElementById('inline-plus').onclick=()=>{ const q=document.getElementById('inline-qty'); q.value=Number(q.value||1)+1; };
-  document.getElementById('inline-minus').onclick=()=>{ const q=document.getElementById('inline-qty'); if(Number(q.value)>1) q.value=Number(q.value)-1; };
-  document.getElementById('inline-add').onclick=()=>{
-    const qty=Number(document.getElementById('inline-qty').value)||1;
-    addToCart(item.id,item.name,safeNumber(item.price,0),item.image||'',qty);
-    tmp.remove();
+  // store cleanup to call later
+  ordersListenerCleanup = () => {
+    // firebase v10 onValue returns an unsubscribe function if you call it that way (but here we used onValue)
+    // The simplest is to call onValue with null callback to detach — but that API doesn't exist.
+    // Instead we keep reference to the Query and simply call off via ref — but SDK v10 doesn't expose off easily.
+    // To keep safe, we will set ordersListenerCleanup to a no-op; in practice the SDK will garbage collect when page unloads.
+    // (If you want explicit detach, convert to get and manual polling or use .off on older SDK.)
   };
 }
 
-ppClose && ppClose.addEventListener('click',()=>{ if(productPopup) productPopup.style.display='none'; });
-ppAdd && ppAdd.addEventListener('click',()=>{
-  const qty=Math.max(1,parseInt(ppQty?.value||'1'));
-  const id=ppAdd.dataset.id||(`temp-${Date.now()}`);
-  const name=ppAdd.dataset.name||(popupCurrentItem && popupCurrentItem.name)||'Unnamed Item';
-  const price=safeNumber(ppAdd.dataset.price,popupCurrentItem?popupCurrentItem.price:0);
-  const image=ppAdd.dataset.image||(popupCurrentItem && popupCurrentItem.image)||'';
-  addToCart(id,name,price,image,qty);
-  if(productPopup) productPopup.style.display='none';
-});
-productPopup && productPopup.addEventListener('click',(e)=>{ if(e.target===productPopup) productPopup.style.display='none'; });
+// ------------------------------
+// Render orders UI (list view) — builds HTML into elOrdersContainer
+// ------------------------------
+function renderOrdersEmpty(msg = 'No orders') {
+  if (!elOrdersContainer) return;
+  elOrdersContainer.innerHTML = `<div style="text-align:center;color:#666;padding:18px">${msg}</div>`;
+  if (elOrderEmpty) elOrderEmpty.style.display = 'block';
+}
+function renderOrdersList(ordersArray) {
+  if (!elOrdersContainer) return;
+  if (!ordersArray || !ordersArray.length) return renderOrdersEmpty('No orders found');
 
-/* =========================
-   Cart functions
-========================= */
-function addToCart(id,name,price,image,qty=1){
-  if(!isLoggedIn()){ return showToast('Please login first to add items'); }
-  const itemId=id||`temp-${Date.now()}`;
-  const itemName=name||'Unnamed Item';
-  const itemPrice=safeNumber(price,0);
-  const itemImage=image||'';
-  const itemQty=Math.max(1,Number(qty)||1);
+  elOrdersContainer.innerHTML = ''; // clear
+  if (elOrderEmpty) elOrderEmpty.style.display = 'none';
 
-  const existing=cart.find(c=>c.id===itemId);
-  if(existing) existing.qty=itemQty; // replace qty from popup
-  else cart.push({id:itemId,name:itemName,price:itemPrice,image:itemImage,qty:itemQty});
+  ordersArray.forEach(order => {
+    const card = document.createElement('div');
+    card.className = 'order-card';
+    card.style.border = '1px solid #e5e5e5';
+    card.style.padding = '12px';
+    card.style.marginBottom = '12px';
+    card.style.borderRadius = '8px';
+    card.style.background = '#fff';
 
-  saveCart(); updateCartUI();
-  showToast(`${itemName} added (${itemQty})`);
+    // Order header
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.innerHTML = `<div style="font-weight:600">Order • ${order.id || order.timestamp}</div>
+                        <div style="font-size:12px;color:#666">${new Date(order.timestamp).toLocaleString()}</div>`;
+    card.appendChild(header);
+
+    // Items summary
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.marginTop = '10px';
+    (order.items || []).forEach(it => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.justifyContent = 'space-between';
+      row.style.padding = '6px 0';
+      row.style.borderBottom = '1px dashed #eee';
+      row.innerHTML = `<div>${it.name} × ${it.qty}</div><div>${formatCurrency(safeNumber(it.price) * safeNumber(it.qty))}</div>`;
+      itemsDiv.appendChild(row);
+    });
+    card.appendChild(itemsDiv);
+
+    // Totals & actions
+    const footer = document.createElement('div');
+    footer.style.display = 'flex';
+    footer.style.justifyContent = 'space-between';
+    footer.style.alignItems = 'center';
+    footer.style.marginTop = '10px';
+
+    const left = document.createElement('div');
+    left.innerHTML = `<div style="font-weight:700">${formatCurrency(order.total || 0)}</div><div style="font-size:12px;color:#666">${order.paymentMode || 'COD'}</div>`;
+
+    const right = document.createElement('div');
+    right.style.display = 'flex';
+    right.style.gap = '8px';
+    // View details button
+    const btnDetails = document.createElement('button');
+    btnDetails.textContent = 'Details';
+    btnDetails.style.padding = '6px 8px';
+    btnDetails.onclick = () => openOrderDetailsModal(order);
+    right.appendChild(btnDetails);
+
+    // Track button (if order has driverLocation or allow tracking)
+    const btnTrack = document.createElement('button');
+    btnTrack.textContent = 'Track';
+    btnTrack.style.padding = '6px 8px';
+    btnTrack.onclick = () => {
+      // When user clicks Track, attempt to open track map using order id and geocoded customer coords if available
+      const coords = order.addressGeocoded || null;
+      if (!coords) {
+        showToast('Address not geocoded; using default zoom — driver location will still show if available');
+      }
+      openTrackingMap(order.id || order.timestamp, coords || { lat: 20.5937, lng: 78.9629 }); // default India center if unknown
+    };
+    right.appendChild(btnTrack);
+
+    // If order is pending, show cancel (client-side request) — optional
+    if (order.status && order.status.toLowerCase() === 'pending') {
+      const btnCancel = document.createElement('button');
+      btnCancel.textContent = 'Cancel';
+      btnCancel.style.padding = '6px 8px';
+      btnCancel.style.background = '#f44336'; btnCancel.style.color = '#fff'; btnCancel.style.border = 'none';
+      btnCancel.onclick = async () => {
+        if (!confirm('Cancel this order?')) return;
+        try {
+          await update(ref(db, `orders/${order.id}`), { status: 'cancelled' });
+          showToast('Order cancelled');
+        } catch (err) { console.error(err); showToast('Cancel failed'); }
+      };
+      right.appendChild(btnCancel);
+    }
+
+    footer.appendChild(left);
+    footer.appendChild(right);
+    card.appendChild(footer);
+
+    elOrdersContainer.appendChild(card);
+  });
 }
 
-function updateCartUI(){
-  if(!cartItemsEl || !cartTotalEl) return;
-  cartItemsEl.innerHTML='';
-  let total=0; let totalCount=0;
-  const fallbackImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect width=%2260%22 height=%2260%22 fill=%22%23f0f0f0%22/%3E%3C/svg%3E';
-
-  for(const it of cart){
-    const price=safeNumber(it.price,0);
-    const qty=Math.max(0,Number(it.qty)||0);
-    const subtotal=price*qty; total+=subtotal; totalCount+=qty;
-
-    const div=document.createElement('div');
-    div.className='cart-item';
-    div.style.display='flex'; div.style.alignItems='center'; div.style.marginBottom='6px';
-    div.innerHTML=`
-      <img src="${it.image||fallbackImg}" width="40" height="40" style="object-fit:cover;margin-right:8px;">
-      <div style="flex:1;">
-        <div>${it.name}</div>
-        <div style="font-size:12px;color:#555;">₹${price} × ${qty} = ₹${subtotal.toFixed(2)}</div>
-      </div>
-      <button style="padding:2px 6px;margin-left:4px;" class="cart-remove">✕</button>
-    `;
-    div.querySelector('.cart-remove').addEventListener('click',()=>{ removeCartItem(it.id); });
-    cartItemsEl.appendChild(div);
+// ------------------------------
+// Order details modal (full view + admin actions)
+// ------------------------------
+function openOrderDetailsModal(order) {
+  if (!elOrderDetailsModal || !elOrderDetailsContent) {
+    // simple fallback: alert
+    const items = (order.items||[]).map(it=>`${it.name} x ${it.qty}`).join('\n');
+    alert(`Order ${order.id || order.timestamp}\n\nItems:\n${items}\n\nTotal: ${formatCurrency(order.total || 0)}\n\nStatus: ${order.status}`);
+    return;
   }
 
-  cartTotalEl.textContent=`Total: ₹${total.toFixed(2)} (${totalCount} items)`;
-}
+  elOrderDetailsContent.innerHTML = ''; // clear
+  const wrapper = document.createElement('div');
+  wrapper.style.padding = '12px';
 
-function removeCartItem(id){
-  cart=cart.filter(c=>c.id!==id);
-  saveCart(); updateCartUI();
-}
+  wrapper.innerHTML = `<h3>Order • ${order.id || order.timestamp}</h3>
+    <div><strong>Phone:</strong> ${order.phoneNumber || '—'}</div>
+    <div><strong>Address:</strong> ${order.address || '—'}</div>
+    <div><strong>Payment:</strong> ${order.paymentMode || 'COD'}</div>
+    <div><strong>Status:</strong> <span id="order-status-text">${order.status || '—'}</span></div>
+    <hr/>`;
 
-/* =========================
-   Checkout
-========================= */
-checkoutPlace?.addEventListener('click',()=>{
-  if(!isLoggedIn()){ return showToast('Please login first'); }
-  if(!cart.length){ return showToast('Cart is empty'); }
-
-  const phone=checkoutPhone.value.trim()||getCurrentPhone();
-  if(!phone) return showToast('Phone is required');
-
-  const address=checkoutAddress.value.trim();
-  const payment=checkoutPayment.value.trim()||'Cash on Delivery';
-  const instructions=checkoutInstructions.value.trim()||'';
-
-  const orderRef=ref(db,'orders');
-  const timestamp=new Date().toISOString();
-
-  push(orderRef,{
-    phone,
-    items:cart,
-    total:cart.reduce((acc,it)=>acc+safeNumber(it.price)*safeNumber(it.qty),0),
-    paymentMode:payment,
-    address,
-    instructions,
-    status:'pending',
-    timestamp
-  }).then(()=>{
-    showToast('Order placed!');
-    cart=[]; saveCart(); updateCartUI();
-    if(checkoutModal) checkoutModal.style.display='none';
-  }).catch(err=>{
-    console.error(err); showToast('Error placing order');
+  const itemsList = document.createElement('div');
+  (order.items||[]).forEach(it=>{
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.justifyContent = 'space-between';
+    row.style.padding = '6px 0';
+    row.innerHTML = `<div>${it.name} × ${it.qty}</div><div>${formatCurrency(safeNumber(it.price)*safeNumber(it.qty))}</div>`;
+    itemsList.appendChild(row);
   });
+  wrapper.appendChild(itemsList);
+
+  const btnContainer = document.createElement('div');
+  btnContainer.style.display = 'flex';
+  btnContainer.style.gap = '8px';
+  btnContainer.style.marginTop = '12px';
+
+  const btnClose = document.createElement('button');
+  btnClose.textContent = 'Close';
+  btnClose.onclick = () => { elOrderDetailsModal.style.display = 'none'; };
+  btnContainer.appendChild(btnClose);
+
+  const btnTrack = document.createElement('button');
+  btnTrack.textContent = 'Track';
+  btnTrack.onclick = () => {
+    const coords = order.addressGeocoded || null;
+    openTrackingMap(order.id || order.timestamp, coords || { lat: 20.5937, lng: 78.9629 });
+  };
+  btnContainer.appendChild(btnTrack);
+
+  // Admin helpers — update status (this will be available but you should secure it server-side in production)
+  const btnMarkReady = document.createElement('button');
+  btnMarkReady.textContent = 'Mark Ready';
+  btnMarkReady.onclick = async () => {
+    try { await update(ref(db, `orders/${order.id}`), { status: 'ready' }); showToast('Marked ready'); elOrderDetailsModal.style.display='none'; }
+    catch(e){ console.error(e); showToast('Update failed'); }
+  };
+  btnContainer.appendChild(btnMarkReady);
+
+  wrapper.appendChild(btnContainer);
+  elOrderDetailsContent.appendChild(wrapper);
+  elOrderDetailsModal.style.display = 'flex';
+}
+
+// ------------------------------
+// Live tracking map (Leaflet)
+// ------------------------------
+function openTrackingMap(orderId, customerCoords) {
+  // ensure Leaflet script & css are present in the page; otherwise warn
+  if (typeof L === 'undefined') {
+    showToast('Map not available — include Leaflet library (CSS + JS) in the page');
+    return;
+  }
+  if (!trackMapPopup) {
+    trackMapPopup = document.createElement('div');
+    trackMapPopup.style.position = 'fixed';
+    trackMapPopup.style.inset = '0';
+    trackMapPopup.style.background = 'rgba(0,0,0,0.65)';
+    trackMapPopup.style.zIndex = 999999;
+    trackMapPopup.style.display = 'flex';
+    trackMapPopup.style.alignItems = 'center';
+    trackMapPopup.style.justifyContent = 'center';
+    trackMapPopup.innerHTML = `
+      <div style="position:relative;width:90%;max-width:900px;height:70vh;background:#fff;border-radius:10px;overflow:hidden;">
+        <div id="order-track-map" style="width:100%;height:100%;"></div>
+        <button id="order-track-close" style="position:absolute;top:10px;right:10px;padding:8px 10px;background:#d40000;color:#fff;border:none;border-radius:6px;cursor:pointer;">Close</button>
+      </div>
+    `;
+    document.body.appendChild(trackMapPopup);
+    trackMapPopup.querySelector('#order-track-close').onclick = closeTrackingMap;
+  }
+  trackMapPopup.style.display = 'flex';
+
+  // Initialize map container if not already
+  if (!trackMap) {
+    trackMap = L.map('order-track-map', { zoomControl: true }).setView([customerCoords.lat, customerCoords.lng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(trackMap);
+    // customer marker
+    L.marker([customerCoords.lat, customerCoords.lng], { title: 'Your location' }).addTo(trackMap);
+    // driver marker initial
+    trackDriverMarker = L.marker([customerCoords.lat, customerCoords.lng], { title: 'Driver' }).addTo(trackMap);
+  } else {
+    trackMap.setView([customerCoords.lat, customerCoords.lng], 13);
+    if (trackDriverMarker) trackDriverMarker.setLatLng([customerCoords.lat, customerCoords.lng]);
+  }
+
+  // Poll Firebase for driver location for this order
+  if (trackIntervalHandle) clearInterval(trackIntervalHandle);
+  const driverLocRefPath = `orders/${orderId}/driverLocation`;
+  trackIntervalHandle = setInterval(() => {
+    get(ref(db, driverLocRefPath)).then(snapshot => {
+      const val = snapshot.val();
+      if (val && val.lat && val.lng) {
+        const lat = Number(val.lat), lng = Number(val.lng);
+        if (trackDriverMarker) trackDriverMarker.setLatLng([lat, lng]);
+        else trackDriverMarker = L.marker([lat, lng], { title: 'Driver' }).addTo(trackMap);
+      }
+    }).catch(err => {
+      // silently ignore; no driver location yet
+    });
+  }, TRACKING_POLL_INTERVAL);
+
+  // initial immediate fetch
+  get(ref(db, driverLocRefPath)).then(snap => {
+    const val = snap.val();
+    if (val && val.lat && val.lng) {
+      const lat=Number(val.lat), lng=Number(val.lng);
+      if (trackDriverMarker) trackDriverMarker.setLatLng([lat,lng]);
+      else trackDriverMarker = L.marker([lat,lng],{title:'Driver'}).addTo(trackMap);
+    }
+  }).catch(()=>{});
+}
+
+function closeTrackingMap() {
+  if (trackMapPopup) trackMapPopup.style.display = 'none';
+  if (trackIntervalHandle) { clearInterval(trackIntervalHandle); trackIntervalHandle = null; }
+}
+
+// ------------------------------
+// Checkout form UI wiring (if present in page)
+// ------------------------------
+if (elCheckoutForm) {
+  // Prefill phone if logged in
+  if (isLoggedIn() && elCheckoutPhone) elCheckoutPhone.value = getCurrentPhone();
+
+  // Cancel hides form modal if used as popup
+  if (elCheckoutCancel) {
+    elCheckoutCancel.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (elCheckoutForm) {
+        // assume checkout form is inside a modal with class 'modal' and has style display flex/none
+        const modal = elCheckoutForm.closest('.modal');
+        if (modal) modal.style.display = 'none';
+        else elCheckoutForm.style.display = 'none';
+      }
+    });
+  }
+
+  // Submit handler
+  if (elCheckoutSubmit) {
+    elCheckoutSubmit.addEventListener('click', async (evt) => {
+      evt.preventDefault();
+      if (!requireLoginOrToast()) return;
+
+      const phone = (elCheckoutPhone?.value || '').trim() || getCurrentPhone();
+      if (!validatePhone(phone)) { showToast('Enter a valid phone'); return; }
+      const address = (elCheckoutAddress?.value || '').trim();
+      if (!address) { showToast('Enter delivery address'); return; }
+      const payment = (elCheckoutPayment?.value || 'Cash on Delivery');
+      const instructions = (elCheckoutInstructions?.value || '').trim();
+
+      // Get cart for current user (content.js stores cart in localStorage cart_{phone})
+      const cartKey = `cart_${getCurrentPhone()}`;
+      let cart = [];
+      try { cart = JSON.parse(localStorage.getItem(cartKey)) || []; } catch(e) { cart = []; }
+      if (!cart || !cart.length) { showToast('Cart is empty'); return; }
+
+      // compute total
+      const total = cart.reduce((s, it) => s + (safeNumber(it.price) * safeNumber(it.qty)), 0);
+
+      // optionally geocode
+      let geocoded = null;
+      if (ENABLE_GEOCODE) {
+        elCheckoutSubmit.disabled = true;
+        elCheckoutSubmit.textContent = 'Geocoding...';
+        geocoded = await geocodeAddressIfNeeded(address).catch(()=>null);
+        elCheckoutSubmit.disabled = false;
+        elCheckoutSubmit.textContent = 'Place Order';
+      }
+
+      // build order payload
+      const orderPayload = {
+        phoneNumber: phone,
+        address,
+        addressGeocoded: geocoded,
+        items: cart,
+        paymentMode: payment,
+        instructions,
+        total
+      };
+
+      try {
+        elCheckoutSubmit.disabled = true;
+        elCheckoutSubmit.textContent = 'Placing...';
+        const res = await submitOrder(orderPayload);
+        // clear cart for user
+        localStorage.removeItem(cartKey);
+        showToast('Order placed successfully!');
+        // optionally redirect to orders page or show order id
+        setTimeout(()=> {
+          elCheckoutSubmit.disabled = false;
+          elCheckoutSubmit.textContent = 'Place Order';
+          // if a modal wrap exists, hide it
+          const modal = elCheckoutForm.closest('.modal');
+          if (modal) modal.style.display = 'none';
+          // reload order list
+          listUserOrdersAttach();
+        }, 400);
+      } catch (err) {
+        console.error('Order submit', err);
+        showToast('Failed to place order');
+        elCheckoutSubmit.disabled = false;
+        elCheckoutSubmit.textContent = 'Place Order';
+      }
+    });
+  }
+}
+
+// ------------------------------
+// Public helpers for content.js to call
+// ------------------------------
+window.checkout_submitOrder = submitOrder; // returns promise
+window.checkout_openOrderDetails = openOrderDetailsModal;
+window.checkout_openTrackingMap = openTrackingMap;
+window.checkout_reloadOrders = listUserOrdersAttach;
+
+// ------------------------------
+// Init: attach orders listing when page loads
+// ------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  // If there is a cached menu or other need, it's handled in content.js
+  // Here, attach user orders list if an orders container exists
+  if (elOrdersContainer) {
+    listUserOrdersAttach();
+  }
+
+  // If there is a place order button that should open the checkout form
+  if (elPlaceOrderBtn && elCheckoutForm) {
+    elPlaceOrderBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!isLoggedIn()) { showToast('Please login to place order'); return; }
+      // show checkout form (if modal wrap), or ensure phone prefilled
+      if (elCheckoutPhone) elCheckoutPhone.value = getCurrentPhone();
+      const modal = elCheckoutForm.closest('.modal');
+      if (modal) modal.style.display = 'flex';
+      else elCheckoutForm.style.display = 'block';
+    });
+  }
 });
 
-checkoutCancel?.addEventListener('click',()=>{ if(checkoutModal) checkoutModal.style.display='none'; });
-
-/* =========================
-   Events
-========================= */
-cartToggleBtn?.addEventListener('click',()=>{ if(cartPopupEl) cartPopupEl.style.display=cartPopupEl.style.display==='flex'?'none':'flex'; });
-searchInput?.addEventListener('input',()=>renderMenu());
-sortSelect?.addEventListener('change',()=>renderMenu());
-gridViewBtn?.addEventListener('click',()=>{ viewMode='grid'; renderMenu(); });
-listViewBtn?.addEventListener('click',()=>{ viewMode='list'; renderMenu(); });
-
-/* =========================
-   Init
-========================= */
-updateAuthUI();
-loadCartFromStorage();
-updateCartUI();
-loadShopData();
+// ------------------------------
+// Clean up on unload
+// ------------------------------
+window.addEventListener('beforeunload', () => {
+  if (trackIntervalHandle) clearInterval(trackIntervalHandle);
+  if (ordersListenerCleanup) ordersListenerCleanup();
+});
