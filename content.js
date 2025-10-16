@@ -106,6 +106,7 @@ function showToast(message) {
 function isLoggedIn() {
   return localStorage.getItem('isLoggedIn') === 'true';
 }
+
 function updateAuthUI() {
   if (!authBar) return;
   if (isLoggedIn()) {
@@ -116,16 +117,28 @@ function updateAuthUI() {
   }
   authBar.style.display = 'block';
 }
+
 window.logout = () => {
   localStorage.removeItem('isLoggedIn');
   localStorage.removeItem('userPhone');
+  // Clear cart on logout to prevent cross-user data leakage
+  cart = [];
+  saveCart();
+  updateCartUI();
   updateAuthUI();
+  showToast('Logged out');
 };
 
 /* =========================
    Load & sanitize cart from storage
    ========================= */
 function loadCartFromStorage() {
+  // Only load cart if user is logged in
+  if (!isLoggedIn()) {
+    cart = [];
+    saveCart();
+    return;
+  }
   const raw = JSON.parse(localStorage.getItem('cart')) || [];
   cart = raw.map((it, idx) => ({
     id: it?.id || `temp-${Date.now()}-${idx}`,
@@ -136,13 +149,17 @@ function loadCartFromStorage() {
   }));
   saveCart();
 }
-function saveCart() { localStorage.setItem('cart', JSON.stringify(cart)); }
+
+function saveCart() {
+  if (!isLoggedIn()) {
+    localStorage.removeItem('cart');
+    return;
+  }
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
 
 /* =========================
    Load shop data (categories, menu, offers)
-   - preserves firebase keys as item.id
-   - coerces prices to numbers
-   - caches raw menu object in sessionStorage under 'menuCache'
    ========================= */
 function loadShopData() {
   if (categoryCarousel) {
@@ -257,7 +274,6 @@ function renderMenu() {
       </div>
     `;
 
-    // open product popup on image or card click (unless add button clicked)
     const imgEl = card.querySelector('.menu-img');
     imgEl?.addEventListener('click', (e) => openProductPopup(item));
     card.addEventListener('click', (e) => {
@@ -271,17 +287,13 @@ function renderMenu() {
 }
 
 /* =========================
-   Product Popup (uses productPopup element from HTML)
-   - fills fields: pp-img, pp-name, pp-desc, pp-price, pp-qty
-   - ensures pp-add has dataset id/name/price/image
-   - adds +/- controls next to qty field if not present
+   Product Popup
    ========================= */
 let popupCurrentItem = null;
 
 function openProductPopup(item) {
   popupCurrentItem = item;
   if (!productPopup) {
-    // fallback: create minimal popup if not present in HTML
     createInlineProductPopup(item);
     return;
   }
@@ -290,12 +302,11 @@ function openProductPopup(item) {
   ppName && (ppName.textContent = item.name || 'Unnamed Item');
   ppDesc && (ppDesc.textContent = item.description || '');
   ppPrice && (ppPrice.textContent = `₹${safeNumber(item.price,0).toFixed(2)}`);
-  if (ppQty) ppQty.value = 1;
+  // DO NOT reset quantity to 1 — let user adjust from current or default
+  if (ppQty && ppQty.value === '') ppQty.value = '1';
 
-  // ensure + / - controls exist, create if needed
   ensurePopupQtyControls();
 
-  // set data attrs on add button (used when clicking to add)
   if (ppAdd) {
     ppAdd.dataset.id = item.id || '';
     ppAdd.dataset.name = item.name || '';
@@ -308,10 +319,8 @@ function openProductPopup(item) {
 
 function ensurePopupQtyControls() {
   if (!ppQty) return;
-  // check for existing wrappers by id
   if (document.getElementById('pp-minus') && document.getElementById('pp-plus')) return;
 
-  // create minus
   const minus = document.createElement('button');
   minus.type = 'button';
   minus.id = 'pp-minus';
@@ -324,7 +333,6 @@ function ensurePopupQtyControls() {
     if (v > 1) ppQty.value = v - 1;
   });
 
-  // create plus
   const plus = document.createElement('button');
   plus.type = 'button';
   plus.id = 'pp-plus';
@@ -337,12 +345,10 @@ function ensurePopupQtyControls() {
     ppQty.value = v + 1;
   });
 
-  // insert them around ppQty
   ppQty.insertAdjacentElement('beforebegin', minus);
   ppQty.insertAdjacentElement('afterend', plus);
 }
 
-/* If HTML didn't contain productPopup, fallback create minimal popup inline */
 function createInlineProductPopup(item) {
   const tmp = document.createElement('div');
   tmp.id = 'productPopupInline';
@@ -384,41 +390,41 @@ function createInlineProductPopup(item) {
   };
 }
 
-/* popup add/close handlers (when productPopup exists in HTML) */
 ppClose && ppClose.addEventListener('click', () => { if (productPopup) productPopup.style.display = 'none'; });
 ppAdd && ppAdd.addEventListener('click', () => {
-  // dataset approach: ensure we pass proper values
   const id = ppAdd.dataset.id || (`temp-${Date.now()}`);
-  const name = ppAdd.dataset.name || (popupCurrentItem && popupCurrentItem.name) || 'Unnamed Item';
+  const name = ppAdd.dataset.name || (popupCurrentItem?.name) || 'Unnamed Item';
   const price = safeNumber(ppAdd.dataset.price, popupCurrentItem ? popupCurrentItem.price : 0);
-  const image = ppAdd.dataset.image || (popupCurrentItem && popupCurrentItem.image) || '';
+  const image = ppAdd.dataset.image || (popupCurrentItem?.image) || '';
   const qty = Math.max(1, parseInt(ppQty?.value || '1'));
   addToCart(id, name, price, image, qty);
   if (productPopup) productPopup.style.display = 'none';
 });
 
-/* close popup on background click */
 productPopup && productPopup.addEventListener('click', (e) => { if (e.target === productPopup) productPopup.style.display = 'none'; });
 
 /* =========================
    Cart functions
    ========================= */
 function addToCart(id, name, price, image, qty = 1) {
-  // normalize
+  if (!isLoggedIn()) {
+    showToast('Please log in to add items to cart.');
+    window.location.href = 'login.html';
+    return;
+  }
+
   const itemId = id || `temp-${Date.now()}`;
   const itemName = name || 'Unnamed Item';
   const itemPrice = safeNumber(price, 0);
   const itemImage = image || '';
   const itemQty = Math.max(1, Number(qty) || 1);
 
-  // find
   const existing = cart.find(c => c.id === itemId);
-  if (existing) existing.qty = (existing.qty || 0) + itemQty;
+  if (existing) existing.qty += itemQty;
   else cart.push({ id: itemId, name: itemName, price: itemPrice, image: itemImage, qty: itemQty });
 
   saveCart();
   updateCartUI();
-
   showToast(`${itemName} added (${itemQty})`);
 }
 
@@ -488,31 +494,28 @@ function removeFromCart(id) {
 
 /* =========================
    Checkout / placeOrder
-   - uses checkout-phone input if present; fallback to localStorage; then prompt
-   - computes total from cart robustly
    ========================= */
 function placeOrder() {
-  if (!cart || cart.length === 0) return showToast('Cart is empty!');
-  // ensure logged-in check: if you require login, keep this; otherwise can be commented
-  // if (!isLoggedIn()) return showToast('Please login first to place order.');
+  if (!isLoggedIn()) {
+    showToast('Please log in to place an order.');
+    window.location.href = 'login.html';
+    return;
+  }
 
-  // Address
+  if (!cart || cart.length === 0) return showToast('Cart is empty!');
+
   const address = (checkoutAddress?.value || '').trim();
   if (!address) {
-    // open checkout modal to let user fill in
     if (checkoutModal) {
-      // prefill phone if available
       checkoutPhone && (checkoutPhone.value = localStorage.getItem('userPhone') || '');
       checkoutModal.style.display = 'flex';
     } else {
-      // prompt quick fallback
       const a = prompt('Enter delivery address:');
       if (!a) return showToast('Delivery address required');
     }
     return;
   }
 
-  // Phone: prefer checkout input -> localStorage -> prompt
   let phone = (checkoutPhone?.value || '').trim();
   if (!phone) phone = localStorage.getItem('userPhone') || '';
   if (!phone) {
@@ -521,14 +524,12 @@ function placeOrder() {
     phone = p.trim();
     localStorage.setItem('userPhone', phone);
   } else {
-    // save typed phone to storage
     localStorage.setItem('userPhone', phone);
   }
 
   const payment = (checkoutPayment?.value) || 'Cash on Delivery';
   const instructions = (checkoutInstructions?.value || '').trim();
 
-  // compute total robustly from cart
   const computedTotal = cart.reduce((s, it) => {
     const pr = safeNumber(it.price, 0);
     const q = Math.max(0, Number(it.qty) || 0);
@@ -558,7 +559,6 @@ function placeOrder() {
       cart = [];
       saveCart();
       updateCartUI();
-      // close cart modal & checkout modal if present
       if (cartPopupEl) cartPopupEl.style.display = 'none';
       if (checkoutModal) checkoutModal.style.display = 'none';
     })
@@ -568,15 +568,13 @@ function placeOrder() {
     });
 }
 
-/* Checkout modal handlers */
 checkoutCancel && checkoutCancel.addEventListener('click', () => {
   if (checkoutModal) checkoutModal.style.display = 'none';
 });
 checkoutPlace && checkoutPlace.addEventListener('click', () => {
-  // move to actual order placement flow — ensure checkout fields are validated
   const addr = (checkoutAddress?.value || '').trim();
   if (!addr) return showToast('Please enter delivery address');
-  placeOrder(); // will re-check phone and submit
+  placeOrder();
 });
 
 /* =========================
@@ -585,8 +583,12 @@ checkoutPlace && checkoutPlace.addEventListener('click', () => {
 document.addEventListener('click', (e) => {
   const t = e.target;
 
-  // grid Add-to-cart
   if (t.classList && t.classList.contains('add-cart-btn')) {
+    if (!isLoggedIn()) {
+      showToast('Please log in to add items.');
+      window.location.href = 'login.html';
+      return;
+    }
     const id = t.dataset.id;
     const name = t.dataset.name;
     const price = safeNumber(t.dataset.price, 0);
@@ -595,7 +597,6 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // cart qty buttons
   if (t.classList && t.classList.contains('qty-btn')) {
     const id = t.dataset.id;
     const action = t.dataset.action;
@@ -604,27 +605,28 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // delete item
   if (t.classList && t.classList.contains('delete-item')) {
     removeFromCart(t.dataset.id);
     showToast('Item removed');
     return;
   }
 
-  // toggle cart popup
   if (t.id === 'cart-toggle-btn') {
     if (cartPopupEl) cartPopupEl.style.display = cartPopupEl.style.display === 'block' ? 'none' : 'block';
     return;
   }
-  // close cart
+
   if (t.id === 'close-cart') {
     if (cartPopupEl) cartPopupEl.style.display = 'none';
     return;
   }
 
-  // checkout from cart popup
   if (t.id === 'checkout-btn') {
-    // open checkout modal
+    if (!isLoggedIn()) {
+      showToast('Please log in to checkout.');
+      window.location.href = 'login.html';
+      return;
+    }
     if (checkoutModal) {
       checkoutPhone && (checkoutPhone.value = localStorage.getItem('userPhone') || '');
       checkoutModal.style.display = 'flex';
@@ -634,7 +636,6 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // track-order button (open orders page)
   if (t.id === 'track-order-btn') {
     window.open('orders.html', '_blank');
     return;
@@ -655,7 +656,6 @@ listViewBtn && listViewBtn.addEventListener('click', () => {
   renderMenu();
 });
 
-/* Search debounced */
 let searchTimer = null;
 searchInput && searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
@@ -670,7 +670,6 @@ updateAuthUI();
 loadCartFromStorage();
 updateCartUI();
 
-// try to use cached menu quickly
 try {
   const cached = sessionStorage.getItem('menuCache');
   if (cached) {
@@ -689,10 +688,9 @@ try {
   // ignore cache parse errors
 }
 
-// start live listeners
 loadShopData();
 
-/* Expose some helpers (for debugging / external calls) */
+/* Expose helpers */
 window.addToCart = addToCart;
 window.placeOrder = placeOrder;
 window.openProductPopup = openProductPopup;
