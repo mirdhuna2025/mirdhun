@@ -3,72 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Search</title>
+  <title>Search Menu – Mirdhuna Shop</title>
   <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: Arial, sans-serif;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: #f9f9f9; 
+      padding: 12px; 
+      color: #333; 
+    }
+    h2 {
+      margin: 8px 0;
+      color: #d40000;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    #search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
     }
     #search-input {
-      width: 90%;
-      max-width: 400px;
-      padding: 8px;
-      font-size: 16px;
+      flex: 1;
+      padding: 10px 16px;
       border: 1px solid #ccc;
-      border-radius: 20px;
+      border-radius: 24px;
+      font-size: 15px;
+      outline: none;
+    }
+    #back-btn {
+      padding: 10px 16px;
+      background: #d40000;
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      padding: 5px 0;
+    }
+    .menu-card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+      cursor: pointer;
+    }
+    .menu-img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
       display: block;
-      margin: 8px auto;
     }
-    #results {
-      max-width: 400px;
-      margin: 0 auto;
-      padding: 0 10px;
+    .menu-info {
+      padding: 8px;
     }
-    .result {
-      padding: 10px 0;
+    .menu-name {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #222;
+      text-transform: capitalize;
+      word-wrap: break-word;
+    }
+    .menu-price {
       color: #d40000;
-      text-decoration: none;
-      display: block;
-      border-bottom: 1px solid #eee;
-    }
-    .result span {
-      color: #666;
-      font-size: 13px;
-      display: block;
+      font-weight: 700;
+      font-size: 16px;
     }
     .no-results {
+      grid-column: 1 / -1;
       text-align: center;
-      color: #999;
-      padding: 15px;
+      color: #888;
+      padding: 20px;
+    }
+    @media (max-width: 520px) {
+      .menu-img { height: 150px; }
+      .menu-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+  <h2>Search Menu</h2>
+  <div id="search-box">
+    <input type="text" id="search-input" placeholder="Search dishes, items..." autofocus />
+    <button id="back-btn" onclick="window.location.href='content.html'">← Shop</button>
+  </div>
 
-<input type="text" id="search-input" placeholder="Search menu or category..." autocomplete="off" />
-<div id="results"></div>
+  <div class="menu-grid" id="results"></div>
 
-<script>
-  // Predefined list (optional) — or leave empty if you want only manual typing
-  // In practice, you'd link to your main site with ?q=...
-  
-  document.getElementById('search-input').addEventListener('input', function(e) {
-    const q = e.target.value.trim();
-    const results = document.getElementById('results');
-    results.innerHTML = '';
-
-    if (!q) return;
-
-    // Generate direct links to your main site
-    const itemUrl = `index.html?q=${encodeURIComponent(q)}`;
-    const catUrl = `index.html?category=${encodeURIComponent(q)}`;
-
-    results.innerHTML = `
-      <a href="${itemUrl}" class="result">${q} <span>Search in menu</span></a>
-      <a href="${catUrl}" class="result">${q} <span>View as category</span></a>
-    `;
-  });
-</script>
+  <script type="module" src="search.js"></script>
 </body>
 </html>
