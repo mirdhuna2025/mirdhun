@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orders - Mirdhuna</title>
   <style>
     body {
@@ -12,6 +12,7 @@
       padding: 20px;
       color: #333;
     }
+
     .order-card {
       background: #fff;
       padding: 15px;
@@ -19,6 +20,7 @@
       margin-bottom: 12px;
       box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
     }
+
     .order-card p { margin: 4px 0; }
     .status { font-weight: 600; color: #d40000; }
     .track-btn {
@@ -32,7 +34,7 @@
     }
     .track-btn:hover { background: #43a047; }
 
-    /* Popup */
+    /* Map Popup */
     #track-popup {
       display: none;
       position: fixed;
@@ -66,10 +68,10 @@
   </style>
 </head>
 <body>
-
+  <!-- Orders Section -->
   <div id="ordersContainer" style="display:none;"></div>
 
-  <!-- Track Delivery Popup -->
+  <!-- Delivery Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
@@ -78,6 +80,7 @@
     </div>
   </div>
 
+  <!-- Firebase Logic -->
   <script type="module" src="orders.js"></script>
 </body>
 </html>
