@@ -11,48 +11,56 @@ const firebaseConfig = {
   appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const ordersContainer = document.getElementById('ordersContainer');
-const trackPopup = document.getElementById('track-popup');
-const trackMap = document.getElementById('track-map');
-const closeTrack = document.getElementById('close-track');
+const ordersContainer = document.getElementById("ordersContainer");
+const trackPopup = document.getElementById("track-popup");
+const trackMap = document.getElementById("track-map");
+const closeTrack = document.getElementById("close-track");
 
-// Load orders only if logged in
-const userPhone = localStorage.getItem("userPhone");
+// Function to show orders (called only when button is clicked)
+window.showUserOrders = function() {
+  const userPhone = localStorage.getItem("userPhone");
 
-if (!userPhone) {
-  ordersContainer.innerHTML = "<p>Please login to view your orders.</p>";
-} else {
-  ordersContainer.innerHTML = "<p>Loading your orders...</p>";
-
-  onValue(ref(db, 'orders'), snapshot => {
-    const data = snapshot.val();
-    const orders = data ? Object.values(data) : [];
-    const userOrders = orders.filter(o => o.phoneNumber === userPhone);
-    renderOrders(userOrders);
-  });
-}
-
-function renderOrders(orders) {
-  ordersContainer.innerHTML = '';
-  if (orders.length === 0) {
-    ordersContainer.innerHTML = "<p>No orders found.</p>";
+  // Check login
+  if (!userPhone) {
+    alert("Please login first to view your orders.");
+    ordersContainer.style.display = "none";
     return;
   }
 
-  orders.forEach(order => {
-    const div = document.createElement('div');
-    div.className = 'order-card';
+  ordersContainer.style.display = "block";
+  ordersContainer.innerHTML = "<p>Loading your orders...</p>";
+
+  onValue(ref(db, "orders"), (snapshot) => {
+    const data = snapshot.val();
+    const orders = data ? Object.values(data) : [];
+    const userOrders = orders.filter((o) => o.phoneNumber === userPhone);
+    renderOrders(userOrders);
+  });
+};
+
+// Render user-specific orders
+function renderOrders(orders) {
+  ordersContainer.innerHTML = "";
+  if (orders.length === 0) {
+    ordersContainer.innerHTML = "<p>No orders found for your account.</p>";
+    return;
+  }
+
+  orders.forEach((order) => {
+    const div = document.createElement("div");
+    div.className = "order-card";
     div.innerHTML = `
       <p><strong>Order Time:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
       <p><strong>Total:</strong> ₹${order.total}</p>
       <p class="status"><strong>Status:</strong> ${order.status}</p>
       <p><strong>Items:</strong> ${order.items.map(i => `${i.name} x${i.qty}`).join(', ')}</p>
-      ${order.status === 'on the way'
+      ${order.status === "on the way"
         ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
-        : ''
+        : ""
       }
     `;
     ordersContainer.appendChild(div);
@@ -60,17 +68,15 @@ function renderOrders(orders) {
 }
 
 // Track Delivery Popup
-document.addEventListener('click', e => {
-  if (e.target.classList.contains('track-btn')) {
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("track-btn")) {
     const lat = e.target.dataset.lat;
     const lng = e.target.dataset.lng;
     trackMap.src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
-    trackPopup.style.display = 'flex';
+    trackPopup.style.display = "flex";
   }
 });
 
 closeTrack.onclick = () => {
-  trackPopup.style.display = 'none';
+  trackPopup.style.display = "none";
 };
-
-
