@@ -1,4 +1,4 @@
-// content.js — full replacement
+// content.js — full replacement (search functionality removed)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -40,7 +40,7 @@ const cartItemsEl = document.getElementById('cartItems');
 const cartTotalEl = document.getElementById('cartTotal');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-const searchInput = document.getElementById('search-input');
+// REMOVED: searchInput reference
 const sortSelect = document.getElementById('sort-select');
 
 const gridViewBtn = document.getElementById('grid-view');
@@ -238,8 +238,7 @@ function renderMenu() {
     ? menuItems.filter(i => i.category === selectedCategory)
     : [...menuItems];
 
-  const term = (searchInput?.value || '').trim().toLowerCase();
-  if (term) items = items.filter(i => (i.name || '').toLowerCase().includes(term));
+  // REMOVED: search filtering logic
 
   const sortVal = (sortSelect?.value || 'default');
   if (sortVal === 'price-low-high') items.sort((a,b) => (a.price||0) - (b.price||0));
@@ -656,11 +655,8 @@ listViewBtn && listViewBtn.addEventListener('click', () => {
   renderMenu();
 });
 
-let searchTimer = null;
-searchInput && searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => renderMenu(), 320);
-});
+// REMOVED: searchInput event listener
+
 sortSelect && sortSelect.addEventListener('change', () => renderMenu());
 
 /* =========================
