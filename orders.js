@@ -15,27 +15,16 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const ordersContainer = document.getElementById('ordersContainer');
-const viewOrdersBtn = document.getElementById('viewOrdersBtn');
 const trackPopup = document.getElementById('track-popup');
 const trackMap = document.getElementById('track-map');
 const closeTrack = document.getElementById('close-track');
 
-// Hide orders by default
-ordersContainer.style.display = 'none';
+// Load orders only if logged in
+const userPhone = localStorage.getItem("userPhone");
 
-// When button is clicked — load orders
-viewOrdersBtn.addEventListener('click', () => {
-  const userPhone = localStorage.getItem("userPhone");
-
-  if (!userPhone) {
-    alert("Please login to view your orders.");
-    ordersContainer.innerHTML = "<p>Please login to view your orders.</p>";
-    ordersContainer.style.display = 'block';
-    return;
-  }
-
-  // Show loading
-  ordersContainer.style.display = 'block';
+if (!userPhone) {
+  ordersContainer.innerHTML = "<p>Please login to view your orders.</p>";
+} else {
   ordersContainer.innerHTML = "<p>Loading your orders...</p>";
 
   onValue(ref(db, 'orders'), snapshot => {
@@ -44,9 +33,8 @@ viewOrdersBtn.addEventListener('click', () => {
     const userOrders = orders.filter(o => o.phoneNumber === userPhone);
     renderOrders(userOrders);
   });
-});
+}
 
-// Render orders
 function renderOrders(orders) {
   ordersContainer.innerHTML = '';
   if (orders.length === 0) {
@@ -62,8 +50,8 @@ function renderOrders(orders) {
       <p><strong>Total:</strong> ₹${order.total}</p>
       <p class="status"><strong>Status:</strong> ${order.status}</p>
       <p><strong>Items:</strong> ${order.items.map(i => `${i.name} x${i.qty}`).join(', ')}</p>
-      ${order.status === 'on the way' 
-        ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>` 
+      ${order.status === 'on the way'
+        ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
         : ''
       }
     `;
@@ -84,4 +72,5 @@ document.addEventListener('click', e => {
 closeTrack.onclick = () => {
   trackPopup.style.display = 'none';
 };
+
 
