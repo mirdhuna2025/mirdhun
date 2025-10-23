@@ -1,4 +1,4 @@
-// content.js — full replacement (search removed + login modal on checkout)
+// content.js — full replacement (search removed + guest cart + fixed double-add)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -119,7 +119,6 @@ function updateAuthUI() {
 window.logout = () => {
   localStorage.removeItem('isLoggedIn');
   localStorage.removeItem('userPhone');
-  // Keep cart for UX, but it won't be submitted until re-login
   updateAuthUI();
   showToast('Logged out');
 };
@@ -127,15 +126,15 @@ window.logout = () => {
 window.showLoginModal = () => {
   const loginModal = document.getElementById('loginModal');
   if (loginModal) {
-    loginModal.style.display = 'flex'; // or 'block' — match your CSS
+    loginModal.style.display = 'flex';
   } else {
-    showToast('Login interface not found.');
-    console.warn('Element #loginModal not found in DOM.');
+    console.warn('Login modal #loginModal not found.');
+    showToast('Login interface missing.');
   }
 };
 
 /* =========================
-   Cart: Load & Save (now supports guests)
+   Cart: Load & Save (guest-friendly)
    ========================= */
 function loadCartFromStorage() {
   const raw = JSON.parse(localStorage.getItem('cart')) || [];
@@ -149,7 +148,6 @@ function loadCartFromStorage() {
 }
 
 function saveCart() {
-  // Always save — guest or logged-in
   localStorage.setItem('cart', JSON.stringify(cart));
 }
 
@@ -297,6 +295,7 @@ function openProductPopup(item) {
 
   ensurePopupQtyControls();
 
+  // ✅ ONLY update dataset — NO event listener here!
   if (ppAdd) {
     ppAdd.dataset.id = item.id || '';
     ppAdd.dataset.name = item.name || '';
@@ -380,24 +379,14 @@ function createInlineProductPopup(item) {
   };
 }
 
+// Close popup on close button or outside click
 ppClose && ppClose.addEventListener('click', () => { if (productPopup) productPopup.style.display = 'none'; });
-ppAdd && ppAdd.addEventListener('click', () => {
-  const id = ppAdd.dataset.id || (`temp-${Date.now()}`);
-  const name = ppAdd.dataset.name || (popupCurrentItem?.name) || 'Unnamed Item';
-  const price = safeNumber(ppAdd.dataset.price, popupCurrentItem ? popupCurrentItem.price : 0);
-  const image = ppAdd.dataset.image || (popupCurrentItem?.image) || '';
-  const qty = Math.max(1, parseInt(ppQty?.value || '1'));
-  addToCart(id, name, price, image, qty);
-  if (productPopup) productPopup.style.display = 'none';
-});
-
 productPopup && productPopup.addEventListener('click', (e) => { if (e.target === productPopup) productPopup.style.display = 'none'; });
 
 /* =========================
    Cart functions
    ========================= */
 function addToCart(id, name, price, image, qty = 1) {
-  // ✅ Allow adding to cart without login
   const itemId = id || `temp-${Date.now()}`;
   const itemName = name || 'Unnamed Item';
   const itemPrice = safeNumber(price, 0);
@@ -483,10 +472,9 @@ function removeFromCart(id) {
 function placeOrder() {
   if (!isLoggedIn()) {
     showToast('Please log in to place an order.');
-    // 👇 Show your existing login modal
     const loginModal = document.getElementById('loginModal');
     if (loginModal) {
-      loginModal.style.display = 'flex'; // adjust to 'block' if needed
+      loginModal.style.display = 'flex';
     } else {
       console.error('Login modal #loginModal not found!');
     }
@@ -569,13 +557,13 @@ checkoutPlace && checkoutPlace.addEventListener('click', () => {
 });
 
 /* =========================
-   Event delegation
+   Global Event Delegation
    ========================= */
 document.addEventListener('click', (e) => {
   const t = e.target;
 
+  // Add from menu card
   if (t.classList && t.classList.contains('add-cart-btn')) {
-    // ✅ No login check here — allow guest add
     const id = t.dataset.id;
     const name = t.dataset.name;
     const price = safeNumber(t.dataset.price, 0);
@@ -584,6 +572,21 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  // Add from product popup (FIXED: single listener)
+  if (t && t.id === 'pp-add') {
+    const id = ppAdd?.dataset.id || (`temp-${Date.now()}`);
+    const name = ppAdd?.dataset.name || 'Unnamed Item';
+    const price = safeNumber(ppAdd?.dataset.price, 0);
+    const image = ppAdd?.dataset.image || '';
+    const qty = Math.max(1, parseInt(ppQty?.value || '1'));
+
+    addToCart(id, name, price, image, qty);
+    if (productPopup) productPopup.style.display = 'none';
+    if (ppQty) ppQty.value = '1'; // reset for next use
+    return;
+  }
+
+  // Cart quantity buttons
   if (t.classList && t.classList.contains('qty-btn')) {
     const id = t.dataset.id;
     const action = t.dataset.action;
@@ -592,12 +595,14 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  // Delete from cart
   if (t.classList && t.classList.contains('delete-item')) {
     removeFromCart(t.dataset.id);
     showToast('Item removed');
     return;
   }
 
+  // Toggle cart popup
   if (t.id === 'cart-toggle-btn') {
     if (cartPopupEl) cartPopupEl.style.display = cartPopupEl.style.display === 'block' ? 'none' : 'block';
     return;
@@ -608,6 +613,7 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  // Checkout button
   if (t.id === 'checkout-btn') {
     if (!isLoggedIn()) {
       showToast('Please log in to checkout.');
