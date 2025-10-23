@@ -1,4 +1,4 @@
-// search.js — full-featured search with Add to Cart
+// search.js — full-featured search with Add to Cart (using localStorage)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -20,6 +20,29 @@ let allMenuItems = [];
 function safeNumber(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+// Load cart from localStorage
+function getCart() {
+  const cart = localStorage.getItem('cart');
+  return cart ? JSON.parse(cart) : [];
+}
+
+// Save cart to localStorage
+function saveCart(cart) {
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
+
+// Add item to cart
+function addToCart(item) {
+  const cart = getCart();
+  const existing = cart.find(i => i.id === item.id);
+  if (existing) {
+    existing.quantity = (existing.quantity || 1) + 1;
+  } else {
+    cart.push({ ...item, quantity: 1 });
+  }
+  saveCart(cart);
 }
 
 function showToast(message) {
@@ -70,14 +93,13 @@ function renderItems(items) {
         </div>` 
       : '';
 
-    // Add to Cart button data
     const id = item.id || `temp-${Date.now()}`;
     const priceNum = safeNumber(item.price, 0);
     const image = item.image || '';
 
     return `
       <div class="menu-card">
-        <img class="menu-img" src="${image}" alt="${safeName}" />
+        <img class="menu-img" src="${image}" alt="${safeName}" onerror="this.src='fallback-image.jpg'" />
         <div class="menu-info">
           <div class="menu-name">${safeName}</div>
           <div style="display:flex;gap:6px;align-items:center;">
@@ -107,13 +129,17 @@ function renderItems(items) {
       const price = parseFloat(btn.dataset.price);
       const image = btn.dataset.image || '';
 
-      // Show message and redirect to main shop to add (since cart/auth is there)
-      showToast(`"${name}" added! Redirecting to cart...`);
-      // Pass item via URL params (optional) or just go to shop
+      const item = { id, name, price, image };
+
+      // ✅ ACTUALLY ADD TO CART
+      addToCart(item);
+
+      showToast(`"${name}" added to cart!`);
+      
+      // Optional: Redirect after short delay
       setTimeout(() => {
-        // You can enhance this later to auto-add via localStorage + redirect
-        window.location.href = '';
-      }, 1500);
+        window.location.href = 'content.html';
+      }, 1200);
     });
   });
 }
@@ -130,7 +156,7 @@ function performSearch(query) {
   renderItems(filtered);
 }
 
-// Load menu
+// Load menu from Firebase
 onValue(ref(db, 'menu'), snapshot => {
   const arr = [];
   snapshot.forEach(child => {
@@ -153,6 +179,7 @@ onValue(ref(db, 'menu'), snapshot => {
   }
 });
 
+// Debounced search
 let searchTimer;
 document.getElementById('search-input')?.addEventListener('input', (e) => {
   clearTimeout(searchTimer);
