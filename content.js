@@ -1,4 +1,4 @@
-// content.js — full replacement (search removed + guest cart + fixed double-add)
+// content.js — full replacement (search removed + guest cart + fixed double-add + grouped view)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -25,7 +25,7 @@ let menuItems = [];
 let cart = [];
 let currentOffer = null;
 let selectedCategory = null;
-let viewMode = 'grid'; // 'grid' | 'list'
+let viewMode = 'grid'; // 'grid' | 'list' | 'grouped'
 
 /* =========================
    DOM refs
@@ -43,6 +43,7 @@ const cartToggleBtn = document.getElementById('cart-toggle-btn');
 const sortSelect = document.getElementById('sort-select');
 const gridViewBtn = document.getElementById('grid-view');
 const listViewBtn = document.getElementById('list-view');
+let groupedViewBtn = document.getElementById('grouped-view'); // may be injected
 
 // Product popup
 const productPopup = document.getElementById('productPopup');
@@ -222,25 +223,8 @@ function renderCategories() {
   });
 }
 
-function renderMenu() {
-  if (!menuGrid) return;
-  menuGrid.innerHTML = '';
-
-  let items = selectedCategory
-    ? menuItems.filter(i => i.category === selectedCategory)
-    : [...menuItems];
-
-  const sortVal = (sortSelect?.value || 'default');
-  if (sortVal === 'price-low-high') items.sort((a,b) => (a.price||0) - (b.price||0));
-  else if (sortVal === 'price-high-low') items.sort((a,b) => (b.price||0) - (a.price||0));
-  else if (sortVal === 'offer-first') items.sort((a,b) => (b.offer ? 1 : 0) - (a.offer ? 1 : 0));
-
-  if (!items.length) {
-    menuGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;">No items available</p>';
-    menuGrid.style.gridTemplateColumns = '1fr';
-    return;
-  }
-
+// Helper to render a list of menu cards
+function renderMenuItems(items) {
   items.forEach(item => {
     const safeName = (item.name || 'Unnamed Item').replace(/"/g,'&quot;');
     const safePrice = safeNumber(item.price, 0).toFixed(2);
@@ -271,7 +255,85 @@ function renderMenu() {
 
     menuGrid.appendChild(card);
   });
+}
 
+function renderMenu() {
+  if (!menuGrid) return;
+  menuGrid.innerHTML = '';
+
+  if (viewMode === 'grouped') {
+    const allItems = [...menuItems];
+    let itemsToRender = selectedCategory
+      ? allItems.filter(i => i.category === selectedCategory)
+      : allItems;
+
+    if (itemsToRender.length === 0) {
+      menuGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;">No items available</p>';
+      menuGrid.style.gridTemplateColumns = '1fr';
+      return;
+    }
+
+    if (!selectedCategory) {
+      // Show "All Items" header
+      const allHeader = document.createElement('h3');
+      allHeader.textContent = 'All Items';
+      allHeader.style.gridColumn = '1 / -1';
+      allHeader.style.marginTop = '20px';
+      allHeader.style.paddingLeft = '12px';
+      allHeader.style.borderLeft = '3px solid #4CAF50';
+      menuGrid.appendChild(allHeader);
+      renderMenuItems(allItems);
+    }
+
+    // Group by category
+    const categoryMap = {};
+    itemsToRender.forEach(item => {
+      const cat = item.category || 'Uncategorized';
+      if (!categoryMap[cat]) categoryMap[cat] = [];
+      categoryMap[cat].push(item);
+    });
+
+    // Sort categories for consistent order
+    const sortedCategories = Object.keys(categoryMap).sort();
+
+    sortedCategories.forEach(catName => {
+      if (selectedCategory && catName !== selectedCategory) return;
+
+      const catItems = categoryMap[catName];
+      if (catItems.length === 0) return;
+
+      const header = document.createElement('h3');
+      header.textContent = catName;
+      header.style.gridColumn = '1 / -1';
+      header.style.marginTop = '24px';
+      header.style.paddingLeft = '12px';
+      header.style.borderLeft = '3px solid #2196F3';
+      menuGrid.appendChild(header);
+
+      renderMenuItems(catItems);
+    });
+
+    menuGrid.style.gridTemplateColumns = '1fr';
+    return;
+  }
+
+  // === Original grid/list view ===
+  let items = selectedCategory
+    ? menuItems.filter(i => i.category === selectedCategory)
+    : [...menuItems];
+
+  const sortVal = (sortSelect?.value || 'default');
+  if (sortVal === 'price-low-high') items.sort((a,b) => (a.price||0) - (b.price||0));
+  else if (sortVal === 'price-high-low') items.sort((a,b) => (b.price||0) - (a.price||0));
+  else if (sortVal === 'offer-first') items.sort((a,b) => (b.offer ? 1 : 0) - (a.offer ? 1 : 0));
+
+  if (!items.length) {
+    menuGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;">No items available</p>';
+    menuGrid.style.gridTemplateColumns = '1fr';
+    return;
+  }
+
+  renderMenuItems(items);
   menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
@@ -295,7 +357,6 @@ function openProductPopup(item) {
 
   ensurePopupQtyControls();
 
-  // ✅ ONLY update dataset — NO event listener here!
   if (ppAdd) {
     ppAdd.dataset.id = item.id || '';
     ppAdd.dataset.name = item.name || '';
@@ -379,7 +440,6 @@ function createInlineProductPopup(item) {
   };
 }
 
-// Close popup on close button or outside click
 ppClose && ppClose.addEventListener('click', () => { if (productPopup) productPopup.style.display = 'none'; });
 productPopup && productPopup.addEventListener('click', (e) => { if (e.target === productPopup) productPopup.style.display = 'none'; });
 
@@ -562,7 +622,6 @@ checkoutPlace && checkoutPlace.addEventListener('click', () => {
 document.addEventListener('click', (e) => {
   const t = e.target;
 
-  // Add from menu card
   if (t.classList && t.classList.contains('add-cart-btn')) {
     const id = t.dataset.id;
     const name = t.dataset.name;
@@ -572,7 +631,6 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Add from product popup (FIXED: single listener)
   if (t && t.id === 'pp-add') {
     const id = ppAdd?.dataset.id || (`temp-${Date.now()}`);
     const name = ppAdd?.dataset.name || 'Unnamed Item';
@@ -582,11 +640,10 @@ document.addEventListener('click', (e) => {
 
     addToCart(id, name, price, image, qty);
     if (productPopup) productPopup.style.display = 'none';
-    if (ppQty) ppQty.value = '1'; // reset for next use
+    if (ppQty) ppQty.value = '1';
     return;
   }
 
-  // Cart quantity buttons
   if (t.classList && t.classList.contains('qty-btn')) {
     const id = t.dataset.id;
     const action = t.dataset.action;
@@ -595,14 +652,12 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Delete from cart
   if (t.classList && t.classList.contains('delete-item')) {
     removeFromCart(t.dataset.id);
     showToast('Item removed');
     return;
   }
 
-  // Toggle cart popup
   if (t.id === 'cart-toggle-btn') {
     if (cartPopupEl) cartPopupEl.style.display = cartPopupEl.style.display === 'block' ? 'none' : 'block';
     return;
@@ -613,7 +668,6 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Checkout button
   if (t.id === 'checkout-btn') {
     if (!isLoggedIn()) {
       showToast('Please log in to checkout.');
@@ -641,16 +695,42 @@ document.addEventListener('click', (e) => {
 });
 
 /* View toggles */
+function setActiveView(mode) {
+  gridViewBtn?.classList.toggle('active', mode === 'grid');
+  listViewBtn?.classList.toggle('active', mode === 'list');
+  groupedViewBtn?.classList.toggle('active', mode === 'grouped');
+}
+
 gridViewBtn && gridViewBtn.addEventListener('click', () => {
   viewMode = 'grid';
-  gridViewBtn.classList.add('active');
-  listViewBtn && listViewBtn.classList.remove('active');
+  setActiveView('grid');
   renderMenu();
 });
+
 listViewBtn && listViewBtn.addEventListener('click', () => {
   viewMode = 'list';
-  listViewBtn.classList.add('active');
-  gridViewBtn && gridViewBtn.classList.remove('active');
+  setActiveView('list');
+  renderMenu();
+});
+
+// Inject grouped button if missing
+if (gridViewBtn && !groupedViewBtn) {
+  const btn = document.createElement('button');
+  btn.id = 'grouped-view';
+  btn.textContent = 'Grouped';
+  btn.style.marginLeft = '8px';
+  btn.style.padding = '6px 10px';
+  btn.style.border = '1px solid #ccc';
+  btn.style.borderRadius = '4px';
+  btn.style.cursor = 'pointer';
+  btn.style.background = '#f9f9f9';
+  gridViewBtn.parentNode.insertBefore(btn, gridViewBtn.nextSibling);
+  groupedViewBtn = btn;
+}
+
+groupedViewBtn && groupedViewBtn.addEventListener('click', () => {
+  viewMode = 'grouped';
+  setActiveView('grouped');
   renderMenu();
 });
 
