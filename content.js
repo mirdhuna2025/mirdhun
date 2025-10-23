@@ -1,4 +1,4 @@
-// content.js — full replacement (search functionality removed)
+// content.js — full replacement (search removed + login modal on checkout)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -22,13 +22,13 @@ const db = getDatabase(app);
    ========================= */
 let categories = [];
 let menuItems = [];
-let cart = []; // will load & sanitize
+let cart = [];
 let currentOffer = null;
 let selectedCategory = null;
 let viewMode = 'grid'; // 'grid' | 'list'
 
 /* =========================
-   DOM refs (from your content.html)
+   DOM refs
    ========================= */
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
@@ -40,14 +40,12 @@ const cartItemsEl = document.getElementById('cartItems');
 const cartTotalEl = document.getElementById('cartTotal');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 
-// REMOVED: searchInput reference
 const sortSelect = document.getElementById('sort-select');
-
 const gridViewBtn = document.getElementById('grid-view');
 const listViewBtn = document.getElementById('list-view');
 
-/* Product details popup expected IDs from your content.html */
-const productPopup = document.getElementById('productPopup'); // container
+// Product popup
+const productPopup = document.getElementById('productPopup');
 const ppImg = document.getElementById('pp-img');
 const ppName = document.getElementById('pp-name');
 const ppDesc = document.getElementById('pp-desc');
@@ -56,16 +54,16 @@ const ppQty = document.getElementById('pp-qty');
 const ppAdd = document.getElementById('pp-add');
 const ppClose = document.getElementById('pp-close');
 
-/* Checkout modal fields (ensure these exist in your content.html) */
+// Checkout modal
 const checkoutModal = document.getElementById('checkoutModal');
-const checkoutPhone = document.getElementById('checkout-phone'); // phone input (must exist)
+const checkoutPhone = document.getElementById('checkout-phone');
 const checkoutAddress = document.getElementById('checkout-address');
 const checkoutPayment = document.getElementById('checkout-payment');
 const checkoutInstructions = document.getElementById('checkout-instructions');
 const checkoutPlace = document.getElementById('checkout-place');
 const checkoutCancel = document.getElementById('checkout-cancel');
 
-/* Toast */
+// Toast
 let toastEl = document.getElementById('toast');
 
 /* =========================
@@ -113,7 +111,7 @@ function updateAuthUI() {
     const phone = localStorage.getItem('userPhone') || '';
     authBar.innerHTML = `Logged in${phone ? ' — ' + phone : ''} <button onclick="logout()">Logout</button>`;
   } else {
-    authBar.innerHTML = `Welcome! <a href="login.html" style="color:white;text-decoration:underline">Login to Order</a>`;
+    authBar.innerHTML = `Welcome! <button onclick="showLoginModal()">Login to Order</button>`;
   }
   authBar.style.display = 'block';
 }
@@ -121,24 +119,25 @@ function updateAuthUI() {
 window.logout = () => {
   localStorage.removeItem('isLoggedIn');
   localStorage.removeItem('userPhone');
-  // Clear cart on logout to prevent cross-user data leakage
-  cart = [];
-  saveCart();
-  updateCartUI();
+  // Keep cart for UX, but it won't be submitted until re-login
   updateAuthUI();
   showToast('Logged out');
 };
 
+window.showLoginModal = () => {
+  const loginModal = document.getElementById('loginModal');
+  if (loginModal) {
+    loginModal.style.display = 'flex'; // or 'block' — match your CSS
+  } else {
+    showToast('Login interface not found.');
+    console.warn('Element #loginModal not found in DOM.');
+  }
+};
+
 /* =========================
-   Load & sanitize cart from storage
+   Cart: Load & Save (now supports guests)
    ========================= */
 function loadCartFromStorage() {
-  // Only load cart if user is logged in
-  if (!isLoggedIn()) {
-    cart = [];
-    saveCart();
-    return;
-  }
   const raw = JSON.parse(localStorage.getItem('cart')) || [];
   cart = raw.map((it, idx) => ({
     id: it?.id || `temp-${Date.now()}-${idx}`,
@@ -147,19 +146,15 @@ function loadCartFromStorage() {
     image: it?.image || '',
     qty: Math.max(1, parseInt(it?.qty) || 1)
   }));
-  saveCart();
 }
 
 function saveCart() {
-  if (!isLoggedIn()) {
-    localStorage.removeItem('cart');
-    return;
-  }
+  // Always save — guest or logged-in
   localStorage.setItem('cart', JSON.stringify(cart));
 }
 
 /* =========================
-   Load shop data (categories, menu, offers)
+   Load shop data
    ========================= */
 function loadShopData() {
   if (categoryCarousel) {
@@ -211,7 +206,6 @@ function renderOffer() {
 function renderCategories() {
   if (!categoryCarousel) return;
   categoryCarousel.innerHTML = '';
-  // ALL
   const allDiv = document.createElement('div');
   allDiv.className = 'category-item';
   allDiv.innerHTML = `<img class="category-img" src="" alt="All"/><div class="category-name">ALL</div>`;
@@ -237,8 +231,6 @@ function renderMenu() {
   let items = selectedCategory
     ? menuItems.filter(i => i.category === selectedCategory)
     : [...menuItems];
-
-  // REMOVED: search filtering logic
 
   const sortVal = (sortSelect?.value || 'default');
   if (sortVal === 'price-low-high') items.sort((a,b) => (a.price||0) - (b.price||0));
@@ -301,7 +293,6 @@ function openProductPopup(item) {
   ppName && (ppName.textContent = item.name || 'Unnamed Item');
   ppDesc && (ppDesc.textContent = item.description || '');
   ppPrice && (ppPrice.textContent = `₹${safeNumber(item.price,0).toFixed(2)}`);
-  // DO NOT reset quantity to 1 — let user adjust from current or default
   if (ppQty && ppQty.value === '') ppQty.value = '1';
 
   ensurePopupQtyControls();
@@ -406,12 +397,7 @@ productPopup && productPopup.addEventListener('click', (e) => { if (e.target ===
    Cart functions
    ========================= */
 function addToCart(id, name, price, image, qty = 1) {
-  if (!isLoggedIn()) {
-    showToast('Please log in to add items to cart.');
-    window.location.href = 'login.html';
-    return;
-  }
-
+  // ✅ Allow adding to cart without login
   const itemId = id || `temp-${Date.now()}`;
   const itemName = name || 'Unnamed Item';
   const itemPrice = safeNumber(price, 0);
@@ -497,7 +483,13 @@ function removeFromCart(id) {
 function placeOrder() {
   if (!isLoggedIn()) {
     showToast('Please log in to place an order.');
-    window.location.href = 'login.html';
+    // 👇 Show your existing login modal
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+      loginModal.style.display = 'flex'; // adjust to 'block' if needed
+    } else {
+      console.error('Login modal #loginModal not found!');
+    }
     return;
   }
 
@@ -577,17 +569,13 @@ checkoutPlace && checkoutPlace.addEventListener('click', () => {
 });
 
 /* =========================
-   Event wiring (delegation)
+   Event delegation
    ========================= */
 document.addEventListener('click', (e) => {
   const t = e.target;
 
   if (t.classList && t.classList.contains('add-cart-btn')) {
-    if (!isLoggedIn()) {
-      showToast('Please log in to add items.');
-      window.location.href = 'login.html';
-      return;
-    }
+    // ✅ No login check here — allow guest add
     const id = t.dataset.id;
     const name = t.dataset.name;
     const price = safeNumber(t.dataset.price, 0);
@@ -623,7 +611,12 @@ document.addEventListener('click', (e) => {
   if (t.id === 'checkout-btn') {
     if (!isLoggedIn()) {
       showToast('Please log in to checkout.');
-      window.location.href = 'login.html';
+      const loginModal = document.getElementById('loginModal');
+      if (loginModal) {
+        loginModal.style.display = 'flex';
+      } else {
+        console.error('Login modal #loginModal not found!');
+      }
       return;
     }
     if (checkoutModal) {
@@ -654,8 +647,6 @@ listViewBtn && listViewBtn.addEventListener('click', () => {
   gridViewBtn && gridViewBtn.classList.remove('active');
   renderMenu();
 });
-
-// REMOVED: searchInput event listener
 
 sortSelect && sortSelect.addEventListener('change', () => renderMenu());
 
