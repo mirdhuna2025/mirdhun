@@ -112,7 +112,7 @@ function renderItems(items) {
       // Pass item via URL params (optional) or just go to shop
       setTimeout(() => {
         // You can enhance this later to auto-add via localStorage + redirect
-        window.location.href = 'content.html';
+        window.location.href = '';
       }, 1500);
     });
   });
