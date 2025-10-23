@@ -1,7 +1,8 @@
-<script type="module">
+// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -16,87 +17,65 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const ordersContainer = document.getElementById("ordersContainer");
-const trackPopup = document.getElementById("track-popup");
-const trackMap = document.getElementById("track-map");
-const closeTrack = document.getElementById("close-track");
+// DOM elements
+const popup = document.getElementById("order-popup");
+const ordersList = document.getElementById("orders-list");
+const closeBtn = document.getElementById("close-popup");
 
-/**
- * Normalize phone number: remove all non-digit characters
- */
+// Normalize phone helper
 function normalizePhone(phone) {
   if (!phone) return '';
   return String(phone).replace(/\D/g, '');
 }
 
-/**
- * Function called when the “My Orders” button is clicked
- */
-window.showUserOrders = function() {
-  const userPhone = localStorage.getItem("userPhone");
+// Close popup
+closeBtn.addEventListener("click", () => {
+  popup.style.display = "none";
+  // Optional: redirect or close tab
+  // window.close();
+});
 
-  if (!userPhone) {
-    alert("Please login to view your orders.");
-    ordersContainer.style.display = "none";
-    return;
-  }
+// Get user phone
+const userPhone = localStorage.getItem("userPhone");
+const userPhoneNorm = normalizePhone(userPhone);
 
-  ordersContainer.style.display = "block";
-  ordersContainer.innerHTML = "<p>Loading your orders...</p>";
-
-  const userPhoneNormalized = normalizePhone(userPhone);
-
+if (!userPhone) {
+  ordersList.innerHTML = `<p style="color:red;text-align:center;">⚠️ Please log in first.</p>`;
+} else {
+  // Fetch & filter orders
   const ordersRef = ref(db, "orders");
   onValue(ordersRef, (snapshot) => {
     const data = snapshot.val();
     const allOrders = data ? Object.values(data) : [];
     
-    // Filter orders by normalized phone number
-    const userOrders = allOrders.filter(order => 
-      normalizePhone(order.phoneNumber) === userPhoneNormalized
+    const myOrders = allOrders.filter(order =>
+      normalizePhone(order.phoneNumber) === userPhoneNorm
     );
 
-    renderOrders(userOrders);
-  });
-};
+    if (myOrders.length === 0) {
+      ordersList.innerHTML = '<p class="no-orders">No orders found for your number.</p>';
+    } else {
+      let html = '';
+      myOrders.forEach(order => {
+        const time = order.timestamp 
+          ? new Date(order.timestamp).toLocaleString() 
+          : 'Unknown time';
+        const items = order.items?.map(i => `${i.name} × ${i.qty}`).join(', ') || '—';
+        const total = order.total || '0';
 
-// Render orders filtered by phone number
-function renderOrders(orders) {
-  ordersContainer.innerHTML = "";
-
-  if (!orders.length) {
-    ordersContainer.innerHTML = "<p>No orders found for your login.</p>";
-    return;
-  }
-
-  orders.forEach(order => {
-    const div = document.createElement("div");
-    div.className = "order-card";
-    div.innerHTML = `
-      <p><strong>Order Time:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'Unknown'}</p>
-      <p><strong>Total:</strong> ₹${order.total || '0'}</p>
-      <p class="status"><strong>Status:</strong> ${order.status || 'Pending'}</p>
-      <p><strong>Items:</strong> ${order.items?.map(i => `${i.name} x${i.qty}`).join(', ') || 'None'}</p>
-      ${order.status === "on the way" 
-        ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
-        : ""
-      }
-    `;
-    ordersContainer.appendChild(div);
+        html += `
+          <div class="order-card">
+            <p><strong>Order Time:</strong> ${time}</p>
+            <p><strong>Total:</strong> ₹${total}</p>
+            <p><strong>Status:</strong> ${order.status || 'Pending'}</p>
+            <p><strong>Items:</strong> ${items}</p>
+          </div>
+        `;
+      });
+      ordersList.innerHTML = html;
+    }
+  }, (error) => {
+    console.error("Firebase error:", error);
+    ordersList.innerHTML = `<p style="color:red;">❌ Failed to load orders. Check console.</p>`;
   });
 }
-
-// Delivery Map Popup
-document.addEventListener("click", e => {
-  if (e.target.classList.contains("track-btn")) {
-    const lat = e.target.dataset.lat;
-    const lng = e.target.dataset.lng;
-    trackMap.src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
-    trackPopup.style.display = "flex";
-  }
-});
-
-closeTrack.onclick = () => {
-  trackPopup.style.display = "none";
-};
-</script>
