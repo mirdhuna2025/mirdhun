@@ -1,4 +1,4 @@
-// search.js — full-featured search with Add to Cart (no redirect)
+// search.js — full-featured search with Add to Cart (using localStorage)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -22,16 +22,18 @@ function safeNumber(v, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-// Cart utilities
+// Load cart from localStorage
 function getCart() {
   const cart = localStorage.getItem('cart');
   return cart ? JSON.parse(cart) : [];
 }
 
+// Save cart to localStorage
 function saveCart(cart) {
   localStorage.setItem('cart', JSON.stringify(cart));
 }
 
+// Add item to cart
 function addToCart(item) {
   const cart = getCart();
   const existing = cart.find(i => i.id === item.id);
@@ -43,15 +45,6 @@ function addToCart(item) {
   saveCart(cart);
 }
 
-// Optional: Update cart count badge (e.g., on a cart icon)
-function updateCartCount() {
-  const cart = getCart();
-  const total = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-  const el = document.getElementById('cart-count');
-  if (el) el.textContent = total;
-}
-
-// Toast notification
 function showToast(message) {
   let toast = document.getElementById('search-toast');
   if (!toast) {
@@ -79,7 +72,6 @@ function showToast(message) {
   setTimeout(() => { toast.style.opacity = '0'; }, 2200);
 }
 
-// Render search results
 function renderItems(items) {
   const container = document.getElementById('results');
   if (!container) return;
@@ -92,13 +84,13 @@ function renderItems(items) {
   container.innerHTML = items.map(item => {
     const safeName = (item.name || 'Unnamed Item').replace(/"/g, '&quot;');
     const safePrice = safeNumber(item.price, 0).toFixed(2);
-    const mrpDisplay = (item.mrp && item.mrp > item.price)
-      ? `<del style="color:#999;font-size:14px">₹${item.mrp}</del>`
+    const mrpDisplay = (item.mrp && item.mrp > item.price) 
+      ? `<del style="color:#999;font-size:14px">₹${item.mrp}</del>` 
       : '';
-    const discountDisplay = (item.mrp && item.mrp > item.price)
+    const discountDisplay = (item.mrp && item.mrp > item.price) 
       ? `<div style="color:#d40000;font-size:13px;font-weight:600;margin-top:2px;">
           ${Math.round(((item.mrp - item.price) / item.mrp) * 100)}% OFF
-        </div>`
+        </div>` 
       : '';
 
     const id = item.id || `temp-${Date.now()}`;
@@ -107,7 +99,7 @@ function renderItems(items) {
 
     return `
       <div class="menu-card">
-        <img class="menu-img" src="${image}" alt="${safeName}" onerror="this.src='https://via.placeholder.com/100?text=No+Image'" />
+        <img class="menu-img" src="${image}" alt="${safeName}" onerror="this.src='fallback-image.jpg'" />
         <div class="menu-info">
           <div class="menu-name">${safeName}</div>
           <div style="display:flex;gap:6px;align-items:center;">
@@ -128,7 +120,7 @@ function renderItems(items) {
     `;
   }).join('');
 
-  // Add to Cart click handler — NO REDIRECT
+  // Attach Add to Cart handler
   container.querySelectorAll('.add-cart-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -138,14 +130,20 @@ function renderItems(items) {
       const image = btn.dataset.image || '';
 
       const item = { id, name, price, image };
+
+      // ✅ ACTUALLY ADD TO CART
       addToCart(item);
-      updateCartCount(); // optional
+
       showToast(`"${name}" added to cart!`);
+      
+      // Optional: Redirect after short delay
+      setTimeout(() => {
+        window.location.href = 'mirdhuna.com';
+      }, 1200);
     });
   });
 }
 
-// Perform search
 function performSearch(query) {
   if (!query.trim()) {
     renderItems([]);
@@ -173,7 +171,6 @@ onValue(ref(db, 'menu'), snapshot => {
   });
   allMenuItems = arr;
 
-  // Auto-search if query param exists
   const urlParams = new URLSearchParams(window.location.search);
   const q = urlParams.get('q');
   if (q) {
@@ -182,7 +179,7 @@ onValue(ref(db, 'menu'), snapshot => {
   }
 });
 
-// Debounced input listener
+// Debounced search
 let searchTimer;
 document.getElementById('search-input')?.addEventListener('input', (e) => {
   clearTimeout(searchTimer);
@@ -190,6 +187,3 @@ document.getElementById('search-input')?.addEventListener('input', (e) => {
     performSearch(e.target.value);
   }, 300);
 });
-
-// Initialize cart count on load (optional)
-updateCartCount();
