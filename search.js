@@ -136,10 +136,7 @@ function renderItems(items) {
 
       showToast(`"${name}" added to cart!`);
       
-      // Optional: Redirect after short delay
-      setTimeout(() => {
-        window.location.href = 'content.html';
-      }, 1200);
+     
     });
   });
 }
