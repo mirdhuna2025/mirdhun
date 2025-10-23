@@ -138,7 +138,7 @@ function renderItems(items) {
       
       // Optional: Redirect after short delay
       setTimeout(() => {
-        window.location.href = 'mirdhuna.com';
+        window.location.href = '';
       }, 1200);
     });
   });
