@@ -1,3 +1,4 @@
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -21,13 +22,19 @@ const trackMap = document.getElementById("track-map");
 const closeTrack = document.getElementById("close-track");
 
 /**
+ * Normalize phone number: remove all non-digit characters
+ */
+function normalizePhone(phone) {
+  if (!phone) return '';
+  return String(phone).replace(/\D/g, '');
+}
+
+/**
  * Function called when the “My Orders” button is clicked
- * (this function must be called from your main site)
  */
 window.showUserOrders = function() {
   const userPhone = localStorage.getItem("userPhone");
 
-  // If not logged in, show nothing
   if (!userPhone) {
     alert("Please login to view your orders.");
     ordersContainer.style.display = "none";
@@ -37,12 +44,18 @@ window.showUserOrders = function() {
   ordersContainer.style.display = "block";
   ordersContainer.innerHTML = "<p>Loading your orders...</p>";
 
-  // Fetch from Firebase
+  const userPhoneNormalized = normalizePhone(userPhone);
+
   const ordersRef = ref(db, "orders");
   onValue(ordersRef, (snapshot) => {
     const data = snapshot.val();
     const allOrders = data ? Object.values(data) : [];
-    const userOrders = allOrders.filter(o => o.phoneNumber === userPhone);
+    
+    // Filter orders by normalized phone number
+    const userOrders = allOrders.filter(order => 
+      normalizePhone(order.phoneNumber) === userPhoneNormalized
+    );
+
     renderOrders(userOrders);
   });
 };
@@ -60,10 +73,10 @@ function renderOrders(orders) {
     const div = document.createElement("div");
     div.className = "order-card";
     div.innerHTML = `
-      <p><strong>Order Time:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-      <p><strong>Total:</strong> ₹${order.total}</p>
-      <p class="status"><strong>Status:</strong> ${order.status}</p>
-      <p><strong>Items:</strong> ${order.items.map(i => `${i.name} x${i.qty}`).join(', ')}</p>
+      <p><strong>Order Time:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'Unknown'}</p>
+      <p><strong>Total:</strong> ₹${order.total || '0'}</p>
+      <p class="status"><strong>Status:</strong> ${order.status || 'Pending'}</p>
+      <p><strong>Items:</strong> ${order.items?.map(i => `${i.name} x${i.qty}`).join(', ') || 'None'}</p>
       ${order.status === "on the way" 
         ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
         : ""
@@ -86,3 +99,4 @@ document.addEventListener("click", e => {
 closeTrack.onclick = () => {
   trackPopup.style.display = "none";
 };
+</script>
