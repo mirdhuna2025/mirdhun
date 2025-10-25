@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sticky Button Bar Example</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sticky Navigation Bar</title>
   <style>
     body {
       margin: 0;
       font-family: "Poppins", sans-serif;
       background: #f8f8f8;
-      height: 200000px;
+      /* Remove the 200000px in real use — kept only for scroll demo */
+      height: 2000px;
     }
 
     .top-bar {
@@ -34,7 +35,7 @@
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s, transform 0.2s;
+      transition: all 0.3s ease, transform 0.2s;
     }
 
     .top-bar button:hover {
@@ -45,26 +46,49 @@
   </style>
 </head>
 <body>
-  <!-- Sticky bar -->
-  <div class="top-bar" id="stickyBar"></div>
 
-  <!-- Buttons originally in your HTML -->
-  <button id="loginBtn" onclick="alert('Login clicked')">Login</button>
-  <button id="orderBtn" onclick="alert('Orders clicked')">Orders</button>
-  <button id="orderNowBtn" onclick="alert('Order Now clicked')">Order Now</button>
-  <button id="cartBtn" onclick="alert('Cart clicked')">Your Cart</button>
+  <!-- Placeholder buttons (will be moved into sticky bar) -->
+  <button id="loginBtn">Login</button>
+  <button id="orderBtn">Orders</button>
+  <button id="orderNowBtn">Order Now</button>
+  <button id="cartBtn">Your Cart</button>
 
- 
+  <!-- Optional: A long page for scroll demo -->
+  <div style="padding: 40px 20px; text-align: center;">
+    <h2>Scroll down to see the sticky bar in action</h2>
+    <p>Real navigation replaces fake alerts.</p>
+  </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const bar = document.getElementById("stickyBar");
-      const buttonIds = ["loginBtn", "orderBtn", "orderNowBtn", "cartBtn"];
+      if (!bar) {
+        // Create sticky bar if not in HTML (optional safety)
+        const newBar = document.createElement("div");
+        newBar.className = "top-bar";
+        newBar.id = "stickyBar";
+        document.body.prepend(newBar);
+      }
 
-      buttonIds.forEach(id => {
+      const buttonConfig = {
+        loginBtn: { text: "Login", action: () => window.location.href = "/login" },
+        orderBtn: { text: "Orders", action: () => window.location.href = "/orders" },
+        orderNowBtn: { text: "Order Now", action: () => {
+          // Option 1: Scroll to a section
+          // document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' });
+          // Option 2: Go to ordering page
+          window.location.href = "/order";
+        }},
+        cartBtn: { text: "Your Cart", action: () => window.location.href = "/cart" }
+      };
+
+      Object.entries(buttonConfig).forEach(([id, config]) => {
         const btn = document.getElementById(id);
         if (btn) {
-          bar.appendChild(btn);
+          btn.textContent = config.text;
+          btn.removeEventListener('click', config.action); // Prevent duplicate listeners
+          btn.addEventListener('click', config.action);
+          document.getElementById("stickyBar").appendChild(btn);
         }
       });
     });
