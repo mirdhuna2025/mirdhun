@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
 
   <style>
     body {
       margin: 0;
       font-family: "Poppins", sans-serif;
-      background: ;
-      height: 20px; /* just to show scroll */
+      background: #f8f8f8;
+      height: 2000px; /* just to show scroll */
     }
 
     /* Sticky top bar */
     .top-bar {
       position: sticky;
-      top: 200px;
+      top: 0; /* 👈 makes it stick at the top */
       z-index: 1000;
-      background-color: #;
+      background-color: #d40000; /* red bar */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -30,7 +29,7 @@
     /* Buttons */
     .top-bar button {
       background: #fff;
-      color: #;
+      color: #d40000;
       border: none;
       padding: 10px 18px;
       margin: 0 8px;
@@ -38,19 +37,19 @@
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      
+      transition: background 0.3s, color 0.3s, transform 0.2s;
     }
 
     .top-bar button:hover {
-      background: ;
-      color: ;
+      background: #b00000;
+      color: #fff;
       transform: scale(1.05);
     }
 
-    /* Optional shrink on scroll */
+    /* Optional shrink effect on scroll */
     .top-bar.shrink {
       padding: 6px 0;
-      background-color: ;
+      background-color: #b00000;
     }
   </style>
 </head>
@@ -63,12 +62,14 @@
     <button onclick="window.location.href='order-now.html'">Order Now</button>
     <button onclick="window.location.href='cart.html'">Your Cart</button>
   </div>
- 
-  
+
+  <div style="padding: 20px;">
+    <h1>Scroll down to test sticky bar</h1>
+    <p>Keep scrolling — the red bar stays stuck to the top.</p>
   </div>
 
   <script>
- 
+    // Optional: shrink bar on scroll
     window.addEventListener("scroll", function() {
       const navbar = document.getElementById("navbar");
       if (window.scrollY > 50) {
