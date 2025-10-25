@@ -3,30 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <title>Sticky Button Bar Example</title>
   <style>
     body {
       margin: 0;
       font-family: "Poppins", sans-serif;
       background: #f8f8f8;
-      height: 2000px; /* just to show scroll */
+      height: 200000px;
     }
 
-    /* Sticky top bar */
     .top-bar {
       position: sticky;
-      top: 0; /* 👈 makes it stick at the top */
+      top: 0;
       z-index: 1000;
-      background-color: #d40000; /* red bar */
+      background-color: #d40000;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 10px 0;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s ease;
     }
 
-    /* Buttons */
     .top-bar button {
       background: #fff;
       color: #d40000;
@@ -37,7 +34,7 @@
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.3s, color 0.3s, transform 0.2s;
+      transition: all 0.3s, transform 0.2s;
     }
 
     .top-bar button:hover {
@@ -45,38 +42,33 @@
       color: #fff;
       transform: scale(1.05);
     }
-
-    /* Optional shrink effect on scroll */
-    .top-bar.shrink {
-      padding: 6px 0;
-      background-color: #b00000;
-    }
   </style>
 </head>
-
 <body>
-  <!-- Sticky top bar -->
-  <div class="top-bar" id="navbar">
-    <button onclick="window.location.href='login.html'">Login</button>
-    <button onclick="window.location.href='order.html'">Orders</button>
-    <button onclick="window.location.href='order-now.html'">Order Now</button>
-    <button onclick="window.location.href='cart.html'">Your Cart</button>
-  </div>
+  <!-- Sticky bar -->
+  <div class="top-bar" id="stickyBar"></div>
+
+  <!-- Buttons originally in your HTML -->
+  <button id="loginBtn" onclick="alert('Login clicked')">Login</button>
+  <button id="orderBtn" onclick="alert('Orders clicked')">Orders</button>
+  <button id="orderNowBtn" onclick="alert('Order Now clicked')">Order Now</button>
+  <button id="cartBtn" onclick="alert('Cart clicked')">Your Cart</button>
 
   <div style="padding: 20px;">
-    <h1>Scroll down to test sticky bar</h1>
-    <p>Keep scrolling — the red bar stays stuck to the top.</p>
+    <h1>Scroll down to see sticky bar working</h1>
   </div>
 
   <script>
-    // Optional: shrink bar on scroll
-    window.addEventListener("scroll", function() {
-      const navbar = document.getElementById("navbar");
-      if (window.scrollY > 50) {
-        navbar.classList.add("shrink");
-      } else {
-        navbar.classList.remove("shrink");
-      }
+    document.addEventListener("DOMContentLoaded", () => {
+      const bar = document.getElementById("stickyBar");
+      const buttonIds = ["loginBtn", "orderBtn", "orderNowBtn", "cartBtn"];
+
+      buttonIds.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+          bar.appendChild(btn);
+        }
+      });
     });
   </script>
 </body>
