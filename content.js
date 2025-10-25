@@ -689,7 +689,7 @@ document.addEventListener('click', (e) => {
   }
 
   if (t.id === 'track-order-btn') {
-    window.open('orders.html', '_blank');
+    window.open('myorder.html' );
     return;
   }
 });
