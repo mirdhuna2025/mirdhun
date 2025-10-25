@@ -1,6 +1,8 @@
+// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+// Fixed: Removed trailing spaces in databaseURL
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -42,6 +44,10 @@ closeBtn.addEventListener("click", () => {
   popup.style.display = "none";
 });
 
+popup.addEventListener("click", (e) => {
+  if (e.target === popup) popup.style.display = "none";
+});
+
 submitBtn.addEventListener("click", async () => {
   const number = mobInput.value.trim();
   if (!number || !/^[6-9]\d{9}$/.test(number)) {
@@ -78,7 +84,11 @@ submitBtn.addEventListener("click", async () => {
       location: location || { error: "Geolocation denied or unavailable" }
     });
 
+    // 🔥 Clear ALL localStorage before saving new login
+    localStorage.clear();
+
     localStorage.setItem("isLoggedIn", "true");
+
     alert("Login successful!");
     popup.style.display = "none";
     mobInput.value = "";
