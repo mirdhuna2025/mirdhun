@@ -20,7 +20,7 @@
     #login-btn {
       position: fixed;
       top: 30px;
-      right: 0px;
+      right: 30px;
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
       border: none;
@@ -41,7 +41,6 @@
       background: linear-gradient(135deg, #ff4c4c, #ff7070);
     }
 
-    /* Subtle glowing animation */
     @keyframes pulse {
       0% { box-shadow: 0 0 10px rgba(212, 0, 0, 0.3); }
       50% { box-shadow: 0 0 25px rgba(255, 76, 76, 0.7); }
@@ -112,7 +111,6 @@
       font-weight: 600;
     }
 
-    /* ---------- Input ---------- */
     .popup-content input {
       width: 100%;
       padding: 15px 18px;
@@ -135,7 +133,6 @@
       color: #aaa;
     }
 
-    /* ---------- Buttons ---------- */
     .button-group {
       display: flex;
       gap: 14px;
@@ -201,19 +198,6 @@
     </div>
   </div>
 
-  <script>
-    // Popup logic
-    const loginBtn = document.getElementById("login-btn");
-    const popup = document.getElementById("login-popup");
-    const closeBtn = document.getElementById("close-popup");
-
-    loginBtn.addEventListener("click", () => popup.style.display = "flex");
-    closeBtn.addEventListener("click", () => popup.style.display = "none");
-
-    // Optional: close popup when clicking outside content
-    popup.addEventListener("click", (e) => {
-      if (e.target === popup) popup.style.display = "none";
-    });
-  </script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
