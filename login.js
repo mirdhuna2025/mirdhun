@@ -1,8 +1,6 @@
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+\import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Fixed: Removed trailing spaces in databaseURL
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -24,7 +22,8 @@ const mobInput = document.getElementById("mob-number");
 
 function updateLoginState() {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-  loginBtn.textContent = isLoggedIn ? "Logout" : "Login";
+  const mobileNumber = localStorage.getItem("mobileNumber") || "";
+  loginBtn.textContent = isLoggedIn ? `Logout (${mobileNumber})` : "Login";
   loginBtn.style.background = isLoggedIn
     ? "linear-gradient(135deg, #4CAF50, #66bb6a)"
     : "linear-gradient(135deg, #d40000, #ff4c4c)";
@@ -33,6 +32,7 @@ function updateLoginState() {
 loginBtn.addEventListener("click", () => {
   if (localStorage.getItem("isLoggedIn") === "true") {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("mobileNumber");
     updateLoginState();
     alert("Logged out successfully.");
   } else {
@@ -84,10 +84,13 @@ submitBtn.addEventListener("click", async () => {
       location: location || { error: "Geolocation denied or unavailable" }
     });
 
-    // 🔥 Clear ALL localStorage before saving new login
-    localStorage.clear();
+    // 🔥 Clear ONLY previous login data
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("mobileNumber");
 
+    // ✅ Save NEW login data immediately
     localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("mobileNumber", number);
 
     alert("Login successful!");
     popup.style.display = "none";
