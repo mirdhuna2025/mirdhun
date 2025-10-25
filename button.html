@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: ;
+      height: 20px; /* just to show scroll */
+    }
+
+    /* Sticky top bar */
+    .top-bar {
+      position: sticky;
+      top: 200px;
+      z-index: 1000;
+      background-color: #;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+    }
+
+    /* Buttons */
+    .top-bar button {
+      background: #fff;
+      color: #;
+      border: none;
+      padding: 10px 18px;
+      margin: 0 8px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      
+    }
+
+    .top-bar button:hover {
+      background: ;
+      color: ;
+      transform: scale(1.05);
+    }
+
+    /* Optional shrink on scroll */
+    .top-bar.shrink {
+      padding: 6px 0;
+      background-color: ;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sticky top bar -->
+  <div class="top-bar" id="navbar">
+    <button onclick="window.location.href='login.html'">Login</button>
+    <button onclick="window.location.href='order.html'">Orders</button>
+    <button onclick="window.location.href='order-now.html'">Order Now</button>
+    <button onclick="window.location.href='cart.html'">Your Cart</button>
+  </div>
+ 
+  
+  </div>
+
+  <script>
+ 
+    window.addEventListener("scroll", function() {
+      const navbar = document.getElementById("navbar");
+      if (window.scrollY > 50) {
+        navbar.classList.add("shrink");
+      } else {
+        navbar.classList.remove("shrink");
+      }
+    });
+  </script>
+</body>
+</html>
