@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mirdhuna Admin Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f7fa;
+      color: #333;
+    }
+    h1, h2 {
+      color: #1a73e8;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section {
+      background: white;
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+    .preview {
+      max-width: 80px;
+      max-height: 80px;
+      object-fit: cover;
+    }
+    .actions button {
+      margin-right: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #e8eaed;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+    }
+    .actions button.delete {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    pre {
+      background: #f1f3f4;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .status {
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .success { background: #e6f4ea; color: #137333; }
+    .error { background: #fce8e6; color: #c5221f; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔥 Mirdhuna Admin Dashboard</h1>
+
+    <div class="section">
+      <h2>📁 Storage Files (Images, Docs, etc.)</h2>
+      <div id="storageStatus"></div>
+      <table id="storageTable">
+        <thead><tr><th>Preview</th><th>Name</th><th>Size</th><th>Actions</th></tr></thead>
+        <tbody id="storageList"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>👥 Users (from Realtime Database)</h2>
+      <div id="usersStatus"></div>
+      <table id="usersTable">
+        <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead>
+        <tbody id="usersList"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>🛍️ Orders</h2>
+      <div id="ordersStatus"></div>
+      <table id="ordersTable">
+        <thead><tr><th>ID</th><th>User</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="ordersList"></tbody>
+      </table>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+    <script>
+      // 🔑 Your Firebase Config
+      const firebaseConfig = {
+        apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+        authDomain: "mirdhuna-25542.firebaseapp.com",
+        databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+        projectId: "mirdhuna-25542",
+        storageBucket: "mirdhuna-25542.firebasestorage.app",
+        messagingSenderId: "575924409876",
+        appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+      const storage = firebase.storage();
+
+      // ======================
+      // STORAGE FILES
+      // ======================
+      async function loadStorageFiles() {
+        const listEl = document.getElementById("storageList");
+        const statusEl = document.getElementById("storageStatus");
+        statusEl.innerHTML = '<div class="status">Loading files...</div>';
+
+        try {
+          const res = await storage.ref().listAll();
+          listEl.innerHTML = "";
+          if (res.items.length === 0) {
+            listEl.innerHTML = "<tr><td colspan='4'>No files found.</td></tr>";
+            return;
+          }
+
+          for (const ref of res.items) {
+            const meta = await ref.getMetadata();
+            const url = await ref.getDownloadURL();
+            const ext = ref.name.split('.').pop()?.toLowerCase() || '';
+            let preview = "";
+
+            if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+              preview = `<img src="${url}" class="preview" />`;
+            } else {
+              preview = `<a href="${url}" target="_blank">📄</a>`;
+            }
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${preview}</td>
+              <td>${ref.name}</td>
+              <td>${formatBytes(meta.size)}</td>
+              <td class="actions">
+                <button class="delete" onclick="deleteStorageFile('${ref.fullPath}')">Delete</button>
+                <a href="${url}" target="_blank">Download</a>
+              </td>
+            `;
+            listEl.appendChild(row);
+          }
+          statusEl.innerHTML = "";
+        } catch (err) {
+          statusEl.innerHTML = `<div class="status error">Error: ${err.message}</div>`;
+        }
+      }
+
+      async function deleteStorageFile(path) {
+        if (!confirm("Delete this file permanently?")) return;
+        try {
+          await storage.ref(path).delete();
+          loadStorageFiles();
+        } catch (err) {
+          alert("Delete failed: " + err.message);
+        }
+      }
+
+      // ======================
+      // USERS (from Realtime DB)
+      // ======================
+      function loadUsers() {
+        const listEl = document.getElementById("usersList");
+        const statusEl = document.getElementById("usersStatus");
+        statusEl.innerHTML = '<div class="status">Loading users...</div>';
+
+        db.ref("users").once("value")
+          .then(snapshot => {
+            listEl.innerHTML = "";
+            if (!snapshot.exists()) {
+              listEl.innerHTML = "<tr><td colspan='5'>No users in /users path.</td></tr>";
+              statusEl.innerHTML = '<div class="status error">⚠️ No /users node found in Realtime DB.</div>';
+              return;
+            }
+
+            snapshot.forEach(child => {
+              const id = child.key;
+              const data = child.val();
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${id}</td>
+                <td>${data.name || '–'}</td>
+                <td>${data.email || '–'}</td>
+                <td>${data.phone || '–'}</td>
+                <td class="actions">
+                  <button onclick="editUser('${id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})">Edit</button>
+                  <button class="delete" onclick="deleteUser('${id}')">Delete</button>
+                </td>
+              `;
+              listEl.appendChild(row);
+            });
+            statusEl.innerHTML = "";
+          })
+          .catch(err => {
+            statusEl.innerHTML = `<div class="status error">DB Error: ${err.message}</div>`;
+          });
+      }
+
+      function editUser(id, data) {
+        const newData = prompt("Edit user as JSON:", JSON.stringify(data, null, 2));
+        if (!newData) return;
+        try {
+          const parsed = JSON.parse(newData);
+          db.ref("users/" + id).set(parsed);
+          loadUsers();
+        } catch (e) {
+          alert("Invalid JSON: " + e.message);
+        }
+      }
+
+      function deleteUser(id) {
+        if (!confirm("Delete user " + id + "?")) return;
+        db.ref("users/" + id).remove().then(() => loadUsers());
+      }
+
+      // ======================
+      // ORDERS
+      // ======================
+      function loadOrders() {
+        const listEl = document.getElementById("ordersList");
+        const statusEl = document.getElementById("ordersStatus");
+        statusEl.innerHTML = '<div class="status">Loading orders...</div>';
+
+        db.ref("orders").once("value")
+          .then(snapshot => {
+            listEl.innerHTML = "";
+            if (!snapshot.exists()) {
+              listEl.innerHTML = "<tr><td colspan='6'>No orders found.</td></tr>";
+              return;
+            }
+
+            snapshot.forEach(child => {
+              const id = child.key;
+              const o = child.val();
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${id}</td>
+                <td>${o.userId || '–'}</td>
+                <td>$${(o.total || 0).toFixed(2)}</td>
+                <td>${o.status || '–'}</td>
+                <td>${o.timestamp ? new Date(o.timestamp).toLocaleString() : '–'}</td>
+                <td class="actions">
+                  <button onclick="editOrder('${id}', ${JSON.stringify(o).replace(/"/g, '&quot;')})">Edit</button>
+                  <button class="delete" onclick="deleteOrder('${id}')">Delete</button>
+                </td>
+              `;
+              listEl.appendChild(row);
+            });
+            statusEl.innerHTML = "";
+          })
+          .catch(err => {
+            statusEl.innerHTML = `<div class="status error">DB Error: ${err.message}</div>`;
+          });
+      }
+
+      function editOrder(id, data) {
+        const newData = prompt("Edit order as JSON:", JSON.stringify(data, null, 2));
+        if (!newData) return;
+        try {
+          const parsed = JSON.parse(newData);
+          db.ref("orders/" + id).set(parsed);
+          loadOrders();
+        } catch (e) {
+          alert("Invalid JSON: " + e.message);
+        }
+      }
+
+      function deleteOrder(id) {
+        if (!confirm("Delete order " + id + "?")) return;
+        db.ref("orders/" + id).remove().then(() => loadOrders());
+      }
+
+      // Utility
+      function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+      }
+
+      // Load all on start
+      window.onload = () => {
+        loadStorageFiles();
+        loadUsers();
+        loadOrders();
+      };
+
+      // Expose functions to global scope for inline onclick
+      window.deleteStorageFile = deleteStorageFile;
+      window.editUser = editUser;
+      window.deleteUser = deleteUser;
+      window.editOrder = editOrder;
+      window.deleteOrder = deleteOrder;
+    </script>
+  </div>
+</body>
+</html>
