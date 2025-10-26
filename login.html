@@ -14,8 +14,6 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-
-    /* ---------- Popup Overlay ---------- */
     #login-popup {
       display: flex;
       position: fixed;
@@ -27,13 +25,7 @@
       z-index: 10000;
       animation: fadeIn 0.3s ease forwards;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    /* ---------- Popup Content ---------- */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .popup-content {
       background: white;
       padding: 45px 36px;
@@ -47,15 +39,7 @@
       opacity: 0;
       animation: popUp 0.4s ease forwards;
     }
-
-    @keyframes popUp {
-      to {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    /* ---------- Brand ---------- */
+    @keyframes popUp { to { transform: scale(1); opacity: 1; } }
     .brand {
       font-size: 30px;
       font-weight: 700;
@@ -66,20 +50,8 @@
       letter-spacing: -0.5px;
       animation: textGlow 3s ease-in-out infinite alternate;
     }
-
-    @keyframes textGlow {
-      from { text-shadow: 0 0 5px rgba(255, 76, 76, 0.3); }
-      to { text-shadow: 0 0 15px rgba(255, 76, 76, 0.7); }
-    }
-
-    .popup-content h3 {
-      margin: 0 0 24px 0;
-      color: #333;
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    /* ---------- Input ---------- */
+    @keyframes textGlow { from { text-shadow: 0 0 5px rgba(255, 76, 76, 0.3); } to { text-shadow: 0 0 15px rgba(255, 76, 76, 0.7); } }
+    .popup-content h3 { margin: 0 0 24px 0; color: #333; font-size: 20px; font-weight: 600; }
     .popup-content input {
       width: 100%;
       padding: 15px 18px;
@@ -92,23 +64,9 @@
       font-family: 'Poppins', sans-serif;
       transition: all 0.25s ease;
     }
-
-    .popup-content input:focus {
-      border-color: #d40000;
-      box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
-    }
-
-    .popup-content input::placeholder {
-      color: #aaa;
-    }
-
-    /* ---------- Buttons ---------- */
-    .button-group {
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-    }
-
+    .popup-content input:focus { border-color: #d40000; box-shadow: 0 0 12px rgba(212,0,0,0.3); }
+    .popup-content input::placeholder { color: #aaa; }
+    .button-group { display: flex; gap: 14px; justify-content: center; }
     .popup-content button {
       padding: 13px 20px;
       border: none;
@@ -121,39 +79,22 @@
       transition: all 0.25s ease;
       font-family: 'Poppins', sans-serif;
     }
-
     #submit-login {
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
-      box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
+      box-shadow: 0 0 12px rgba(212,0,0,0.3);
     }
-
     #submit-login:hover:not(:disabled) {
       background: linear-gradient(135deg, #ff4c4c, #ff7070);
       transform: translateY(-2px);
-      box-shadow: 0 0 18px rgba(255, 76, 76, 0.6);
+      box-shadow: 0 0 18px rgba(255,76,76,0.6);
     }
-
-    #submit-login:disabled {
-      opacity: 0.75;
-      cursor: not-allowed;
-    }
-
-    #close-popup {
-      background: #f8f9fa;
-      color: #444;
-      border: 1px solid #ddd;
-    }
-
-    #close-popup:hover {
-      background: #e9ecef;
-      transform: translateY(-2px);
-      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-    }
+    #submit-login:disabled { opacity: 0.75; cursor: not-allowed; }
+    #close-popup { background: #f8f9fa; color: #444; border: 1px solid #ddd; }
+    #close-popup:hover { background: #e9ecef; transform: translateY(-2px); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
   </style>
 </head>
 <body>
-
   <div id="login-popup">
     <div class="popup-content">
       <div class="brand">MIRDHUNA</div>
@@ -188,12 +129,10 @@
     const submitBtn = document.getElementById("submit-login");
     const mobInput = document.getElementById("mob-number");
 
-    // Cancel → Go back to index.html
     closeBtn.addEventListener("click", () => {
       window.location.href = "index.html";
     });
 
-    // Submit → Firebase + redirect
     submitBtn.addEventListener("click", async () => {
       const number = mobInput.value.trim();
       if (!number || !/^[6-9]\d{9}$/.test(number)) {
@@ -214,10 +153,7 @@
               timeout: 10000
             });
           });
-          location = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-          };
+          location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         } catch (err) {
           console.warn("Geolocation not available:", err);
         }
@@ -230,7 +166,10 @@
           location: location || { error: "Geolocation denied or unavailable" }
         });
 
+        // Save both login flag and mobile number
         localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("mobileNumber", number);
+
         mobInput.value = "";
         alert("Login successful!");
         window.location.href = "index.html";
