@@ -28,17 +28,13 @@
       background: rgba(15, 15, 15, 0.8);
       border: 1px;
       border-radius: 20px;
-     
       
       display: flex;
       justify-content: space-around;
       
       padding: 12px 0;
       z-index: 9999;
- 
     }
-
-  
 
     .bottom-bar button {
       background: transparent;
@@ -55,21 +51,14 @@
       position: relative;
     }
 
-   
-  
-
     .bottom-bar button.active {
       color: #00ffff;
       text-shadow: 0 0 10px #00ffff;
     }
-
   </style>
 </head>
 
 <body>
-  
- 
-
   <!-- ⚡ Futuristic Sticky Bottom Navigation -->
   <div class="bottom-bar">
     <button class="active" onclick="location.href='index.html'">
@@ -82,9 +71,9 @@
       <span>Orders</span>
     </button>
 
-    <button onclick="location.href='login.html'">
+    <button id="authButton" onclick="toggleAuth()">
       <i data-lucide="user"></i>
-      <span>Login</span>
+      <span id="authText">Login</span>
     </button>
 
     <button onclick="location.href='search.html'">
@@ -95,6 +84,35 @@
 
   <script>
     lucide.createIcons();
+
+    // Check login status on page load
+    function checkAuthStatus() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const authText = document.getElementById('authText');
+      const authButton = document.getElementById('authButton');
+      
+      if (isLoggedIn) {
+        authText.textContent = 'Logout';
+      } else {
+        authText.textContent = 'Login';
+      }
+    }
+
+    // Handle login/logout
+    function toggleAuth() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (isLoggedIn) {
+        // Perform logout
+        localStorage.setItem('isLoggedIn', 'false');
+        location.href = 'login.html'; // or stay on same page: location.reload();
+      } else {
+        // Go to login
+        location.href = 'login.html';
+      }
+    }
+
+    // Initialize on load
+    checkAuthStatus();
   </script>
 </body>
 </html>
