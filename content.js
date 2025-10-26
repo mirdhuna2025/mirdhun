@@ -557,12 +557,7 @@ function placeOrder() {
 
   let phone = (checkoutPhone?.value || '').trim();
   if (!phone) phone = localStorage.getItem('userPhone') || '';
-  if (!phone) {
-    const p = prompt('Enter mobile number:');
-    if (!p) return showToast('Mobile number required.');
-    phone = p.trim();
-    localStorage.setItem('userPhone', phone);
-  } else {
+ {
     localStorage.setItem('userPhone', phone);
   }
 
