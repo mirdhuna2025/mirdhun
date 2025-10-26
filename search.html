@@ -133,12 +133,16 @@ function renderItems(items) {
   const container = document.getElementById('results');
   if (!container) return;
 
-  if (items.length === 0) {
-    container.innerHTML = `<div class="no-results">No items match your search.</div>`;
+  // If search returns no results, show ALL items instead
+  const itemsToRender = items.length === 0 ? allMenuItems : items;
+
+  // If even allMenuItems is empty (e.g., before data loads), show fallback
+  if (itemsToRender.length === 0) {
+    container.innerHTML = `<div class="no-results">No items available.</div>`;
     return;
   }
 
-  container.innerHTML = items.map(item => {
+  container.innerHTML = itemsToRender.map(item => {
     const safeName = (item.name || 'Unnamed Item').replace(/"/g, '&quot;');
     const safePrice = safeNumber(item.price, 0).toFixed(2);
     const mrpDisplay = (item.mrp && item.mrp > item.price) 
@@ -200,6 +204,7 @@ function renderItems(items) {
 
 function performSearch(query) {
   if (!query.trim()) {
+    // If search is empty, show all items
     renderItems([]);
     return;
   }
@@ -229,6 +234,9 @@ onValue(ref(db, 'menu'), snapshot => {
   if (q) {
     document.getElementById('search-input').value = q;
     performSearch(q);
+  } else {
+    // Initially show all items when page loads with no query
+    renderItems([]);
   }
 });
 
