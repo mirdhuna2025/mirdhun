@@ -284,7 +284,7 @@ function renderMenu() {
       menuGrid.appendChild(allHeader);
       renderMenuItems(allItems);
     }
-/*
+
     // Group by category
    const categoryMap = {};
     itemsToRender.forEach(item => {
@@ -315,7 +315,7 @@ function renderMenu() {
 
     menuGrid.style.gridTemplateColumns = '1fr';
     return;
-  } */
+  } 
   // === Original grid/list view ===
   let items = selectedCategory
     ? menuItems.filter(i => i.category === selectedCategory)
