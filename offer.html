@@ -10,7 +10,7 @@
       top: 10px;
       height: 12.5vh;
       overflow: hidden;
-      border-radius: 15px 15px 15px 15px;
+      border-radius: 15px;
       background: #2c3e50;
     }
     .offer-slider {
@@ -26,9 +26,7 @@
       cursor: pointer;
       opacity: 0.95;
     }
-    .offer-slide:hover {
-      opacity: 1;
-    }
+    .offer-slide:hover { opacity: 1; }
     .offer-nav {
       position: absolute;
       bottom: 8px;
@@ -65,9 +63,7 @@
       align-items: center;
       justify-content: center;
     }
-    .offer-btn:hover {
-      background: rgba(255,255,255,0.4);
-    }
+    .offer-btn:hover { background: rgba(255,255,255,0.4); }
   </style>
 </head>
 <body>
@@ -81,10 +77,11 @@
   </div>
 </section>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+<!-- ✅ Firebase compat SDKs (load safely from anywhere) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
     authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -95,8 +92,8 @@
     appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
   const slider = document.getElementById("offerSlider");
   const nav = document.getElementById("offerNav");
@@ -104,8 +101,8 @@
   let index = 0;
   let autoSlideInterval;
 
-  // 🔥 Reading from 'offerslide'
-  onValue(ref(db, 'offerslide'), (snapshot) => {
+  // 🔥 Read from 'offerslide'
+  firebase.database().ref('offerslide').on('value', snapshot => {
     const data = snapshot.val();
 
     if (autoSlideInterval) clearInterval(autoSlideInterval);
@@ -128,9 +125,7 @@
       slides.push(div);
     });
 
-    if (slides.length > 0) {
-      setupOfferSlider();
-    }
+    if (slides.length > 0) setupOfferSlider();
   });
 
   function setupOfferSlider() {
@@ -149,8 +144,7 @@
         const imgUrl = slide.dataset.image;
         const url = slide.dataset.url;
 
-        // 🔥 Log click event
-        push(ref(db, 'slideClicks'), {
+        firebase.database().ref('slideClicks').push({
           image: imgUrl,
           url: url,
           clickedAt: new Date().toISOString()
@@ -166,12 +160,10 @@
       dots.forEach((d, j) => d.classList.toggle('active', i === j));
     }
 
-    document.querySelector(".prev").onclick = () => {
+    document.querySelector(".prev").onclick = () =>
       goToSlide((index - 1 + slides.length) % slides.length);
-    };
-    document.querySelector(".next").onclick = () => {
+    document.querySelector(".next").onclick = () =>
       goToSlide((index + 1) % slides.length);
-    };
 
     autoSlideInterval = setInterval(() => {
       goToSlide((index + 1) % slides.length);
