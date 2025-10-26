@@ -688,11 +688,6 @@ document.addEventListener('click', (e) => {
     return;
      
   } 
-if (t.id === 'login-btn') {
-    window.open('login.html' );
-    return;
-     
-  }
 
 });
 
