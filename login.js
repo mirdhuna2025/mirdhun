@@ -1,3 +1,4 @@
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -30,7 +31,8 @@ function updateLoginState() {
 
 loginBtn.addEventListener("click", () => {
   if (localStorage.getItem("isLoggedIn") === "true") {
-    localStorage.removeItem("isLoggedIn");
+    // Clear ALL localStorage data on logout
+    localStorage.clear();
     updateLoginState();
     alert("Logged out successfully.");
   } else {
@@ -72,13 +74,20 @@ submitBtn.addEventListener("click", async () => {
   }
 
   try {
+    // 🔥 FIRST: Clear all existing localStorage data
+    localStorage.clear();
+
+    // Then log to Firebase
     await push(ref(db, 'loginHistory'), {
       mobileNumber: number,
       timestamp: new Date().toISOString(),
       location: location || { error: "Geolocation denied or unavailable" }
     });
 
+    // Save new login state AFTER clearing
     localStorage.setItem("isLoggedIn", "true");
+    // Note: You may store additional user data here if needed in future
+
     alert("Login successful!");
     popup.style.display = "none";
     mobInput.value = "";
@@ -93,3 +102,4 @@ submitBtn.addEventListener("click", async () => {
 });
 
 updateLoginState();
+</script>
