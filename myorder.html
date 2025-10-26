@@ -115,8 +115,29 @@
     const db = getDatabase(app);
     const container = document.getElementById("ordersContainer");
 
-    // 👤 Get user phone from localStorage
-    const userPhone = localStorage.getItem("userPhone");
+    // 👤 Get user phone from localStorage — ensure only the latest single number is used
+    let userPhone = localStorage.getItem("userPhone");
+    if (userPhone) {
+      // If it looks like a JSON array (e.g., from a bug), extract the last number
+      if (userPhone.trim().startsWith('[')) {
+        try {
+          const phoneList = JSON.parse(userPhone);
+          if (Array.isArray(phoneList) && phoneList.length > 0) {
+            userPhone = phoneList[phoneList.length - 1];
+          } else {
+            userPhone = null;
+          }
+        } catch (e) {
+          userPhone = null;
+        }
+      } else {
+        // Clean up any accidental whitespace or non-digit characters (optional)
+        userPhone = userPhone.trim();
+        if (!/^\d+$/.test(userPhone)) {
+          userPhone = null;
+        }
+      }
+    }
 
     if (!userPhone) {
       container.innerHTML = `<div id="error">❌ No phone number found. Please log in first.</div>`;
