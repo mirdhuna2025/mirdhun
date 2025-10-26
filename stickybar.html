@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Futuristic Bottom Bar</title>
-
-  
   <script src="https://unpkg.com/lucide@latest"></script>
-
   <style>
     body {
       margin: 0;
@@ -17,7 +14,6 @@
       min-height: 200vh;
     }
 
-    /* --- Futuristic Bottom Bar --- */
     .bottom-bar {
       position: fixed;
       bottom: 0px;
@@ -26,12 +22,9 @@
       width: 90%;
       max-width: 450px;
       background: rgba(15, 15, 15, 0.8);
-      border: 1px;
       border-radius: 20px;
-      
       display: flex;
       justify-content: space-around;
-      
       padding: 12px 0;
       z-index: 9999;
     }
@@ -59,57 +52,61 @@
 </head>
 
 <body>
-  <!-- ⚡ Futuristic Sticky Bottom Navigation -->
   <div class="bottom-bar">
-    <button class="active" onclick="location.href='index.html'">
+    <button class="active" id="homeBtn">
       <i data-lucide="home"></i>
       <span>Home</span>
     </button>
 
-    <button onclick="location.href='myorder.html'">
+    <button id="ordersBtn">
       <i data-lucide="shopping-bag"></i>
       <span>Orders</span>
     </button>
 
-    <button id="authButton" onclick="toggleAuth()">
+    <button id="authButton">
       <i data-lucide="user"></i>
       <span id="authText">Login</span>
     </button>
 
-    <button onclick="location.href='search.html'">
+    <button id="searchBtn">
       <i data-lucide="settings"></i>
       <span>search</span>
     </button>
   </div>
 
   <script>
+    // Initialize Lucide icons
     lucide.createIcons();
 
-    // Check login status on page load
+    // DOM elements
+    const authButton = document.getElementById('authButton');
+    const authText = document.getElementById('authText');
+    const homeBtn = document.getElementById('homeBtn');
+    const ordersBtn = document.getElementById('ordersBtn');
+    const searchBtn = document.getElementById('searchBtn');
+
+    // Check login status
     function checkAuthStatus() {
       const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      const authText = document.getElementById('authText');
-      const authButton = document.getElementById('authButton');
-      
-      if (isLoggedIn) {
-        authText.textContent = 'Logout';
-      } else {
-        authText.textContent = 'Login';
-      }
+      authText.textContent = isLoggedIn ? 'Logout' : 'Login';
     }
 
-    // Handle login/logout
+    // Handle auth click
     function toggleAuth() {
       const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
       if (isLoggedIn) {
-        // Perform logout
         localStorage.setItem('isLoggedIn', 'false');
-        location.href = 'login.html'; // or stay on same page: location.reload();
+        window.location.href = 'login.html';
       } else {
-        // Go to login
-        location.href = 'login.html';
+        window.location.href = 'login.html';
       }
     }
+
+    // Set up event listeners
+    homeBtn.addEventListener('click', () => window.location.href = 'index.html');
+    ordersBtn.addEventListener('click', () => window.location.href = 'myorder.html');
+    searchBtn.addEventListener('click', () => window.location.href = 'search.html');
+    authButton.addEventListener('click', toggleAuth);
 
     // Initialize on load
     checkAuthStatus();
