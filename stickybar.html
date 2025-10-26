@@ -3,21 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Futuristic Bottom Bar</title>
+  <title>Futuristic SPA Bottom Bar</title>
 
-  
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
     body {
       margin: 0;
       padding: 0;
-      background: transparent;
       font-family: 'Orbitron', sans-serif;
       min-height: 200vh;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #fff;
     }
 
-    /* --- Futuristic Bottom Bar --- */
+    /* --- Content Box --- */
+    #content {
+      margin: 20px auto 80px auto;
+      max-width: 450px;
+      background: rgba(15, 15, 15, 1);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.7), 0 0 50px rgba(0, 255, 255, 0.3);
+      min-height: 300px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    #content.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* --- Bottom Bar --- */
     .bottom-bar {
       position: fixed;
       bottom: 0px;
@@ -25,20 +49,15 @@
       transform: translateX(-50%);
       width: 90%;
       max-width: 450px;
-      background: rgba(15, 15, 15, 0.8);
-      border: 1px;
+      background: rgba(15, 15, 15, 0.85);
       border-radius: 20px;
-     
-      
       display: flex;
       justify-content: space-around;
-      
       padding: 12px 0;
       z-index: 9999;
- 
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
     }
-
-  
 
     .bottom-bar button {
       background: transparent;
@@ -55,46 +74,106 @@
       position: relative;
     }
 
-   
-  
+    .bottom-bar button i {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 4px;
+      transition: all 0.3s ease;
+    }
 
     .bottom-bar button.active {
       color: #00ffff;
-      text-shadow: 0 0 10px #00ffff;
+      text-shadow: 0 0 12px #00ffff, 0 0 25px #00ffff;
     }
 
+    .bottom-bar button:hover {
+      color: #0ff;
+      text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 360px) {
+      .bottom-bar {
+        width: 95%;
+        padding: 10px 0;
+      }
+      .bottom-bar button span {
+        font-size: 10px;
+      }
+    }
   </style>
 </head>
-
 <body>
-  
- 
 
-  <!-- ⚡ Futuristic Sticky Bottom Navigation -->
+  <!-- Content Box -->
+  <div id="content" class="show">
+    <h2>Welcome</h2>
+    <p>Click the buttons below to load content without leaving this page.</p>
+  </div>
+
+  <!-- Bottom Bar -->
   <div class="bottom-bar">
-    <button class="active" onclick="location.href='index.html'">
+    <button class="active" data-page="index.html">
       <i data-lucide="home"></i>
       <span>Home</span>
     </button>
 
-    <button onclick="location.href='myorder.html'">
+    <button data-page="myorder.html">
       <i data-lucide="shopping-bag"></i>
       <span>Orders</span>
     </button>
 
-    <button onclick="location.href='login.html'">
+    <button data-page="login.html">
       <i data-lucide="user"></i>
       <span>Login</span>
     </button>
 
-    <button onclick="location.href='search.html'">
+    <button data-page="search.html">
       <i data-lucide="settings"></i>
-      <span>search</span>
+      <span>Search</span>
     </button>
   </div>
 
   <script>
     lucide.createIcons();
+
+    const contentDiv = document.getElementById('content');
+    const buttons = document.querySelectorAll('.bottom-bar button');
+
+    function loadContent(page) {
+      // Fade out
+      contentDiv.classList.remove('show');
+
+      fetch(page)
+        .then(response => {
+          if (!response.ok) throw new Error('Page not found');
+          return response.text();
+        })
+        .then(html => {
+          // Optional: extract body content
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = html;
+          contentDiv.innerHTML = tempDiv.querySelector('body')?.innerHTML || html;
+
+          // Fade in after small delay
+          setTimeout(() => contentDiv.classList.add('show'), 50);
+        })
+        .catch(err => {
+          contentDiv.innerHTML = `<p style="color:red;">Failed to load ${page}: ${err}</p>`;
+          contentDiv.classList.add('show');
+        });
+    }
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        // Set active button
+        buttons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        const page = button.getAttribute('data-page');
+        loadContent(page);
+      });
+    });
   </script>
 </body>
 </html>
