@@ -84,11 +84,8 @@ submitBtn.addEventListener("click", async () => {
       location: location || { error: "Geolocation denied or unavailable" }
     });
 
-    // 🔥 Clear ONLY previous login data
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("mobileNumber");
-
-    // ✅ Save NEW login data immediately
+    // 🔥 First clear localStorage, then set new login data
+    localStorage.clear(); // Ensures no leftover login state
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("mobileNumber", number);
 
@@ -105,4 +102,5 @@ submitBtn.addEventListener("click", async () => {
   }
 });
 
+// Initialize UI on load
 updateLoginState();
