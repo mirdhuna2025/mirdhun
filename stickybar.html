@@ -1,1 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sticky Bottom Bar Example</title>
+
+  <!-- Google Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      min-height: 200vh; /* just to show scroll effect */
+      background: #fafafa;
+    }
+
+    /* Sticky Bottom Bar */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+
+    .bottom-bar button {
+      background: none;
+      border: none;
+      outline: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .bottom-bar button:hover {
+      color: #d40000;
+      transform: scale(1.1);
+    }
+
+    .bottom-bar button.active {
+      color: #d40000;
+    }
+
+    .bottom-bar svg {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+
+<body>
+ 
+
+  <!-- Sticky Bottom Navigation Bar -->
+  <div class="bottom-bar">
+    <button class="active" onclick="location.href='home.html'">
+      <i data-lucide="home"></i>
+      <span>Home</span>
+    </button>
+
+    <button onclick="location.href='orders.html'">
+      <i data-lucide="shopping-bag"></i>
+      <span>Orders</span>
+    </button>
+
+    <button onclick="location.href='login.html'">
+      <i data-lucide="user"></i>
+      <span>Login</span>
+    </button>
+
+    <button onclick="location.href='more.html'">
+      <i data-lucide="menu"></i>
+      <span>More</span>
+    </button>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
 
