@@ -97,14 +97,13 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js  ";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js  ";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    // 🔥 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com  ",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
       projectId: "mirdhuna-25542",
       storageBucket: "mirdhuna-25542.appspot.com",
       messagingSenderId: "575924409876",
@@ -115,13 +114,13 @@
     const db = getDatabase(app);
     const container = document.getElementById("ordersContainer");
 
-    // 👤 Get user phone from localStorage
-    const userPhone = localStorage.getItem("userPhone");
+    // 🔑 Fix: read correct key from localStorage
+    const userPhone = localStorage.getItem("mobileNumber");
 
     if (!userPhone) {
-      container.innerHTML = `<div id="error">❌ No phone number found. Please log in first.</div>`;
+      alert("Please login first!");
+      window.location.href = "login.html";
     } else {
-      // Fetch and filter orders
       const ordersRef = ref(db, "orders");
       onValue(ordersRef, (snapshot) => {
         const data = snapshot.val();
@@ -180,3 +179,5 @@
       document.getElementById("track-popup").style.display = "none";
     });
   </script>
+</body>
+</html>
