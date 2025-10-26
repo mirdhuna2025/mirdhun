@@ -188,10 +188,12 @@
     const submitBtn = document.getElementById("submit-login");
     const mobInput = document.getElementById("mob-number");
 
+    // Cancel → Go back to index.html
     closeBtn.addEventListener("click", () => {
-      popup.style.display = "none";
+      window.location.href = "index.html";
     });
 
+    // Submit → Firebase + redirect
     submitBtn.addEventListener("click", async () => {
       const number = mobInput.value.trim();
       if (!number || !/^[6-9]\d{9}$/.test(number)) {
@@ -229,9 +231,9 @@
         });
 
         localStorage.setItem("isLoggedIn", "true");
-        popup.style.display = "none";
         mobInput.value = "";
         alert("Login successful!");
+        window.location.href = "index.html";
       } catch (error) {
         console.error("Firebase error:", error);
         alert("Login failed. Please try again.");
