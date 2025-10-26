@@ -97,14 +97,14 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js  ";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js  ";
 
     // 🔥 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com  ",
       projectId: "mirdhuna-25542",
       storageBucket: "mirdhuna-25542.appspot.com",
       messagingSenderId: "575924409876",
@@ -115,29 +115,8 @@
     const db = getDatabase(app);
     const container = document.getElementById("ordersContainer");
 
-    // 👤 Get user phone from localStorage — ensure only the latest single number is used
-    let userPhone = localStorage.getItem("userPhone");
-    if (userPhone) {
-      // If it looks like a JSON array (e.g., from a bug), extract the last number
-      if (userPhone.trim().startsWith('[')) {
-        try {
-          const phoneList = JSON.parse(userPhone);
-          if (Array.isArray(phoneList) && phoneList.length > 0) {
-            userPhone = phoneList[phoneList.length - 1];
-          } else {
-            userPhone = null;
-          }
-        } catch (e) {
-          userPhone = null;
-        }
-      } else {
-        // Clean up any accidental whitespace or non-digit characters (optional)
-        userPhone = userPhone.trim();
-        if (!/^\d+$/.test(userPhone)) {
-          userPhone = null;
-        }
-      }
-    }
+    // 👤 Get user phone from localStorage
+    const userPhone = localStorage.getItem("userPhone");
 
     if (!userPhone) {
       container.innerHTML = `<div id="error">❌ No phone number found. Please log in first.</div>`;
@@ -201,5 +180,3 @@
       document.getElementById("track-popup").style.display = "none";
     });
   </script>
-</body>
-</html>
