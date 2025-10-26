@@ -32,7 +32,7 @@ loginBtn.addEventListener("click", () => {
   if (localStorage.getItem("isLoggedIn") === "true") {
     localStorage.removeItem("isLoggedIn");
     updateLoginState();
-    alert("Logged out successfully.");
+   
   } else {
     popup.style.display = "flex";
   }
@@ -79,7 +79,7 @@ submitBtn.addEventListener("click", async () => {
     });
 
     localStorage.setItem("isLoggedIn", "true");
-    alert("Login successful!");
+   
     popup.style.display = "none";
     mobInput.value = "";
     updateLoginState();
