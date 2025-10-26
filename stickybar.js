@@ -1,6 +1,3 @@
-// Initialize Lucide icons
-lucide.createIcons();
-
 // DOM elements
 const authButton = document.getElementById('authButton');
 const authText = document.getElementById('authText');
