@@ -1,179 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Futuristic SPA Bottom Bar</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Futuristic SPA with Login/Logout</title>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
-  <script src="https://unpkg.com/lucide@latest"></script>
+body {
+  margin: 0;
+  padding: 0;
+ 
+  min-height: 200vh;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #fff;
+}
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+/* --- Content Box --- */
+#content {
+  margin: 20px auto 80px auto;
+  max-width: 450px;
+  background: rgba(15, 15, 15, 1);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.7), 0 0 50px rgba(0, 255, 255, 0.3);
+  min-height: 300px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
 
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Orbitron', sans-serif;
-      min-height: 200vh;
-      background: transparent;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #fff;
-    }
+#content.show {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-    /* --- Content Box --- */
-    #content {
-      margin: 20px auto 80px auto;
-      max-width: 450px;
-      background: rgba(15, 15, 15, 1);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 0 25px rgba(0, 255, 255, 0.7), 0 0 50px rgba(0, 255, 255, 0.3);
-      min-height: 300px;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 0.5s ease, transform 0.5s ease;
-    }
+/* --- Bottom Bar --- */
+.bottom-bar {
+  position: fixed;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 450px;
+  background: rgba(15, 15, 15, 0.85);
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0;
+  z-index: 9999;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+}
 
-    #content.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+.bottom-bar button {
+  background: transparent;
+  border: none;
+  color: #00fff2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+}
 
-    /* --- Bottom Bar --- */
-    .bottom-bar {
-      position: fixed;
-      bottom: 0px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      max-width: 450px;
-      background: rgba(15, 15, 15, 0.85);
-      border-radius: 20px;
-      display: flex;
-      justify-content: space-around;
-      padding: 12px 0;
-      z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-      backdrop-filter: blur(10px);
-    }
+.bottom-bar button i {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+}
 
-    .bottom-bar button {
-      background: transparent;
-      border: none;
-      color: #00fff2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: all 0.3s ease;
-      position: relative;
-    }
+.bottom-bar button.active {
+  color: #00ffff;
+  text-shadow: 0 0 12px #00ffff, 0 0 25px #00ffff;
+}
 
-    .bottom-bar button i {
-      width: 28px;
-      height: 28px;
-      margin-bottom: 4px;
-      transition: all 0.3s ease;
-    }
+.bottom-bar button:hover {
+  color: #0ff;
+  text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+  transform: translateY(-2px);
+}
 
-    .bottom-bar button.active {
-      color: #00ffff;
-      text-shadow: 0 0 12px #00ffff, 0 0 25px #00ffff;
-    }
-
-    .bottom-bar button:hover {
-      color: #0ff;
-      text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
-      transform: translateY(-2px);
-    }
-
-    @media (max-width: 360px) {
-      .bottom-bar {
-        width: 95%;
-        padding: 10px 0;
-      }
-      .bottom-bar button span {
-        font-size: 10px;
-      }
-    }
-  </style>
+@media (max-width: 360px) {
+  .bottom-bar {
+    width: 95%;
+    padding: 10px 0;
+  }
+  .bottom-bar button span {
+    font-size: 10px;
+  }
+}
+</style>
 </head>
 <body>
 
-  <!-- Content Box -->
-  <div id="content" class="show">
-    <h2>Welcome</h2>
-    <p>Click the buttons below to load content without leaving this page.</p>
-  </div>
+<!-- Content Box -->
+<div id="content" class="show">
+  <h2>Welcome</h2>
+  <p>Click the buttons below to load content without leaving this page.</p>
+</div>
 
-  <!-- Bottom Bar -->
-  <div class="bottom-bar">
-    <button class="active" data-page="index.html">
-      <i data-lucide="home"></i>
-      <span>Home</span>
-    </button>
+<!-- Bottom Bar -->
+<div class="bottom-bar">
+  <button class="active" data-page="index.html" id="homeBtn">
+    <i data-lucide="home"></i>
+    <span>Home</span>
+  </button>
 
-    <button data-page="myorder.html">
-      <i data-lucide="shopping-bag"></i>
-      <span>Orders</span>
-    </button>
+  <button data-page="myorder.html" id="ordersBtn">
+    <i data-lucide="shopping-bag"></i>
+    <span>Orders</span>
+  </button>
 
-    <button data-page="login.html">
-      <i data-lucide="user"></i>
-      <span>Login</span>
-    </button>
+  <button data-page="login.html" id="loginBtn">
+    <i data-lucide="user"></i>
+    <span>Login</span>
+  </button>
 
-    <button data-page="search.html">
-      <i data-lucide="settings"></i>
-      <span>Search</span>
-    </button>
-  </div>
+  <button data-page="search.html" id="searchBtn">
+    <i data-lucide="settings"></i>
+    <span>Search</span>
+  </button>
+</div>
 
-  <script>
-    lucide.createIcons();
+<script>
+lucide.createIcons();
 
-    const contentDiv = document.getElementById('content');
-    const buttons = document.querySelectorAll('.bottom-bar button');
+const contentDiv = document.getElementById('content');
+const buttons = document.querySelectorAll('.bottom-bar button');
+const loginBtn = document.getElementById('loginBtn');
 
-    function loadContent(page) {
-      // Fade out
-      contentDiv.classList.remove('show');
+// Update Login Button Text
+function updateLoginStatus() {
+  const user = localStorage.getItem('user');
+  if(user){
+    loginBtn.querySelector('span').textContent = 'Logout';
+  } else {
+    loginBtn.querySelector('span').textContent = 'Login';
+  }
+}
 
-      fetch(page)
-        .then(response => {
-          if (!response.ok) throw new Error('Page not found');
-          return response.text();
-        })
-        .then(html => {
-          // Optional: extract body content
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = html;
-          contentDiv.innerHTML = tempDiv.querySelector('body')?.innerHTML || html;
+// Load HTML Content dynamically
+function loadContent(page){
+  if(!page) return;
 
-          // Fade in after small delay
-          setTimeout(() => contentDiv.classList.add('show'), 50);
-        })
-        .catch(err => {
-          contentDiv.innerHTML = `<p style="color:red;">Failed to load ${page}: ${err}</p>`;
-          contentDiv.classList.add('show');
-        });
+  contentDiv.classList.remove('show');
+  fetch(page)
+    .then(res => {
+      if(!res.ok) throw new Error('Page not found');
+      return res.text();
+    })
+    .then(html => {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      contentDiv.innerHTML = tempDiv.querySelector('body')?.innerHTML || html;
+
+      // Execute scripts from loaded HTML
+      tempDiv.querySelectorAll('script').forEach(oldScript=>{
+        const newScript = document.createElement('script');
+        if(oldScript.src){
+          newScript.src = oldScript.src;
+        } else {
+          newScript.textContent = oldScript.textContent;
+        }
+        document.body.appendChild(newScript);
+        document.body.removeChild(newScript);
+      });
+
+      setTimeout(()=> contentDiv.classList.add('show'), 50);
+    })
+    .catch(err=>{
+      contentDiv.innerHTML = `<p style="color:red;">Failed to load ${page}: ${err}</p>`;
+      contentDiv.classList.add('show');
+    });
+}
+
+// Handle button clicks
+buttons.forEach(button=>{
+  button.addEventListener('click', ()=>{
+    // Active button
+    buttons.forEach(btn=> btn.classList.remove('active'));
+    button.classList.add('active');
+
+    // Login / Logout logic
+    if(button === loginBtn){
+      const user = localStorage.getItem('user');
+      if(user){
+        localStorage.removeItem('user');
+        updateLoginStatus();
+        contentDiv.innerHTML = `<h2>Logged Out</h2><p>You have successfully logged out.</p>`;
+        contentDiv.classList.add('show');
+        return;
+      } else {
+        loadContent('login.html');
+        return;
+      }
     }
 
-    buttons.forEach(button => {
-      button.addEventListener('click', () => {
-        // Set active button
-        buttons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
+    // Normal page load
+    const page = button.getAttribute('data-page');
+    loadContent(page);
+  });
+});
 
-        const page = button.getAttribute('data-page');
-        loadContent(page);
-      });
-    });
-  </script>
+updateLoginStatus();
+</script>
 </body>
 </html>
