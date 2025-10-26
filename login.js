@@ -1,5 +1,6 @@
+// order.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -11,85 +12,89 @@ const firebaseConfig = {
   appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const loginBtn = document.getElementById("login-btn");
-const popup = document.getElementById("login-popup");
+// DOM elements
+const popup = document.getElementById("order-popup");
+const ordersList = document.getElementById("orders-list");
 const closeBtn = document.getElementById("close-popup");
-const submitBtn = document.getElementById("submit-login");
-const mobInput = document.getElementById("mob-number");
 
-function updateLoginState() {
-  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-  loginBtn.textContent = isLoggedIn ? "Logout" : "Login";
-  loginBtn.style.background = isLoggedIn
-    ? "linear-gradient(135deg, #4CAF50, #66bb6a)"
-    : "linear-gradient(135deg, #d40000, #ff4c4c)";
+// Helper: normalize phone to digits only
+function normalizePhone(phone) {
+  if (!phone) return '';
+  return String(phone).replace(/\D/g, '');
 }
 
-loginBtn.addEventListener("click", () => {
-  if (localStorage.getItem("isLoggedIn") === "true") {
-    localStorage.removeItem("isLoggedIn");
-    updateLoginState();
-    alert("Logged out successfully.");
-  } else {
-    popup.style.display = "flex";
-  }
-});
-
+// Close popup
 closeBtn.addEventListener("click", () => {
   popup.style.display = "none";
+  // Optional: window.close(); if opened in new tab
 });
 
-submitBtn.addEventListener("click", async () => {
-  const number = mobInput.value.trim();
-  if (!number || !/^[6-9]\d{9}$/.test(number)) {
-    alert("Please enter a valid 10-digit Indian mobile number (starting with 6–9).");
-    return;
-  }
+// Get the last phone number (assuming it's stored as a single value in localStorage)
+const userPhone = localStorage.getItem("userPhone");
+const userPhoneNorm = normalizePhone(userPhone);
 
-  submitBtn.disabled = true;
-  const originalText = submitBtn.textContent;
-  submitBtn.textContent = "Logging in...";
+if (!userPhone) {
+  ordersList.innerHTML = `<p class="error">⚠️ Please log in first.</p>`;
+} else {
+  const ordersRef = ref(db, "orders");
+  onValue(
+    ordersRef,
+    (snapshot) => {
+      const data = snapshot.val();
+      const allOrders = data ? Object.values(data) : [];
 
-  let location = null;
-  if ("geolocation" in navigator) {
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000
+      // Filter ONLY by `phoneNumber` field (your newer orders use this)
+      const myOrders = allOrders.filter(order =>
+        normalizePhone(order.phoneNumber) === userPhoneNorm
+      );
+
+      if (myOrders.length === 0) {
+        ordersList.innerHTML = `<p class="no-orders">No orders found for your number.</p>`;
+      } else {
+        let html = '';
+        myOrders.forEach(order => {
+          // Timestamp
+          let timeStr = 'Unknown';
+          if (order.timestamp) {
+            try {
+              timeStr = new Date(order.timestamp).toLocaleString();
+            } catch (e) {
+              timeStr = String(order.timestamp);
+            }
+          }
+
+          // Items
+          const itemsList = (order.items || []).map(item =>
+            `${item.name || 'Unnamed Item'} × ${item.qty || item.quantity || 1}`
+          ).join(', ') || '—';
+
+          // Total
+          const total = order.total !== undefined ? order.total : 0;
+
+          // Status & Payment
+          const status = order.status || 'Pending';
+          const payment = order.paymentMode || '—';
+
+          html += `
+            <div class="order-card">
+              <p><strong>Order Time:</strong> ${timeStr}</p>
+              <p><strong>Total:</strong> ₹${total}</p>
+              <p><strong>Status:</strong> ${status}</p>
+              <p><strong>Payment:</strong> ${payment}</p>
+              <p><strong>Items:</strong> ${itemsList}</p>
+            </div>
+          `;
         });
-      });
-      location = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
-      };
-    } catch (err) {
-      console.warn("Geolocation not available:", err);
+        ordersList.innerHTML = html;
+      }
+    },
+    (error) => {
+      console.error("Firebase error:", error);
+      ordersList.innerHTML = `<p class="error">❌ Failed to load orders.<br>Check database rules or network.</p>`;
     }
-  }
-
-  try {
-    await push(ref(db, 'loginHistory'), {
-      mobileNumber: number,
-      timestamp: new Date().toISOString(),
-      location: location || { error: "Geolocation denied or unavailable" }
-    });
-
-    localStorage.setItem("isLoggedIn", "true");
-    alert("Login successful!");
-    popup.style.display = "none";
-    mobInput.value = "";
-    updateLoginState();
-  } catch (error) {
-    console.error("Firebase error:", error);
-    alert("Login failed. Please try again.");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
-  }
-});
-
-updateLoginState();
+  );
+}
