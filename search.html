@@ -10,6 +10,27 @@
       padding: 20px;
       font-family: Arial, sans-serif;
     }
+    #close-btn {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      background: #f1f1f1;
+      border: 1px solid #ccc;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      font-size: 18px;
+      color: #555;
+    }
+    #close-btn:hover {
+      background: #e0e0e0;
+    }
     #search-input {
       width: 90%;
       max-width: 400px;
@@ -54,6 +75,8 @@
   </style>
 </head>
 <body>
+
+<button id="close-btn" title="Go back">✕</button>
 
 <input type="text" id="search-input" placeholder="Search menu or category..." autocomplete="off" />
 <div id="results"></div>
@@ -136,7 +159,6 @@ function renderItems(items) {
   // If search returns no results, show ALL items instead
   const itemsToRender = items.length === 0 ? allMenuItems : items;
 
-  // If even allMenuItems is empty (e.g., before data loads), show fallback
   if (itemsToRender.length === 0) {
     container.innerHTML = `<div class="no-results">No items available.</div>`;
     return;
@@ -204,7 +226,6 @@ function renderItems(items) {
 
 function performSearch(query) {
   if (!query.trim()) {
-    // If search is empty, show all items
     renderItems([]);
     return;
   }
@@ -235,7 +256,6 @@ onValue(ref(db, 'menu'), snapshot => {
     document.getElementById('search-input').value = q;
     performSearch(q);
   } else {
-    // Initially show all items when page loads with no query
     renderItems([]);
   }
 });
@@ -246,6 +266,15 @@ document.getElementById('search-input')?.addEventListener('input', (e) => {
   searchTimer = setTimeout(() => {
     performSearch(e.target.value);
   }, 300);
+});
+
+// Close / Back button functionality
+document.getElementById('close-btn')?.addEventListener('click', () => {
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.close(); // May be blocked by browser — that's normal
+  }
 });
 </script>
 
