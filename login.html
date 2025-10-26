@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login – MIRDHUNA</title>
+  <title>MIRDHUNA – Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -12,175 +12,85 @@
       font-family: 'Poppins', sans-serif;
       background: #fafafa;
       min-height: 100vh;
-      overflow-x: hidden;
-    }
-    #login-popup {
       display: flex;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(6px);
       justify-content: center;
       align-items: center;
-      z-index: 10000;
-      animation: fadeIn 0.3s ease forwards;
     }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .popup-content {
+    .auth-container {
       background: white;
-      padding: 45px 36px;
+      padding: 40px;
       border-radius: 24px;
-      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
       width: 90%;
-      max-width: 440px;
+      max-width: 420px;
       text-align: center;
-      position: relative;
-      transform: scale(0.9);
-      opacity: 0;
-      animation: popUp 0.4s ease forwards;
     }
-    @keyframes popUp { to { transform: scale(1); opacity: 1; } }
     .brand {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 24px;
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       -webkit-background-clip: text;
       color: transparent;
-      letter-spacing: -0.5px;
-      animation: textGlow 3s ease-in-out infinite alternate;
     }
-    @keyframes textGlow { from { text-shadow: 0 0 5px rgba(255, 76, 76, 0.3); } to { text-shadow: 0 0 15px rgba(255, 76, 76, 0.7); } }
-    .popup-content h3 { margin: 0 0 24px 0; color: #333; font-size: 20px; font-weight: 600; }
-    .popup-content input {
+    .section { display: none; }
+    .active { display: block; }
+
+    input {
       width: 100%;
-      padding: 15px 18px;
-      margin: 12px 0 24px;
+      padding: 14px;
+      margin: 12px 0 20px;
       border: 2px solid #eee;
       border-radius: 14px;
       font-size: 16px;
-      box-sizing: border-box;
       outline: none;
       font-family: 'Poppins', sans-serif;
-      transition: all 0.25s ease;
+      box-sizing: border-box;
     }
-    .popup-content input:focus { border-color: #d40000; box-shadow: 0 0 12px rgba(212,0,0,0.3); }
-    .popup-content input::placeholder { color: #aaa; }
-    .button-group { display: flex; gap: 14px; justify-content: center; }
-    .popup-content button {
-      padding: 13px 20px;
+    input:focus { border-color: #d40000; }
+
+    button {
+      padding: 12px 20px;
       border: none;
       border-radius: 14px;
       font-weight: 600;
       font-size: 16px;
       cursor: pointer;
-      flex: 1;
-      min-width: 110px;
-      transition: all 0.25s ease;
       font-family: 'Poppins', sans-serif;
+      margin: 6px;
+      min-width: 110px;
     }
-    #submit-login {
+    #login-btn {
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
-      box-shadow: 0 0 12px rgba(212,0,0,0.3);
+      width: 100%;
     }
-    #submit-login:hover:not(:disabled) {
-      background: linear-gradient(135deg, #ff4c4c, #ff7070);
-      transform: translateY(-2px);
-      box-shadow: 0 0 18px rgba(255,76,76,0.6);
+    #logout-btn {
+      background: #f1f1f1;
+      color: #d40000;
+      width: 100%;
     }
-    #submit-login:disabled { opacity: 0.75; cursor: not-allowed; }
-    #close-popup { background: #f8f9fa; color: #444; border: 1px solid #ddd; }
-    #close-popup:hover { background: #e9ecef; transform: translateY(-2px); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
   </style>
 </head>
 <body>
-  <div id="login-popup">
-    <div class="popup-content">
-      <div class="brand">MIRDHUNA</div>
+  <div class="auth-container">
+    <div class="brand">MIRDHUNA</div>
+
+    <!-- Login Form -->
+    <div id="login-form" class="section active">
       <h3>Enter Mobile Number</h3>
       <input type="tel" id="mob-number" placeholder="10-digit mobile number" maxlength="10" />
-      <div class="button-group">
-        <button id="submit-login">Login</button>
-        <button id="close-popup">Cancel</button>
-      </div>
+      <button id="login-btn">Login</button>
+    </div>
+
+    <!-- Logout View -->
+    <div id="logout-view" class="section">
+      <h3>Logged In</h3>
+      <p id="user-number"></p>
+      <button id="logout-btn">Logout</button>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-      authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
-      projectId: "mirdhuna-25542",
-      storageBucket: "mirdhuna-25542.appspot.com",
-      messagingSenderId: "575924409876",
-      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const popup = document.getElementById("login-popup");
-    const closeBtn = document.getElementById("close-popup");
-    const submitBtn = document.getElementById("submit-login");
-    const mobInput = document.getElementById("mob-number");
-
-    closeBtn.addEventListener("click", () => {
-      window.location.href = "index.html";
-    });
-
-    submitBtn.addEventListener("click", async () => {
-      const number = mobInput.value.trim();
-      if (!number || !/^[6-9]\d{9}$/.test(number)) {
-        alert("Please enter a valid 10-digit Indian mobile number (starting with 6–9).");
-        return;
-      }
-
-      submitBtn.disabled = true;
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = "Logging in...";
-
-      let location = null;
-      if ("geolocation" in navigator) {
-        try {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000
-            });
-          });
-          location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        } catch (err) {
-          console.warn("Geolocation not available:", err);
-        }
-      }
-
-      try {
-        await push(ref(db, 'loginHistory'), {
-          mobileNumber: number,
-          timestamp: new Date().toISOString(),
-          location: location || { error: "Geolocation denied or unavailable" }
-        });
-
-        // Save both login flag and mobile number
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("mobileNumber", number);
-
-        mobInput.value = "";
-        alert("Login successful!");
-        window.location.href = "index.html";
-      } catch (error) {
-        console.error("Firebase error:", error);
-        alert("Login failed. Please try again.");
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-      }
-    });
-  </script>
+  <script type="module" src="login.js"></script>
 </body>
 </html>
