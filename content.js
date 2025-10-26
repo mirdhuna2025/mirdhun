@@ -686,7 +686,14 @@ document.addEventListener('click', (e) => {
   if (t.id === 'track-order-btn') {
     window.open('myorder.html' );
     return;
+     
+  } 
+if (t.id === 'login-btn') {
+    window.open('login.html' );
+    return;
+     
   }
+
 });
 
 /* View toggles */
