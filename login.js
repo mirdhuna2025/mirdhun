@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const loginBtn = document.getElementById("login-btn");
+
 const popup = document.getElementById("login-popup");
 const closeBtn = document.getElementById("close-popup");
 const submitBtn = document.getElementById("submit-login");
