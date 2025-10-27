@@ -15,15 +15,13 @@
       font-weight: 600;
     }
 
-    /* Auth Bar - Hidden as requested */
     #auth-bar {
       display: none !important;
     }
 
-    /* Unified Controls Row */
     #menu-controls {
       display: flex;
-       align-items: center;
+      align-items: center;
       justify-content: space-between;
       flex-wrap: nowrap;
       gap: 5px;
@@ -38,8 +36,6 @@
       font-size: 13px;
       outline: none;
     }
-  
-   
     #sort-select {
       padding: 6px 12px;
       border: 1px solid #ccc;
@@ -64,7 +60,6 @@
       border-color: #d40000;
     }
 
-    /* Category Grid */
     .category-carousel {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -103,7 +98,6 @@
       max-width: 80px;
     }
 
-    /* Offer Banner */
     .offer-banner {
       background: linear-gradient(135deg, #ffebee, #ffcdd2);
       color: #c62828;
@@ -118,10 +112,9 @@
       font-size: 14px;
     }
 
-    /* Menu Grid — FIXED to 2 columns exactly */
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr); /* 🔥 YOUR ORIGINAL STYLE */
+      grid-template-columns: repeat(2, 1fr);
       gap: 15px;
       padding: 10px 0;
     }
@@ -237,7 +230,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* List view */
     .menu-card.list-view {
       grid-column: 1 / -1;
       display: flex;
@@ -252,7 +244,6 @@
       opacity: 1; 
       transform: none; 
       width: 110px; left:50px;
-       
       margin-top: 10px;
     }
 
@@ -262,7 +253,6 @@
       .add-cart-btn { padding: 7px 12px; font-size: 13px; }
     }
 
-    /* Cart Popup */
     #cart-popup {
       display: none;
       position: fixed;
@@ -430,7 +420,6 @@
       transition: opacity 0.3s;
     }
 
-    /* Product Modal (details) */
     #productPopup {
       display: none;
       position: fixed;
@@ -453,7 +442,6 @@
     #productPopup .content { padding:14px; }
     #productPopup .actions { display:flex; gap:8px; margin-top:10px; }
 
-    /* Checkout modal (enhanced) */
     #checkoutModal {
       display: none;
       position: fixed;
@@ -480,7 +468,6 @@
 <body>
 
   <div id="auth-bar"></div>
-
   <div class="offer-banner" id="offerBanner"></div>
 
   <h2>Categories</h2>
@@ -515,13 +502,8 @@
   </div>
 
   <button id="cart-toggle-btn">🛒</button>
-  
-
-
-
   <div id="toast"></div>
 
-  <!-- Product details popup -->
   <div id="productPopup">
     <div class="box">
       <img id="pp-img" src="" alt="product image" />
@@ -540,7 +522,6 @@
     </div>
   </div>
 
-  <!-- Checkout Modal -->
   <div id="checkoutModal">
     <div class="box">
       <h3 style="margin:0 0 8px 0; color:#d40000;">Checkout</h3>
