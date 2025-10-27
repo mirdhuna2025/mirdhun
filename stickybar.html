@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mirdhuna</title>
+  <title>Mirdhuna – Orders</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     body {
@@ -14,7 +14,9 @@
       min-height: 100vh;
     }
 
-    #main-content {
+    /* Only show orders when active */
+    #orders-view {
+      display: none;
       padding: 20px;
       padding-bottom: 100px;
     }
@@ -46,12 +48,6 @@
       text-transform: uppercase;
       letter-spacing: 1px;
       transition: all 0.3s ease;
-      position: relative;
-    }
-
-    .bottom-bar button.active {
-      color: #00ffff;
-      text-shadow: 0 0 10px #00ffff;
     }
 
     /* Login Popup */
@@ -97,11 +93,6 @@
       outline: none;
     }
 
-    #mirdhuna-mob-input:focus {
-      border-color: #d40000;
-      box-shadow: 0 0 8px rgba(212, 0, 0, 0.3);
-    }
-
     .mirdhuna-btn-group {
       display: flex;
       gap: 12px;
@@ -133,7 +124,7 @@
       color: #333;
     }
 
-    /* Orders View */
+    /* Orders Styling */
     .orders-view h1 {
       font-family: 'Poppins', sans-serif;
       color: #d40000;
@@ -211,24 +202,17 @@
 </head>
 
 <body>
-  <div id="main-content">
-    <div id="home-view">
-      <p style="text-align:center; padding:40px; font-family:'Poppins'; font-size:18px;">
-        Welcome to Mirdhuna!<br>
-        Click <strong>Orders</strong> to view your orders after login.
-      </p>
-    </div>
-
-    <div id="orders-view" class="orders-view" style="display:none;">
-      <h1>🧾 My Orders</h1>
-      <div id="ordersContainer">
-        <p id="loading">Loading your orders...</p>
-      </div>
+  <!-- Embedded Orders View (hidden by default) -->
+  <div id="orders-view" class="orders-view">
+    <h1>🧾 My Orders</h1>
+    <div id="ordersContainer">
+      <p id="loading">Loading your orders...</p>
     </div>
   </div>
 
+  <!-- Bottom Navigation Bar -->
   <div class="bottom-bar">
-    <button class="active" id="homeBtn"><span>Home</span></button>
+    <button id="homeBtn"><span>Home</span></button>
     <button id="ordersBtn"><span>Orders</span></button>
     <button id="authButton"><span id="authText">Login</span></button>
     <button id="searchBtn"><span>Search</span></button>
@@ -247,7 +231,7 @@
     </div>
   </div>
 
-  <!-- Track Popup -->
+  <!-- Tracking Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
