@@ -1,4 +1,3 @@
-// DOM Elements
 const authButton = document.getElementById('authButton');
 const authText = document.getElementById('authText');
 const homeBtn = document.getElementById('homeBtn');
@@ -18,7 +17,6 @@ const closeTrackBtn = document.getElementById('close-track');
 
 let db = null;
 
-// Initialize Firebase
 async function initFirebase() {
   if (db) return db;
   const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
@@ -39,24 +37,20 @@ async function initFirebase() {
   return db;
 }
 
-// Update login/logout text
 function updateAuthUI() {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   authText.textContent = isLoggedIn ? 'Logout' : 'Login';
 }
 
-// Show or hide orders view
 function toggleOrdersView(show) {
   ordersView.style.display = show ? 'block' : 'none';
 }
 
-// Close login popup
 function closeLoginPopup() {
   popup.style.display = 'none';
   mobInput.value = '';
 }
 
-// Handle login
 async function handleLogin() {
   const number = mobInput.value.trim();
   if (!number || !/^[6-9]\d{9}$/.test(number)) {
@@ -106,7 +100,6 @@ async function handleLogin() {
   }
 }
 
-// Load user orders
 async function loadOrders() {
   const userPhone = localStorage.getItem('mobileNumber');
   if (!userPhone) {
@@ -172,7 +165,6 @@ async function loadOrders() {
   }
 }
 
-// ===== EVENT LISTENERS =====
 homeBtn.addEventListener('click', () => {
   window.location.href = 'index.html';
 });
@@ -194,19 +186,16 @@ searchBtn.addEventListener('click', () => {
 authButton.addEventListener('click', () => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   if (isLoggedIn) {
-    // Logout
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('mobileNumber');
     updateAuthUI();
     alert('Logged out successfully.');
-    toggleOrdersView(false); // hide orders if visible
+    toggleOrdersView(false);
   } else {
-    // Login
     popup.style.display = 'flex';
   }
 });
 
-// Popup controls
 closeBtn.addEventListener('click', closeLoginPopup);
 submitBtn.addEventListener('click', handleLogin);
 
@@ -222,7 +211,6 @@ trackPopup.addEventListener('click', (e) => {
   if (e.target === trackPopup) trackPopup.style.display = 'none';
 });
 
-// Track button delegation
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('track-btn')) {
     const lat = e.target.dataset.lat;
@@ -232,5 +220,4 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Initialize UI
 updateAuthUI();
