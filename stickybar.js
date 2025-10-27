@@ -5,7 +5,6 @@ const homeBtn = document.getElementById('homeBtn');
 const ordersBtn = document.getElementById('ordersBtn');
 const searchBtn = document.getElementById('searchBtn');
 
-const homeView = document.getElementById('home-view');
 const ordersView = document.getElementById('orders-view');
 const ordersContainer = document.getElementById('ordersContainer');
 
@@ -40,21 +39,24 @@ async function initFirebase() {
   return db;
 }
 
+// Update login/logout text
 function updateAuthUI() {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   authText.textContent = isLoggedIn ? 'Logout' : 'Login';
 }
 
-function showView(view) {
-  homeView.style.display = view === 'home' ? 'block' : 'none';
-  ordersView.style.display = view === 'orders' ? 'block' : 'none';
+// Show or hide orders view
+function toggleOrdersView(show) {
+  ordersView.style.display = show ? 'block' : 'none';
 }
 
+// Close login popup
 function closeLoginPopup() {
   popup.style.display = 'none';
   mobInput.value = '';
 }
 
+// Handle login
 async function handleLogin() {
   const number = mobInput.value.trim();
   if (!number || !/^[6-9]\d{9}$/.test(number)) {
@@ -104,11 +106,12 @@ async function handleLogin() {
   }
 }
 
+// Load user orders
 async function loadOrders() {
   const userPhone = localStorage.getItem('mobileNumber');
   if (!userPhone) {
     alert('Please login first to view orders.');
-    showView('home');
+    toggleOrdersView(false);
     return;
   }
 
@@ -138,7 +141,6 @@ async function loadOrders() {
       ordersContainer.innerHTML = '';
       myOrders.forEach(order => {
         const status = order.status || 'pending';
-        // ✅ Safe string formatting — no nested backticks
         const itemsList = order.items
           ? order.items.map(i => i.name + ' ×' + i.qty).join(', ')
           : 'None';
@@ -172,9 +174,7 @@ async function loadOrders() {
 
 // ===== EVENT LISTENERS =====
 homeBtn.addEventListener('click', () => {
-  showView('home');
-  homeBtn.classList.add('active');
-  ordersBtn.classList.remove('active');
+  window.location.href = 'index.html';
 });
 
 ordersBtn.addEventListener('click', () => {
@@ -183,31 +183,30 @@ ordersBtn.addEventListener('click', () => {
     alert('Please login first to view your orders.');
     return;
   }
-  showView('orders');
+  toggleOrdersView(true);
   loadOrders();
-  homeBtn.classList.remove('active');
-  ordersBtn.classList.add('active');
 });
 
 searchBtn.addEventListener('click', () => {
-  alert('Search feature coming soon!');
+  window.location.href = 'search.html';
 });
 
 authButton.addEventListener('click', () => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   if (isLoggedIn) {
+    // Logout
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('mobileNumber');
     updateAuthUI();
     alert('Logged out successfully.');
-    showView('home');
-    homeBtn.classList.add('active');
-    ordersBtn.classList.remove('active');
+    toggleOrdersView(false); // hide orders if visible
   } else {
+    // Login
     popup.style.display = 'flex';
   }
 });
 
+// Popup controls
 closeBtn.addEventListener('click', closeLoginPopup);
 submitBtn.addEventListener('click', handleLogin);
 
@@ -223,6 +222,7 @@ trackPopup.addEventListener('click', (e) => {
   if (e.target === trackPopup) trackPopup.style.display = 'none';
 });
 
+// Track button delegation
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('track-btn')) {
     const lat = e.target.dataset.lat;
@@ -232,6 +232,5 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Initialize
+// Initialize UI
 updateAuthUI();
-showView('home');
