@@ -1,10 +1,6 @@
-// content.js — full replacement (search removed + guest cart + fixed double-add + grouped view)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-/* =========================
-   Firebase config
-   ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
   authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -17,19 +13,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* =========================
-   State
-   ========================= */
 let categories = [];
 let menuItems = [];
 let cart = [];
 let currentOffer = null;
 let selectedCategory = null;
-let viewMode = 'grid'; // 'grid' | 'list' | 'grouped'
+let viewMode = 'grid';
 
-/* =========================
-   DOM refs
-   ========================= */
 const authBar = document.getElementById('auth-bar');
 const categoryCarousel = document.getElementById('categoryCarousel');
 const menuGrid = document.getElementById('menuGrid');
@@ -43,9 +33,7 @@ const cartToggleBtn = document.getElementById('cart-toggle-btn');
 const sortSelect = document.getElementById('sort-select');
 const gridViewBtn = document.getElementById('grid-view');
 const listViewBtn = document.getElementById('list-view');
-let groupedViewBtn = document.getElementById('grouped-view'); // may be injected
 
-// Product popup
 const productPopup = document.getElementById('productPopup');
 const ppImg = document.getElementById('pp-img');
 const ppName = document.getElementById('pp-name');
@@ -55,21 +43,15 @@ const ppQty = document.getElementById('pp-qty');
 const ppAdd = document.getElementById('pp-add');
 const ppClose = document.getElementById('pp-close');
 
-// Checkout modal
 const checkoutModal = document.getElementById('checkoutModal');
-const checkoutPhone = document.getElementById('checkout-phone');
 const checkoutAddress = document.getElementById('checkout-address');
 const checkoutPayment = document.getElementById('checkout-payment');
 const checkoutInstructions = document.getElementById('checkout-instructions');
 const checkoutPlace = document.getElementById('checkout-place');
 const checkoutCancel = document.getElementById('checkout-cancel');
 
-// Toast
 let toastEl = document.getElementById('toast');
 
-/* =========================
-   Utilities
-   ========================= */
 function safeNumber(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -99,9 +81,6 @@ function showToast(message) {
   }, 2200);
 }
 
-/* =========================
-   Auth / UI
-   ========================= */
 function isLoggedIn() {
   return localStorage.getItem('isLoggedIn') === 'true';
 }
@@ -109,7 +88,7 @@ function isLoggedIn() {
 function updateAuthUI() {
   if (!authBar) return;
   if (isLoggedIn()) {
-    const phone = localStorage.getItem('userPhone') || '';
+    const phone = localStorage.getItem('mobileNumber') || '';
     authBar.innerHTML = `Logged in${phone ? ' — ' + phone : ''} <button onclick="logout()">Logout</button>`;
   } else {
     authBar.innerHTML = `Welcome! <button onclick="showLoginModal()">Login to Order</button>`;
@@ -119,7 +98,7 @@ function updateAuthUI() {
 
 window.logout = () => {
   localStorage.removeItem('isLoggedIn');
-  localStorage.removeItem('userPhone');
+  localStorage.removeItem('mobileNumber');
   updateAuthUI();
   showToast('Logged out');
 };
@@ -134,9 +113,6 @@ window.showLoginModal = () => {
   }
 };
 
-/* =========================
-   Cart: Load & Save (guest-friendly)
-   ========================= */
 function loadCartFromStorage() {
   const raw = JSON.parse(localStorage.getItem('cart')) || [];
   cart = raw.map((it, idx) => ({
@@ -152,9 +128,6 @@ function saveCart() {
   localStorage.setItem('cart', JSON.stringify(cart));
 }
 
-/* =========================
-   Load shop data
-   ========================= */
 function loadShopData() {
   if (categoryCarousel) {
     onValue(ref(db, 'categories'), snapshot => {
@@ -189,9 +162,6 @@ function loadShopData() {
   });
 }
 
-/* =========================
-   Render helpers
-   ========================= */
 function renderOffer() {
   if (!offerBanner) return;
   if (currentOffer) {
@@ -223,7 +193,6 @@ function renderCategories() {
   });
 }
 
-// Helper to render a list of menu cards
 function renderMenuItems(items) {
   items.forEach(item => {
     const safeName = (item.name || 'Unnamed Item').replace(/"/g,'&quot;');
@@ -261,62 +230,6 @@ function renderMenu() {
   if (!menuGrid) return;
   menuGrid.innerHTML = '';
 
-  if (viewMode === 'grouped') {
-    const allItems = [...menuItems];
-    let itemsToRender = selectedCategory
-      ? allItems.filter(i => i.category === selectedCategory)
-      : allItems;
-
-    if (itemsToRender.length === 0) {
-      menuGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;">No items available</p>';
-      menuGrid.style.gridTemplateColumns = '1fr';
-      return;
-    }
-
-    if (!selectedCategory) {
-      // Show "All Items" header
-      const allHeader = document.createElement('h3');
-      allHeader.textContent = 'All Items';
-      allHeader.style.gridColumn = '1 / -1';
-      allHeader.style.marginTop = '20px';
-      allHeader.style.paddingLeft = '12px';
-      allHeader.style.borderLeft = '3px solid #4CAF50';
-      menuGrid.appendChild(allHeader);
-      renderMenuItems(allItems);
-    }
-
-    // Group by category
-   const categoryMap = {};
-    itemsToRender.forEach(item => {
-      const cat = item.category || 'Uncategorized';
-      if (!categoryMap[cat]) categoryMap[cat] = [];
-      categoryMap[cat].push(item);
-    });
-
-    // Sort categories for consistent order
-    const sortedCategories = Object.keys(categoryMap).sort();
-
-    sortedCategories.forEach(catName => {
-      if (selectedCategory && catName !== selectedCategory) return;
-
-      const catItems = categoryMap[catName];
-      if (catItems.length === 0) return;
-
-      const header = document.createElement('h3');
-      header.textContent = catName;
-      header.style.gridColumn = '1 / -1';
-      header.style.marginTop = '24px';
-      header.style.paddingLeft = '12px';
-      header.style.borderLeft = '3px solid #2196F3';
-      menuGrid.appendChild(header);
-
-      renderMenuItems(catItems);
-    });
-
-    menuGrid.style.gridTemplateColumns = '1fr';
-    return;
-  } 
-  // === Original grid/list view ===
   let items = selectedCategory
     ? menuItems.filter(i => i.category === selectedCategory)
     : [...menuItems];
@@ -336,25 +249,17 @@ function renderMenu() {
   menuGrid.style.gridTemplateColumns = viewMode === 'list' ? '1fr' : 'repeat(2, 1fr)';
 }
 
-/* =========================
-   Product Popup
-   ========================= */
 let popupCurrentItem = null;
 
 function openProductPopup(item) {
   popupCurrentItem = item;
-  if (!productPopup) {
-    createInlineProductPopup(item);
-    return;
-  }
+  if (!productPopup) return;
 
   ppImg && (ppImg.src = item.image || '');
   ppName && (ppName.textContent = item.name || 'Unnamed Item');
   ppDesc && (ppDesc.textContent = item.description || '');
   ppPrice && (ppPrice.textContent = `₹${safeNumber(item.price,0).toFixed(2)}`);
   if (ppQty && ppQty.value === '') ppQty.value = '1';
-
-  ensurePopupQtyControls();
 
   if (ppAdd) {
     ppAdd.dataset.id = item.id || '';
@@ -366,85 +271,9 @@ function openProductPopup(item) {
   productPopup.style.display = 'flex';
 }
 
-function ensurePopupQtyControls() {
-  if (!ppQty) return;
-  if (document.getElementById('pp-minus') && document.getElementById('pp-plus')) return;
-
-  const minus = document.createElement('button');
-  minus.type = 'button';
-  minus.id = 'pp-minus';
-  minus.textContent = '−';
-  minus.style.marginRight = '8px';
-  minus.style.padding = '6px';
-  minus.style.cursor = 'pointer';
-  minus.addEventListener('click', () => {
-    let v = parseInt(ppQty.value) || 1;
-    if (v > 1) ppQty.value = v - 1;
-  });
-
-  const plus = document.createElement('button');
-  plus.type = 'button';
-  plus.id = 'pp-plus';
-  plus.textContent = '+';
-  plus.style.marginLeft = '8px';
-  plus.style.padding = '6px';
-  plus.style.cursor = 'pointer';
-  plus.addEventListener('click', () => {
-    let v = parseInt(ppQty.value) || 1;
-    ppQty.value = v + 1;
-  });
-
-  ppQty.insertAdjacentElement('beforebegin', minus);
-  ppQty.insertAdjacentElement('afterend', plus);
-}
-
-function createInlineProductPopup(item) {
-  const tmp = document.createElement('div');
-  tmp.id = 'productPopupInline';
-  tmp.style.position = 'fixed';
-  tmp.style.inset = '0';
-  tmp.style.display = 'flex';
-  tmp.style.alignItems = 'center';
-  tmp.style.justifyContent = 'center';
-  tmp.style.background = 'rgba(0,0,0,0.6)';
-  tmp.style.zIndex = '99999';
-  tmp.innerHTML = `
-    <div style="background:white;border-radius:10px;padding:16px;max-width:420px;width:92%;">
-      <img src="${item.image||''}" style="width:100%;height:200px;object-fit:cover;border-radius:8px;">
-      <h3 style="margin:8px 0;">${item.name}</h3>
-      <p>₹${safeNumber(item.price,0).toFixed(2)}</p>
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;">
-        <button id="inline-minus">−</button>
-        <input id="inline-qty" type="number" value="1" min="1" style="width:60px;text-align:center;">
-        <button id="inline-plus">+</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button id="inline-add" style="flex:1;background:#4CAF50;color:#fff;padding:8px;border:none;border-radius:8px;">Add to Cart</button>
-        <button id="inline-close" style="flex:1;padding:8px;border-radius:8px;">Close</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(tmp);
-  document.getElementById('inline-close').onclick = () => tmp.remove();
-  document.getElementById('inline-plus').onclick = () => {
-    const q = document.getElementById('inline-qty'); q.value = Number(q.value || 1) + 1;
-  };
-  document.getElementById('inline-minus').onclick = () => {
-    const q = document.getElementById('inline-qty'); if (Number(q.value) > 1) q.value = Number(q.value) - 1;
-  };
-  document.getElementById('inline-add').onclick = () => {
-    const qty = Number(document.getElementById('inline-qty').value) || 1;
-    addToCart(item.id, item.name, safeNumber(item.price,0), item.image || '', qty);
-    tmp.remove();
-  };
-}
-
 ppClose && ppClose.addEventListener('click', () => { if (productPopup) productPopup.style.display = 'none'; });
 productPopup && productPopup.addEventListener('click', (e) => { if (e.target === productPopup) productPopup.style.display = 'none'; });
 
-/* =========================
-   Cart functions
-   ========================= */
 function addToCart(id, name, price, image, qty = 1) {
   const itemId = id || `temp-${Date.now()}`;
   const itemName = name || 'Unnamed Item';
@@ -525,9 +354,6 @@ function removeFromCart(id) {
   updateCartUI();
 }
 
-/* =========================
-   Checkout / placeOrder
-   ========================= */
 function placeOrder() {
   if (!isLoggedIn()) {
     showToast('Please log in to place an order.');
@@ -544,20 +370,15 @@ function placeOrder() {
 
   const address = (checkoutAddress?.value || '').trim();
   if (!address) {
-    if (checkoutModal) {
-      checkoutPhone && (checkoutPhone.value = localStorage.getItem('userPhone') || '');
-      checkoutModal.style.display = 'flex';
-    } else {
-      const a = prompt('Enter delivery address:');
-      if (!a) return showToast('Delivery address required');
-    }
+    showToast('Please enter delivery address');
     return;
   }
 
-  let phone = (checkoutPhone?.value || '').trim();
-  if (!phone) phone = localStorage.getItem('userPhone') || '';
- {
-    localStorage.setItem('userPhone', phone);
+  // ✅ CRITICAL FIX: Use mobileNumber from stickybar.js login
+  const phone = localStorage.getItem('mobileNumber');
+  if (!phone) {
+    showToast('Session expired. Please log in again.');
+    return;
   }
 
   const payment = (checkoutPayment?.value) || 'Cash on Delivery';
@@ -570,7 +391,7 @@ function placeOrder() {
   }, 0);
 
   const order = {
-    phoneNumber: phone,
+    phoneNumber: phone, // ✅ Now correctly set
     address,
     instructions,
     paymentMode: payment,
@@ -610,9 +431,6 @@ checkoutPlace && checkoutPlace.addEventListener('click', () => {
   placeOrder();
 });
 
-/* =========================
-   Global Event Delegation
-   ========================= */
 document.addEventListener('click', (e) => {
   const t = e.target;
 
@@ -674,27 +492,17 @@ document.addEventListener('click', (e) => {
       return;
     }
     if (checkoutModal) {
-      checkoutPhone && (checkoutPhone.value = localStorage.getItem('userPhone') || '');
       checkoutModal.style.display = 'flex';
     } else {
       placeOrder();
     }
     return;
   }
-
-  if (t.id === 'track-order-btn') {
-    window.open('myorder.html' );
-    return;
-     
-  } 
-
 });
 
-/* View toggles */
 function setActiveView(mode) {
   gridViewBtn?.classList.toggle('active', mode === 'grid');
   listViewBtn?.classList.toggle('active', mode === 'list');
-  groupedViewBtn?.classList.toggle('active', mode === 'grouped');
 }
 
 gridViewBtn && gridViewBtn.addEventListener('click', () => {
@@ -709,32 +517,8 @@ listViewBtn && listViewBtn.addEventListener('click', () => {
   renderMenu();
 });
 
-// Inject grouped button if missing
-if (gridViewBtn && !groupedViewBtn) {
-  const btn = document.createElement('button');
-  btn.id = 'grouped-view';
-  btn.textContent = 'Grouped';
-  btn.style.marginLeft = '8px';
-  btn.style.padding = '6px 10px';
-  btn.style.border = '1px solid #ccc';
-  btn.style.borderRadius = '4px';
-  btn.style.cursor = 'pointer';
-  btn.style.background = '#f9f9f9';
-  gridViewBtn.parentNode.insertBefore(btn, gridViewBtn.nextSibling);
-  groupedViewBtn = btn;
-}
-
-groupedViewBtn && groupedViewBtn.addEventListener('click', () => {
-  viewMode = 'grouped';
-  setActiveView('grouped');
-  renderMenu();
-});
-
 sortSelect && sortSelect.addEventListener('change', () => renderMenu());
 
-/* =========================
-   Initialization
-   ========================= */
 updateAuthUI();
 loadCartFromStorage();
 updateCartUI();
@@ -753,13 +537,10 @@ try {
     });
     renderMenu();
   }
-} catch (e) {
-  // ignore cache parse errors
-}
+} catch (e) {}
 
 loadShopData();
 
-/* Expose helpers */
 window.addToCart = addToCart;
 window.placeOrder = placeOrder;
 window.openProductPopup = openProductPopup;
