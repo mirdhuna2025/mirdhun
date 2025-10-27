@@ -4,6 +4,7 @@ const homeBtn = document.getElementById('homeBtn');
 const ordersBtn = document.getElementById('ordersBtn');
 const searchBtn = document.getElementById('searchBtn');
 
+// ✅ Only container inside popup
 const ordersContainer = document.getElementById('ordersContainer');
 
 const popup = document.getElementById('mirdhuna-login-popup');
@@ -11,6 +12,7 @@ const closeBtn = document.getElementById('mirdhuna-close-popup');
 const submitBtn = document.getElementById('mirdhuna-submit-login');
 const mobInput = document.getElementById('mirdhuna-mob-input');
 
+// ✅ Popup elements (not inline view)
 const ordersPopup = document.getElementById('orders-popup');
 const closeOrdersBtn = document.getElementById('close-orders');
 
@@ -189,35 +191,22 @@ authButton.addEventListener('click', () => {
     localStorage.removeItem('mobileNumber');
     updateAuthUI();
     alert('Logged out successfully.');
-    ordersPopup.style.display = 'none'; // close orders if open
+    ordersPopup.style.display = 'none';
   } else {
     popup.style.display = 'flex';
   }
 });
 
-// Popup controls
+// Popup close handlers
 closeBtn.addEventListener('click', closeLoginPopup);
 submitBtn.addEventListener('click', handleLogin);
+popup.addEventListener('click', (e) => { if (e.target === popup) closeLoginPopup(); });
 
-popup.addEventListener('click', (e) => {
-  if (e.target === popup) closeLoginPopup();
-});
+closeOrdersBtn.addEventListener('click', () => { ordersPopup.style.display = 'none'; });
+ordersPopup.addEventListener('click', (e) => { if (e.target === ordersPopup) ordersPopup.style.display = 'none'; });
 
-closeOrdersBtn.addEventListener('click', () => {
-  ordersPopup.style.display = 'none';
-});
-
-ordersPopup.addEventListener('click', (e) => {
-  if (e.target === ordersPopup) ordersPopup.style.display = 'none';
-});
-
-closeTrackBtn.addEventListener('click', () => {
-  trackPopup.style.display = 'none';
-});
-
-trackPopup.addEventListener('click', (e) => {
-  if (e.target === trackPopup) trackPopup.style.display = 'none';
-});
+closeTrackBtn.addEventListener('click', () => { trackPopup.style.display = 'none'; });
+trackPopup.addEventListener('click', (e) => { if (e.target === trackPopup) trackPopup.style.display = 'none'; });
 
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('track-btn')) {
@@ -228,5 +217,4 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Initialize
 updateAuthUI();
