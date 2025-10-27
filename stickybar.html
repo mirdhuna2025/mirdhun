@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Futuristic Bottom Bar</title>
+  <title>Mirdhuna</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       padding: 0;
       background: #f9f9f9;
-  
+      font-family: 'Orbitron', sans-serif;
       min-height: 100vh;
     }
 
-    /* Main content area */
     #main-content {
       padding: 20px;
-      padding-bottom: 100px; /* space for bottom bar */
+      padding-bottom: 100px;
     }
 
     .bottom-bar {
@@ -55,7 +54,7 @@
       text-shadow: 0 0 10px #00ffff;
     }
 
-    /* ---------- Login Popup ---------- */
+    /* Login Popup */
     #mirdhuna-login-popup {
       display: none;
       position: fixed;
@@ -85,7 +84,6 @@
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       -webkit-background-clip: text;
       color: transparent;
-      letter-spacing: -0.5px;
     }
 
     #mirdhuna-mob-input {
@@ -135,7 +133,7 @@
       color: #333;
     }
 
-    /* ---------- Orders View ---------- */
+    /* Orders View */
     .orders-view h1 {
       font-family: 'Poppins', sans-serif;
       color: #d40000;
@@ -169,7 +167,7 @@
     }
     .track-btn:hover { background: #1976D2; }
 
-    /* ---------- Tracking Popup ---------- */
+    /* Track Popup */
     #track-popup {
       display: none;
       position: fixed;
@@ -214,12 +212,13 @@
 
 <body>
   <div id="main-content">
-    <!-- Default: show nothing or home content -->
     <div id="home-view">
-      <p style="text-align:center; padding:40px; font-family:'Poppins';">Welcome! Click "Orders" to view your orders.</p>
+      <p style="text-align:center; padding:40px; font-family:'Poppins'; font-size:18px;">
+        Welcome to Mirdhuna!<br>
+        Click <strong>Orders</strong> to view your orders after login.
+      </p>
     </div>
 
-    <!-- Orders View (hidden by default) -->
     <div id="orders-view" class="orders-view" style="display:none;">
       <h1>🧾 My Orders</h1>
       <div id="ordersContainer">
@@ -228,20 +227,11 @@
     </div>
   </div>
 
-  <!-- Bottom Navigation -->
   <div class="bottom-bar">
-    <button class="active" id="homeBtn">
-      <span>Home</span>
-    </button>
-    <button id="ordersBtn">
-      <span>Orders</span>
-    </button>
-    <button id="authButton">
-      <span id="authText">Login</span>
-    </button>
-    <button id="searchBtn">
-      <span>Search</span>
-    </button>
+    <button class="active" id="homeBtn"><span>Home</span></button>
+    <button id="ordersBtn"><span>Orders</span></button>
+    <button id="authButton"><span id="authText">Login</span></button>
+    <button id="searchBtn"><span>Search</span></button>
   </div>
 
   <!-- Login Popup -->
@@ -257,7 +247,7 @@
     </div>
   </div>
 
-  <!-- Tracking Popup -->
+  <!-- Track Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
