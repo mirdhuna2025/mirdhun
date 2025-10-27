@@ -10,13 +10,8 @@
       margin: 0;
       padding: 0;
       background: #f9f9f9;
+      font-family: 'Orbitron', sans-serif;
       min-height: 100vh;
-    }
-
-    #orders-view {
-      display: none;
-      padding: 20px;
-      padding-bottom: 100px;
     }
 
     .bottom-bar {
@@ -48,6 +43,7 @@
       transition: all 0.3s ease;
     }
 
+    /* Login Popup */
     #mirdhuna-login-popup {
       display: none;
       position: fixed;
@@ -121,39 +117,29 @@
       color: #333;
     }
 
-    .orders-view h1 {
-      font-family: 'Poppins', sans-serif;
-      color: #d40000;
-      text-align: center;
-      margin-bottom: 20px;
+    /* Orders Popup */
+    #orders-popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
     }
-
-    #ordersContainer {
-      max-width: 700px;
-      margin: 0 auto;
-    }
-
-    .order-card {
+    .orders-popup-content {
       background: white;
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 20px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      position: relative;
       font-family: 'Poppins', sans-serif;
+      overflow: hidden;
     }
 
-    .order-card p { margin: 6px 0; }
-    .track-btn {
-      background: #2196F3;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-    .track-btn:hover { background: #1976D2; }
-
+    /* Track Popup */
     #track-popup {
       display: none;
       position: fixed;
@@ -185,6 +171,27 @@
       color: #d40000;
       font-weight: bold;
     }
+
+    /* Order Card Styling (for popup) */
+    .order-card {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .order-card p { margin: 6px 0; }
+    .track-btn {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .track-btn:hover { background: #1976D2; }
+
     #loading, #error {
       text-align: center;
       padding: 20px;
@@ -197,13 +204,7 @@
 </head>
 
 <body>
-  <div id="orders-view" class="orders-view">
-    <h1>🧾 My Orders</h1>
-    <div id="ordersContainer">
-      <p id="loading">Loading your orders...</p>
-    </div>
-  </div>
-
+  <!-- Bottom Navigation Bar -->
   <div class="bottom-bar">
     <button id="homeBtn"><span>Home</span></button>
     <button id="ordersBtn"><span>Orders</span></button>
@@ -211,6 +212,7 @@
     <button id="searchBtn"><span>Search</span></button>
   </div>
 
+  <!-- Login Popup -->
   <div id="mirdhuna-login-popup">
     <div class="mirdhuna-popup-content">
       <div class="mirdhuna-brand">MIRDHUNA</div>
@@ -223,6 +225,18 @@
     </div>
   </div>
 
+  <!-- Orders Popup -->
+  <div id="orders-popup">
+    <div class="orders-popup-content">
+      <span id="close-orders" style="position:absolute; top:8px; right:12px; cursor:pointer; font-size:20px; color:#d40000; font-weight:bold;">✖</span>
+      <h3 style="margin:0 0 16px 0; color:#d40000; text-align:center;">🧾 My Orders</h3>
+      <div id="ordersContainer" style="max-height:60vh; overflow-y:auto;">
+        <p id="loading" style="text-align:center; padding:20px; font-family:'Poppins',sans-serif;">Loading your orders...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracking Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
