@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Futuristic Bottom Bar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -47,6 +48,92 @@
       color: #00ffff;
       text-shadow: 0 0 10px #00ffff;
     }
+
+    /* ---------- Login Popup Styles ---------- */
+    #mirdhuna-login-popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .mirdhuna-popup-content {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .mirdhuna-brand {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .mirdhuna-popup-content h3 {
+      margin: 0 0 20px;
+      color: #333;
+      font-size: 18px;
+    }
+
+    #mirdhuna-mob-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+      margin: 10px 0 20px;
+      outline: none;
+    }
+
+    #mirdhuna-mob-input:focus {
+      border-color: #d40000;
+      box-shadow: 0 0 8px rgba(212, 0, 0, 0.3);
+    }
+
+    .mirdhuna-btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .mirdhuna-popup-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    #mirdhuna-submit-login {
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
+      color: white;
+    }
+
+    #mirdhuna-submit-login:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #mirdhuna-close-popup {
+      background: #f0f0f0;
+      color: #333;
+    }
   </style>
 </head>
 
@@ -55,18 +142,28 @@
     <button class="active" id="homeBtn">
       <span>Home</span>
     </button>
-
     <button id="ordersBtn">
       <span>Orders</span>
     </button>
-
     <button id="authButton">
       <span id="authText">Login</span>
     </button>
-
     <button id="searchBtn">
       <span>Search</span>
     </button>
+  </div>
+
+  <!-- Login Popup (hidden by default) -->
+  <div id="mirdhuna-login-popup">
+    <div class="mirdhuna-popup-content">
+      <div class="mirdhuna-brand">MIRDHUNA</div>
+      <h3>Enter Mobile Number</h3>
+      <input type="tel" id="mirdhuna-mob-input" placeholder="10-digit mobile number" maxlength="10" />
+      <div class="mirdhuna-btn-group">
+        <button id="mirdhuna-submit-login" class="mirdhuna-popup-btn">Login</button>
+        <button id="mirdhuna-close-popup" class="mirdhuna-popup-btn">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <script src="stickybar.js"></script>
