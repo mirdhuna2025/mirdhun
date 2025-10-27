@@ -6,19 +6,36 @@
   <title>Login – MIRDHUNA</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* ---------- Base ---------- */
     body {
       margin: 0;
       padding: 0;
       font-family: 'Poppins', sans-serif;
       background: #fafafa;
       min-height: 100vh;
-      overflow-x: hidden;
     }
 
-    /* ---------- Popup Overlay ---------- */
+    #login-btn {
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      z-index: 9999;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 0 20px rgba(212, 0, 0, 0.4);
+    }
+
+    #login-btn.logout {
+      background: linear-gradient(135deg, #4CAF50, #66bb6a);
+    }
+
     #login-popup {
-      display: flex;
+      display: none;
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.7);
@@ -28,7 +45,6 @@
       z-index: 10000;
     }
 
-    /* ---------- Popup Content ---------- */
     .popup-content {
       background: white;
       padding: 45px 36px;
@@ -37,10 +53,8 @@
       width: 90%;
       max-width: 440px;
       text-align: center;
-      position: relative;
     }
 
-    /* ---------- Brand ---------- */
     .brand {
       font-size: 30px;
       font-weight: 700;
@@ -48,7 +62,6 @@
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       -webkit-background-clip: text;
       color: transparent;
-      letter-spacing: -0.5px;
     }
 
     .popup-content h3 {
@@ -58,7 +71,6 @@
       font-weight: 600;
     }
 
-    /* ---------- Input ---------- */
     .popup-content input {
       width: 100%;
       padding: 15px 18px;
@@ -69,7 +81,6 @@
       box-sizing: border-box;
       outline: none;
       font-family: 'Poppins', sans-serif;
-      transition: all 0.25s ease;
     }
 
     .popup-content input:focus {
@@ -77,11 +88,6 @@
       box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
     }
 
-    .popup-content input::placeholder {
-      color: #aaa;
-    }
-
-    /* ---------- Buttons ---------- */
     .button-group {
       display: flex;
       gap: 14px;
@@ -97,24 +103,16 @@
       cursor: pointer;
       flex: 1;
       min-width: 110px;
-      transition: all 0.25s ease;
       font-family: 'Poppins', sans-serif;
     }
 
     #submit-login {
       background: linear-gradient(135deg, #d40000, #ff4c4c);
       color: white;
-      box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
-    }
-
-    #submit-login:hover:not(:disabled) {
-      background: linear-gradient(135deg, #ff4c4c, #ff7070);
-      transform: translateY(-2px);
-      box-shadow: 0 0 18px rgba(255, 76, 76, 0.6);
     }
 
     #submit-login:disabled {
-      opacity: 0.75;
+      opacity: 0.7;
       cursor: not-allowed;
     }
 
@@ -123,15 +121,11 @@
       color: #444;
       border: 1px solid #ddd;
     }
-
-    #close-popup:hover {
-      background: #e9ecef;
-      transform: translateY(-2px);
-      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-    }
   </style>
 </head>
 <body>
+
+  <button id="login-btn">Login</button>
 
   <div id="login-popup">
     <div class="popup-content">
@@ -162,18 +156,41 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    const loginBtn = document.getElementById("login-btn");
     const popup = document.getElementById("login-popup");
     const closeBtn = document.getElementById("close-popup");
     const submitBtn = document.getElementById("submit-login");
     const mobInput = document.getElementById("mob-number");
 
-    closeBtn.addEventListener("click", () => {
-      window.close(); // or redirect as needed
+    // Update button text based on login state
+    function updateLoginUI() {
+      const isLoggedIn = localStorage.getItem("mirdhuna_logged_in") === "true";
+      loginBtn.textContent = isLoggedIn ? "Logout" : "Login";
+      loginBtn.classList.toggle("logout", isLoggedIn);
+    }
+
+    // Close popup helper
+    function closePopup() {
+      popup.style.display = "none";
+      mobInput.value = "";
+    }
+
+    loginBtn.addEventListener("click", () => {
+      const isLoggedIn = localStorage.getItem("mirdhuna_logged_in") === "true";
+      if (isLoggedIn) {
+        // Logout: clear only the UI flag (no sensitive data stored)
+        localStorage.removeItem("mirdhuna_logged_in");
+        updateLoginUI();
+        alert("Logged out successfully.");
+      } else {
+        popup.style.display = "flex";
+      }
     });
 
-    // Optional: close on outside click
+    closeBtn.addEventListener("click", closePopup);
+
     popup.addEventListener("click", (e) => {
-      if (e.target === popup) window.close();
+      if (e.target === popup) closePopup();
     });
 
     submitBtn.addEventListener("click", async () => {
@@ -184,7 +201,6 @@
       }
 
       submitBtn.disabled = true;
-      const originalText = submitBtn.textContent;
       submitBtn.textContent = "Logging in...";
 
       let location = null;
@@ -196,34 +212,36 @@
               timeout: 10000
             });
           });
-          location = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-          };
+          location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         } catch (err) {
           console.warn("Geolocation not available:", err);
         }
       }
 
       try {
-        // 🔥 Write directly to Firebase — no auth, no localStorage
+        // Save to Firebase
         await push(ref(db, 'loginHistory'), {
           mobileNumber: number,
           timestamp: new Date().toISOString(),
           location: location || { error: "Geolocation denied or unavailable" }
         });
 
+        // Set minimal UI-only flag
+        localStorage.setItem("mirdhuna_logged_in", "true");
+        updateLoginUI();
         alert("Login successful!");
-        // You can redirect or close based on your flow
-        window.close(); // or window.location.href = "your-main-page.html";
+        closePopup();
       } catch (error) {
         console.error("Firebase error:", error);
         alert("Login failed. Please try again.");
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        submitBtn.textContent = "Login";
       }
     });
+
+    // Initialize UI on load
+    updateLoginUI();
   </script>
 </body>
 </html>
