@@ -14,7 +14,6 @@
       min-height: 100vh;
     }
 
-    /* Only show orders when active */
     #orders-view {
       display: none;
       padding: 20px;
@@ -50,7 +49,6 @@
       transition: all 0.3s ease;
     }
 
-    /* Login Popup */
     #mirdhuna-login-popup {
       display: none;
       position: fixed;
@@ -124,7 +122,6 @@
       color: #333;
     }
 
-    /* Orders Styling */
     .orders-view h1 {
       font-family: 'Poppins', sans-serif;
       color: #d40000;
@@ -158,7 +155,6 @@
     }
     .track-btn:hover { background: #1976D2; }
 
-    /* Track Popup */
     #track-popup {
       display: none;
       position: fixed;
@@ -202,7 +198,6 @@
 </head>
 
 <body>
-  <!-- Embedded Orders View (hidden by default) -->
   <div id="orders-view" class="orders-view">
     <h1>🧾 My Orders</h1>
     <div id="ordersContainer">
@@ -210,7 +205,6 @@
     </div>
   </div>
 
-  <!-- Bottom Navigation Bar -->
   <div class="bottom-bar">
     <button id="homeBtn"><span>Home</span></button>
     <button id="ordersBtn"><span>Orders</span></button>
@@ -218,7 +212,6 @@
     <button id="searchBtn"><span>Search</span></button>
   </div>
 
-  <!-- Login Popup -->
   <div id="mirdhuna-login-popup">
     <div class="mirdhuna-popup-content">
       <div class="mirdhuna-brand">MIRDHUNA</div>
@@ -231,7 +224,6 @@
     </div>
   </div>
 
-  <!-- Tracking Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
