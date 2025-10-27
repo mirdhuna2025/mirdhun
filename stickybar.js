@@ -4,7 +4,6 @@ const homeBtn = document.getElementById('homeBtn');
 const ordersBtn = document.getElementById('ordersBtn');
 const searchBtn = document.getElementById('searchBtn');
 
-// ✅ Only container inside popup
 const ordersContainer = document.getElementById('ordersContainer');
 
 const popup = document.getElementById('mirdhuna-login-popup');
@@ -12,7 +11,6 @@ const closeBtn = document.getElementById('mirdhuna-close-popup');
 const submitBtn = document.getElementById('mirdhuna-submit-login');
 const mobInput = document.getElementById('mirdhuna-mob-input');
 
-// ✅ Popup elements (not inline view)
 const ordersPopup = document.getElementById('orders-popup');
 const closeOrdersBtn = document.getElementById('close-orders');
 
@@ -103,7 +101,7 @@ async function handleLogin() {
 async function loadOrders() {
   const userPhone = localStorage.getItem('mobileNumber');
   if (!userPhone) {
-    alert('Please login first to view orders.');
+    // ❌ Removed alert — but this should not be reached due to Orders click handler
     ordersPopup.style.display = 'none';
     return;
   }
@@ -173,7 +171,8 @@ homeBtn.addEventListener('click', () => {
 ordersBtn.addEventListener('click', () => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   if (!isLoggedIn) {
-    alert('Please login first to view your orders.');
+    // ✅ CHANGE 1: Show login popup instead of alert
+    popup.style.display = 'flex';
     return;
   }
   ordersPopup.style.display = 'flex';
@@ -213,6 +212,8 @@ document.addEventListener('click', (e) => {
     const lat = e.target.dataset.lat;
     const lng = e.target.dataset.lng;
     document.getElementById('track-map').src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+    // ✅ CHANGE 2: Ensure track popup is on top
+    trackPopup.style.zIndex = '10001'; // higher than orders-popup (10000)
     trackPopup.style.display = 'flex';
   }
 });
