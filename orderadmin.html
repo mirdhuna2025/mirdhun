@@ -1,69 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mirdhuna Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #d40000;
+      --success: #4CAF50;
+      --info: #2196F3;
+      --warning: #ff9800;
+      --danger: #f44336;
+      --light: #f5f5f5;
+      --card: #ffffff;
+      --text: #333333;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: "Poppins", sans-serif;
-      background: #f5f5f5;
+      background: var(--light);
       margin: 0;
       padding: 20px;
-      color: #333;
+      color: var(--text);
+      transition: filter 0.3s ease;
     }
-    h1 {
-      color: #d40000;
-      text-align: center;
+
+    /* Password Lock Screen */
+    #password-lock {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      backdrop-filter: blur(8px);
+    }
+
+    #password-lock h2 {
+      color: white;
       margin-bottom: 20px;
-    }
-    #searchPhone {
-      display: block;
-      margin: 0 auto 20px auto;
-      width: 90%;
-      max-width: 400px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      outline: none;
-    }
-    #ordersContainer {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    .order-card {
-      background: #fff;
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-    }
-    .order-card p { margin: 6px 0; }
-    .order-card strong { color: #000; }
-    select.status-select {
-      padding: 4px 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      outline: none;
-    }
-    button.update-btn, button.track-btn {
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 6px;
       font-weight: 600;
     }
-    .update-btn {
-      background: #4CAF50;
-      color: white;
+
+    #password-input {
+      padding: 12px 16px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+      width: 280px;
+      text-align: center;
     }
-    .update-btn:hover { background: #43a047; }
-    .track-btn {
-      background: #2196F3;
+
+    #unlock-btn {
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: var(--success);
       color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
     }
-    .track-btn:hover { background: #1976D2; }
+
+    .error-msg {
+      color: #ff6b6b;
+      margin-top: 10px;
+      font-size: 14px;
+      height: 20px;
+    }
+
+    .shake {
+      animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    /* Main Dashboard (blurred when locked) */
+    body.locked {
+      filter: blur(6px);
+    }
+
+    /* Rest of styles */
+    h1 {
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .controls input, .controls select, .controls button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    #ordersContainer {
+      max-width: 950px;
+      margin: 0 auto;
+    }
+
+    .order-card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #eee;
+    }
+
+    .order-id {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .items-list {
+      margin: 12px 0;
+    }
+
+    .items-list li {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 14px;
+    }
+
+    .total-row {
+      font-weight: 600;
+      margin-top: 10px;
+      color: var(--primary);
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn-print { background: var(--info); color: white; }
+    .btn-update { background: var(--success); color: white; }
+    .btn-edit { background: var(--warning); color: white; }
+    .btn-delete { background: var(--danger); color: white; }
+    .btn-track { background: var(--info); color: white; }
+    .btn-export { background: #9c27b0; color: white; }
+
+    select.status-select {
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
 
     /* Popup */
     #track-popup {
@@ -75,38 +199,64 @@
       align-items: center;
       z-index: 9999;
     }
+
     .popup-inner {
       background: white;
       padding: 20px;
       border-radius: 12px;
       width: 90%;
-      max-width: 400px;
+      max-width: 500px;
       position: relative;
     }
+
     #track-map {
       width: 100%;
-      height: 300px;
+      height: 350px;
       border: none;
       border-radius: 8px;
+      margin-top: 10px;
     }
+
     #close-track {
       position: absolute;
       top: 8px;
       right: 12px;
       cursor: pointer;
-      font-size: 20px;
-      color: #d40000;
+      font-size: 22px;
+      color: var(--danger);
       font-weight: bold;
+    }
+
+    /* Print Styles */
+    @media print {
+      body * { visibility: hidden; }
+      .print-receipt, .print-receipt * { visibility: visible; }
+      .print-receipt {
+        position: absolute;
+        left: 0; top: 0;
+        width: 100%; padding: 15px;
+        font-family: monospace;
+        font-size: 14px;
+        background: white; color: black;
+      }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
-<body>
+<body class="locked">
 
-  <h1>🧾 Mirdhuna Admin Dashboard</h1>
-  <input type="text" id="searchPhone" placeholder="Search by phone number...">
-  <div id="ordersContainer"></div>
+  <!-- 🔒 Password Lock Screen -->
+  <div id="password-lock">
+    <h2>🔒 Admin Access Required</h2>
+    <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
+    <button id="unlock-btn">Unlock</button>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
 
-  <!-- Delivery Tracking Popup -->
+  <!-- 🖨️ Hidden Print Area -->
+  <div id="printReceipt" class="print-receipt" style="display:none;"></div>
+
+  <!-- 📍 Tracking Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
@@ -115,11 +265,28 @@
     </div>
   </div>
 
+  <!-- 📊 Dashboard Content -->
+  <h1>🧾 Mirdhuna Admin Dashboard</h1>
+
+  <div class="controls">
+    <input type="text" id="searchPhone" placeholder="Search by phone..." />
+    <select id="filterStatus">
+      <option value="">All Statuses</option>
+      <option value="pending">Pending</option>
+      <option value="on the way">On the Way</option>
+      <option value="delivered">Delivered</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+    <input type="date" id="filterDate" />
+    <button class="btn btn-export" id="exportBtn">Export CSV</button>
+  </div>
+
+  <div id="ordersContainer"></div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    // 🔥 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
       authDomain: "mirdhuna-25542.firebaseapp.com",
@@ -130,77 +297,165 @@
       appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
     };
 
+    const CORRECT_PASSWORD = "Sanu.0000";
+    const passwordLock = document.getElementById("password-lock");
+    const passwordInput = document.getElementById("password-input");
+    const unlockBtn = document.getElementById("unlock-btn");
+    const errorMsg = document.getElementById("error-msg");
+
+    // 🔐 Unlock Logic
+    function unlockDashboard() {
+      const entered = passwordInput.value.trim();
+      if (entered === CORRECT_PASSWORD) {
+        document.body.classList.remove("locked");
+        passwordLock.style.display = "none";
+        sessionStorage.setItem("unlocked", "true");
+      } else {
+        errorMsg.textContent = "❌ Incorrect password";
+        passwordInput.classList.add("shake");
+        setTimeout(() => passwordInput.classList.remove("shake"), 500);
+      }
+    }
+
+    unlockBtn.addEventListener("click", unlockDashboard);
+    passwordInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") unlockDashboard();
+    });
+
+    // Check if already unlocked in this session
+    if (sessionStorage.getItem("unlocked") === "true") {
+      document.body.classList.remove("locked");
+      passwordLock.style.display = "none";
+    }
+
+    // 🔥 Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const ordersContainer = document.getElementById("ordersContainer");
     const searchInput = document.getElementById("searchPhone");
+    const filterStatus = document.getElementById("filterStatus");
+    const filterDate = document.getElementById("filterDate");
+    const exportBtn = document.getElementById("exportBtn");
+    const printReceiptDiv = document.getElementById("printReceipt");
 
     let allOrders = [];
 
-    // 📡 Fetch Orders Live
     onValue(ref(db, "orders"), snapshot => {
-      const orders = snapshot.val() ? Object.entries(snapshot.val()) : [];
-      allOrders = orders.map(([key, order]) => ({ key, ...order }));
-      renderOrders(allOrders);
+      const data = snapshot.val();
+      allOrders = data ? Object.entries(data).map(([key, order]) => ({ key, ...order })) : [];
+      renderOrders();
     });
 
-    // 🎨 Render Orders
-    function renderOrders(orders) {
-      const searchTerm = searchInput.value.trim();
-      ordersContainer.innerHTML = "";
-
-      const filtered = searchTerm
-        ? orders.filter(o => o.phoneNumber.includes(searchTerm))
-        : orders;
-
-      if (filtered.length === 0) {
-        ordersContainer.innerHTML = "<p style='text-align:center;'>No orders found.</p>";
-        return;
-      }
-
-      filtered.forEach(order => {
-        const div = document.createElement("div");
-        div.className = "order-card";
-        div.innerHTML = `
-          <p><strong>Phone:</strong> ${order.phoneNumber}</p>
-          <p><strong>Placed:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-          <p><strong>Total:</strong> ₹${order.total}</p>
-          <p><strong>Items:</strong> ${order.items.map(i => `${i.name} ×${i.qty}`).join(", ")}</p>
-          <p><strong>Status:</strong>
-            <select class="status-select" data-key="${order.key}">
-              <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
-              <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
-              <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
-              <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
-            </select>
-            <button class="update-btn" data-key="${order.key}">Update</button>
-          </p>
-          ${
-            order.status === "on the way"
-              ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
-              : ""
-          }
-        `;
-        ordersContainer.appendChild(div);
-      });
+    function getOrderDate(timestamp) {
+      return timestamp ? new Date(timestamp).toISOString().split('T')[0] : '';
     }
 
-    // 🔍 Search
-    searchInput.addEventListener("input", () => renderOrders(allOrders));
+    function renderOrders() {
+      const phone = searchInput.value.trim().toLowerCase();
+      const status = filterStatus.value;
+      const date = filterDate.value;
 
-    // 🖱️ Click Events
-    document.addEventListener("click", e => {
-      // Update Status
-      if (e.target.classList.contains("update-btn")) {
-        const key = e.target.dataset.key;
-        const newStatus = document.querySelector(`select[data-key="${key}"]`).value;
-        update(ref(db, "orders/" + key), { status: newStatus })
-          .then(() => alert(`Order status updated to "${newStatus}"`))
-          .catch(err => alert("Error updating: " + err));
+      const filtered = allOrders.filter(order => {
+        const matchesPhone = !phone || (order.phoneNumber && order.phoneNumber.toLowerCase().includes(phone));
+        const matchesStatus = !status || order.status === status;
+        const matchesDate = !date || getOrderDate(order.timestamp) === date;
+        return matchesPhone && matchesStatus && matchesDate;
+      });
+
+      ordersContainer.innerHTML = filtered.length === 0 
+        ? "<p style='text-align:center;'>No orders found.</p>"
+        : filtered.map(order => {
+            const itemsHtml = (order.items || []).map(i => 
+              `<li><span>${i.name} ×${i.qty}</span> <span>₹${((i.price || 0) * i.qty).toFixed(2)}</span></li>`
+            ).join("") || "<li>No items</li>";
+
+            return `
+              <div class="order-card">
+                <div class="order-header">
+                  <span class="order-id">Order #${(order.key || '').substring(0,8)}</span>
+                  <span>📱 ${order.phoneNumber || 'N/A'}</span>
+                </div>
+                <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'N/A'}</p>
+                <ul class="items-list">${itemsHtml}</ul>
+                <div class="total-row">Total: ₹${(order.total || 0).toFixed(2)}</div>
+                <div class="actions">
+                  <select class="status-select" data-key="${order.key}">
+                    <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
+                    <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
+                    <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
+                    <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
+                  </select>
+                  <button class="btn btn-update" data-key="${order.key}">Update</button>
+                  <button class="btn btn-print no-print" data-order='${JSON.stringify(order)}'>Print</button>
+                  <button class="btn btn-edit no-print" data-key="${order.key}">Modify</button>
+                  <button class="btn btn-delete no-print" data-key="${order.key}">Delete</button>
+                  ${order.status === "on the way" 
+                    ? `<button class="btn btn-track no-print" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>` 
+                    : ""}
+                </div>
+              </div>
+            `;
+          }).join("");
+
+      // Attach event listeners (delegated below)
+    }
+
+    // 🎛️ Controls
+    [searchInput, filterStatus, filterDate].forEach(el => 
+      el.addEventListener("input", renderOrders)
+    );
+
+    // 🖱️ Delegated Click Handler
+    document.addEventListener("click", async (e) => {
+      const key = e.target.dataset.key;
+      const orderEl = e.target.closest('.order-card');
+
+      if (e.target.classList.contains("btn-update")) {
+        const newStatus = orderEl.querySelector(`select[data-key="${key}"]`).value;
+        try {
+          await update(ref(db, "orders/" + key), { status: newStatus });
+          alert(`✅ Status updated to "${newStatus}"`);
+        } catch (err) {
+          alert("❌ Update failed: " + err.message);
+        }
       }
 
-      // Track Order
-      if (e.target.classList.contains("track-btn")) {
+      if (e.target.classList.contains("btn-print")) {
+        const order = JSON.parse(e.target.dataset.order);
+        const receipt = `
+          <h2 style="text-align:center;">Mirdhuna</h2>
+          <p style="text-align:center;">Order Receipt</p>
+          <p><strong>Order ID:</strong> ${order.key?.substring(0,8) || 'N/A'}</p>
+          <p><strong>Phone:</strong> ${order.phoneNumber || 'N/A'}</p>
+          <p><strong>Date:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</p>
+          <hr>
+          ${(order.items || []).map(i => 
+            `${i.name} ×${i.qty}        ₹${((i.price || 0) * i.qty).toFixed(2)}`
+          ).join('<br>')}
+          <hr>
+          <p style="text-align:right;"><strong>Total: ₹${(order.total || 0).toFixed(2)}</strong></p>
+          <p style="text-align:center;margin-top:20px;">Thank You!</p>
+        `;
+        printReceiptDiv.innerHTML = receipt;
+        window.print();
+      }
+
+      if (e.target.classList.contains("btn-delete")) {
+        if (confirm("⚠️ Permanently delete this order?")) {
+          try {
+            await remove(ref(db, "orders/" + key));
+            alert("🗑️ Order deleted.");
+          } catch (err) {
+            alert("❌ Delete failed: " + err.message);
+          }
+        }
+      }
+
+      if (e.target.classList.contains("btn-edit")) {
+        alert("🛠️ Modify feature: You can extend this with a form modal.");
+      }
+
+      if (e.target.classList.contains("btn-track")) {
         const lat = e.target.dataset.lat;
         const lng = e.target.dataset.lng;
         document.getElementById("track-map").src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
@@ -208,7 +463,24 @@
       }
     });
 
-    // ❌ Close Popup
+    // 📤 Export to CSV
+    exportBtn.addEventListener("click", () => {
+      if (allOrders.length === 0) return alert("No orders to export.");
+      let csv = "Order ID,Phone,Date,Status,Items,Total\n";
+      allOrders.forEach(o => {
+        const items = (o.items || []).map(i => `${i.name}(${i.qty})`).join("; ");
+        csv += `"${o.key}","${o.phoneNumber || ''}","${o.timestamp ? new Date(o.timestamp).toLocaleString() : ''}","${o.status || ''}","${items}","${o.total || 0}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mirdhuna_orders_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ❌ Close Track Popup
     document.getElementById("close-track").addEventListener("click", () => {
       document.getElementById("track-popup").style.display = "none";
     });
