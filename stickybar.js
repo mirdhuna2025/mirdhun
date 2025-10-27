@@ -16,7 +16,6 @@ const mobInput = document.getElementById('mirdhuna-mob-input');
 
 const trackPopup = document.getElementById('track-popup');
 const closeTrackBtn = document.getElementById('close-track');
-const trackMap = document.getElementById('track-map');
 
 let db = null;
 
@@ -41,25 +40,21 @@ async function initFirebase() {
   return db;
 }
 
-// Update auth UI
 function updateAuthUI() {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   authText.textContent = isLoggedIn ? 'Logout' : 'Login';
 }
 
-// Show view
 function showView(view) {
   homeView.style.display = view === 'home' ? 'block' : 'none';
   ordersView.style.display = view === 'orders' ? 'block' : 'none';
 }
 
-// Close login popup
 function closeLoginPopup() {
   popup.style.display = 'none';
   mobInput.value = '';
 }
 
-// Handle login
 async function handleLogin() {
   const number = mobInput.value.trim();
   if (!number || !/^[6-9]\d{9}$/.test(number)) {
@@ -96,7 +91,7 @@ async function handleLogin() {
     });
 
     localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('mobileNumber', number); // ✅ store for order filtering
+    localStorage.setItem('mobileNumber', number);
     updateAuthUI();
     alert('Login successful!');
     closeLoginPopup();
@@ -109,7 +104,6 @@ async function handleLogin() {
   }
 }
 
-// Load orders from Firebase
 async function loadOrders() {
   const userPhone = localStorage.getItem('mobileNumber');
   if (!userPhone) {
@@ -144,6 +138,11 @@ async function loadOrders() {
       ordersContainer.innerHTML = '';
       myOrders.forEach(order => {
         const status = order.status || 'pending';
+        // ✅ Safe string formatting — no nested backticks
+        const itemsList = order.items
+          ? order.items.map(i => i.name + ' ×' + i.qty).join(', ')
+          : 'None';
+
         const card = document.createElement('div');
         card.className = 'order-card';
         card.innerHTML = `
@@ -151,7 +150,7 @@ async function loadOrders() {
           <p><strong>Phone:</strong> ${order.phoneNumber}</p>
           <p><strong>Address:</strong> ${order.address || '—'}</p>
           <p><strong>Payment:</strong> ${order.paymentMode || '—'}</p>
-          <p><strong>Items:</strong> ${order.items?.map(i => \`\${i.name} ×\${i.qty}\`).join(', ') || 'None'}</p>
+          <p><strong>Items:</strong> ${itemsList}</p>
           <p><strong>Status:</strong> ${status}</p>
           ${
             status === 'on the way'
@@ -171,7 +170,7 @@ async function loadOrders() {
   }
 }
 
-// Event Listeners
+// ===== EVENT LISTENERS =====
 homeBtn.addEventListener('click', () => {
   showView('home');
   homeBtn.classList.add('active');
@@ -212,29 +211,27 @@ authButton.addEventListener('click', () => {
 closeBtn.addEventListener('click', closeLoginPopup);
 submitBtn.addEventListener('click', handleLogin);
 
-// Close popups on outside click
 popup.addEventListener('click', (e) => {
   if (e.target === popup) closeLoginPopup();
-});
-
-trackPopup.addEventListener('click', (e) => {
-  if (e.target === trackPopup) trackPopup.style.display = 'none';
 });
 
 closeTrackBtn.addEventListener('click', () => {
   trackPopup.style.display = 'none';
 });
 
-// Track button delegation
+trackPopup.addEventListener('click', (e) => {
+  if (e.target === trackPopup) trackPopup.style.display = 'none';
+});
+
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('track-btn')) {
     const lat = e.target.dataset.lat;
     const lng = e.target.dataset.lng;
-    trackMap.src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+    document.getElementById('track-map').src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
     trackPopup.style.display = 'flex';
   }
 });
 
-// Init
+// Initialize
 updateAuthUI();
 showView('home');
