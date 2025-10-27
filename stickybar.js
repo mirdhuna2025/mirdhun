@@ -4,13 +4,15 @@ const homeBtn = document.getElementById('homeBtn');
 const ordersBtn = document.getElementById('ordersBtn');
 const searchBtn = document.getElementById('searchBtn');
 
-const ordersView = document.getElementById('orders-view');
 const ordersContainer = document.getElementById('ordersContainer');
 
 const popup = document.getElementById('mirdhuna-login-popup');
 const closeBtn = document.getElementById('mirdhuna-close-popup');
 const submitBtn = document.getElementById('mirdhuna-submit-login');
 const mobInput = document.getElementById('mirdhuna-mob-input');
+
+const ordersPopup = document.getElementById('orders-popup');
+const closeOrdersBtn = document.getElementById('close-orders');
 
 const trackPopup = document.getElementById('track-popup');
 const closeTrackBtn = document.getElementById('close-track');
@@ -40,10 +42,6 @@ async function initFirebase() {
 function updateAuthUI() {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   authText.textContent = isLoggedIn ? 'Logout' : 'Login';
-}
-
-function toggleOrdersView(show) {
-  ordersView.style.display = show ? 'block' : 'none';
 }
 
 function closeLoginPopup() {
@@ -104,11 +102,11 @@ async function loadOrders() {
   const userPhone = localStorage.getItem('mobileNumber');
   if (!userPhone) {
     alert('Please login first to view orders.');
-    toggleOrdersView(false);
+    ordersPopup.style.display = 'none';
     return;
   }
 
-  ordersContainer.innerHTML = '<p id="loading">Loading your orders...</p>';
+  ordersContainer.innerHTML = '<p id="loading" style="text-align:center; padding:20px; font-family:\'Poppins\',sans-serif;">Loading your orders...</p>';
   try {
     const database = await initFirebase();
     const { ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
@@ -165,6 +163,7 @@ async function loadOrders() {
   }
 }
 
+// ===== EVENT LISTENERS =====
 homeBtn.addEventListener('click', () => {
   window.location.href = 'index.html';
 });
@@ -175,7 +174,7 @@ ordersBtn.addEventListener('click', () => {
     alert('Please login first to view your orders.');
     return;
   }
-  toggleOrdersView(true);
+  ordersPopup.style.display = 'flex';
   loadOrders();
 });
 
@@ -190,17 +189,26 @@ authButton.addEventListener('click', () => {
     localStorage.removeItem('mobileNumber');
     updateAuthUI();
     alert('Logged out successfully.');
-    toggleOrdersView(false);
+    ordersPopup.style.display = 'none'; // close orders if open
   } else {
     popup.style.display = 'flex';
   }
 });
 
+// Popup controls
 closeBtn.addEventListener('click', closeLoginPopup);
 submitBtn.addEventListener('click', handleLogin);
 
 popup.addEventListener('click', (e) => {
   if (e.target === popup) closeLoginPopup();
+});
+
+closeOrdersBtn.addEventListener('click', () => {
+  ordersPopup.style.display = 'none';
+});
+
+ordersPopup.addEventListener('click', (e) => {
+  if (e.target === ordersPopup) ordersPopup.style.display = 'none';
 });
 
 closeTrackBtn.addEventListener('click', () => {
@@ -220,4 +228,5 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Initialize
 updateAuthUI();
