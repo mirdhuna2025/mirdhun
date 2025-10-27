@@ -405,6 +405,9 @@ function placeOrder() {
     total: Number(computedTotal.toFixed(2)),
     timestamp: new Date().toISOString(),
     status: 'pending'
+     location: {
+    latitude: latitude,  
+    longitude: longitude, }
   };
 
   push(ref(db, 'orders'), order)
