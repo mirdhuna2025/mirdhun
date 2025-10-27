@@ -169,6 +169,7 @@
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 13px;
+      margin-right: 6px;
     }
 
     /* Modals */
@@ -237,20 +238,6 @@
       cursor: pointer;
       font-size: 24px;
       color: var(--danger);
-    }
-
-    @media print {
-      body * { visibility: hidden; }
-      .print-receipt, .print-receipt * { visibility: visible; }
-      .print-receipt {
-        position: absolute;
-        left: 0; top: 0;
-        width: 100%; padding: 15px;
-        font-family: monospace;
-        font-size: 14px;
-        background: white; color: black;
-      }
-      .no-print { display: none !important; }
     }
   </style>
 </head>
@@ -339,7 +326,6 @@
     };
 
     const CORRECT_PASSWORD = "Sanu.0000";
-    const PARTNER_NUMBER = "916454678866"; // Your number with country code
 
     // 🔐 Unlock
     const passwordInput = document.getElementById("password-input");
@@ -374,7 +360,6 @@
     const filterStatus = document.getElementById("filterStatus");
     const filterDate = document.getElementById("filterDate");
     const exportBtn = document.getElementById("exportBtn");
-    const printReceiptDiv = document.getElementById("printReceipt");
 
     let allOrders = [];
     let currentEditKey = null;
@@ -438,12 +423,21 @@
                 <ul class="items-list">${itemsHtml}</ul>
                 <div class="total-row">Total: ₹${(order.total || 0).toFixed(2)}</div>
                 ${imageHtml}
+                <p><strong>Status:</strong>
+                  <select class="status-select" data-key="${order.key}">
+                    <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
+                    <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
+                    <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
+                    <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
+                  </select>
+                  <button class="btn btn-update" data-key="${order.key}">Update</button>
+                </p>
                 <div class="actions">
-                  <button class="btn btn-print no-print" data-order='${JSON.stringify(order)}'>Print</button>
-                  <button class="btn btn-edit no-print" data-key="${order.key}">Modify</button>
-                  <button class="btn btn-whatsapp no-print" data-msg="${encodeURIComponent(waMsg)}" data-raw="${waMsg}">WhatsApp</button>
+                  <button class="btn btn-print" data-order='${JSON.stringify(order)}'>Print</button>
+                  <button class="btn btn-edit" data-key="${order.key}">Modify</button>
+                  <button class="btn btn-whatsapp" data-msg="${encodeURIComponent(waMsg)}" data-raw="${waMsg}">WhatsApp</button>
                   ${order.status === "on the way" 
-                    ? `<button class="btn btn-track no-print" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>` 
+                    ? `<button class="btn btn-track" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>` 
                     : ""}
                 </div>
               </div>
@@ -459,6 +453,18 @@
     document.addEventListener("click", async (e) => {
       const key = e.target.dataset.key;
       const order = allOrders.find(o => o.key === key);
+
+      // 🔄 Update Status
+      if (e.target.classList.contains("btn-update")) {
+        const select = document.querySelector(`select[data-key="${key}"]`);
+        const newStatus = select.value;
+        try {
+          await update(ref(db, "orders/" + key), { status: newStatus });
+          alert(`✅ Status updated to "${newStatus}"`);
+        } catch (err) {
+          alert("❌ Update failed: " + err.message);
+        }
+      }
 
       // 📞 WhatsApp
       if (e.target.classList.contains("btn-whatsapp")) {
