@@ -10,55 +10,43 @@
       --primary: #d40000;
       --success: #4CAF50;
       --info: #2196F3;
+      --whatsapp: #25D366;
       --warning: #ff9800;
       --danger: #f44336;
       --light: #f5f5f5;
       --card: #ffffff;
-      --text: #333333;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: "Poppins", sans-serif;
       background: var(--light);
-      margin: 0;
-      padding: 20px;
-      color: var(--text);
-      transition: filter 0.3s ease;
+      color: #333;
     }
 
-    /* Password Lock Screen */
-    #password-lock {
+    /* 🔒 Password Screen */
+    #password-screen {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.9);
+      background: #111;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 99999;
-      backdrop-filter: blur(8px);
-    }
-
-    #password-lock h2 {
+      z-index: 999999;
       color: white;
-      margin-bottom: 20px;
-      font-weight: 600;
     }
-
+    #password-screen h2 { margin-bottom: 20px; font-weight: 600; }
     #password-input {
       padding: 12px 16px;
       font-size: 18px;
+      width: 280px;
+      text-align: center;
       border: none;
       border-radius: 8px;
       outline: none;
-      width: 280px;
-      text-align: center;
     }
-
     #unlock-btn {
       margin-top: 16px;
       padding: 10px 24px;
@@ -69,34 +57,30 @@
       font-weight: 600;
       cursor: pointer;
     }
-
     .error-msg {
       color: #ff6b6b;
       margin-top: 10px;
-      font-size: 14px;
       height: 20px;
+      text-align: center;
     }
-
-    .shake {
-      animation: shake 0.5s;
-    }
-
+    .shake { animation: shake 0.5s; }
     @keyframes shake {
-      0%, 100% { transform: translateX(0); }
+      0%,100% { transform: translateX(0); }
       25% { transform: translateX(-8px); }
       75% { transform: translateX(8px); }
     }
 
-    /* Main Dashboard (blurred when locked) */
-    body.locked {
-      filter: blur(6px);
+    /* 📊 Dashboard */
+    #dashboard {
+      padding: 20px;
+      transition: filter 0.3s ease;
     }
+    body.locked #dashboard { filter: blur(6px); }
 
-    /* Rest of styles */
     h1 {
       color: var(--primary);
       text-align: center;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       font-weight: 600;
     }
 
@@ -104,10 +88,9 @@
       display: flex;
       gap: 10px;
       justify-content: center;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       flex-wrap: wrap;
     }
-
     .controls input, .controls select, .controls button {
       padding: 8px 12px;
       border-radius: 6px;
@@ -127,28 +110,28 @@
       margin-bottom: 20px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+    .order-card p { margin: 6px 0; font-size: 14px; }
+    .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .order-id { font-weight: 600; color: var(--primary); }
 
-    .order-header {
+    .order-images {
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px dashed #eee;
-    }
-
-    .order-id {
-      font-weight: 600;
-      color: var(--primary);
-    }
-
-    .items-list {
+      gap: 8px;
       margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    .order-images img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #eee;
     }
 
     .items-list li {
       display: flex;
       justify-content: space-between;
-      margin: 5px 0;
+      margin: 4px 0;
       font-size: 14px;
     }
 
@@ -159,9 +142,9 @@
     }
 
     .actions {
-      display: flex;
-      gap: 6px;
       margin-top: 15px;
+      display: flex;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
@@ -172,24 +155,57 @@
       cursor: pointer;
       font-weight: 600;
       font-size: 13px;
-      transition: opacity 0.2s;
     }
-
     .btn:hover { opacity: 0.9; }
     .btn-print { background: var(--info); color: white; }
     .btn-update { background: var(--success); color: white; }
     .btn-edit { background: var(--warning); color: white; }
     .btn-delete { background: var(--danger); color: white; }
     .btn-track { background: var(--info); color: white; }
+    .btn-whatsapp { background: var(--whatsapp); color: white; }
     .btn-export { background: #9c27b0; color: white; }
 
     select.status-select {
-      padding: 5px 8px;
+      padding: 4px 8px;
       border-radius: 4px;
       font-size: 13px;
     }
 
-    /* Popup */
+    /* Modals */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal h3 { margin-top: 0; color: var(--primary); }
+    .modal label { display: block; margin-top: 12px; font-weight: 500; }
+    .modal input, .modal select, .modal textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .modal-buttons {
+      margin-top: 20px;
+      text-align: right;
+    }
+    .modal-buttons button { margin-left: 8px; }
+
+    /* Tracking Popup */
     #track-popup {
       display: none;
       position: fixed;
@@ -199,7 +215,6 @@
       align-items: center;
       z-index: 9999;
     }
-
     .popup-inner {
       background: white;
       padding: 20px;
@@ -208,7 +223,6 @@
       max-width: 500px;
       position: relative;
     }
-
     #track-map {
       width: 100%;
       height: 350px;
@@ -216,18 +230,15 @@
       border-radius: 8px;
       margin-top: 10px;
     }
-
     #close-track {
       position: absolute;
-      top: 8px;
-      right: 12px;
+      top: 12px;
+      right: 16px;
       cursor: pointer;
-      font-size: 22px;
+      font-size: 24px;
       color: var(--danger);
-      font-weight: bold;
     }
 
-    /* Print Styles */
     @media print {
       body * { visibility: hidden; }
       .print-receipt, .print-receipt * { visibility: visible; }
@@ -245,18 +256,48 @@
 </head>
 <body class="locked">
 
-  <!-- 🔒 Password Lock Screen -->
-  <div id="password-lock">
-    <h2>🔒 Admin Access Required</h2>
+  <!-- 🔒 Password Screen -->
+  <div id="password-screen">
+    <h2>🔒 Mirdhuna Admin Access</h2>
     <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
-    <button id="unlock-btn">Unlock</button>
+    <button id="unlock-btn">Unlock Dashboard</button>
     <div class="error-msg" id="error-msg"></div>
   </div>
 
-  <!-- 🖨️ Hidden Print Area -->
+  <!-- 🖨️ Print Area -->
   <div id="printReceipt" class="print-receipt" style="display:none;"></div>
 
-  <!-- 📍 Tracking Popup -->
+  <!-- 🛠️ Modify Modal -->
+  <div id="modifyModal" class="modal">
+    <div class="modal-content">
+      <h3>✏️ Modify Order</h3>
+      <label>Phone Number</label>
+      <input type="text" id="editPhone" />
+      <label>Status</label>
+      <select id="editStatus">
+        <option value="pending">Pending</option>
+        <option value="on the way">On the Way</option>
+        <option value="delivered">Delivered</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <label>Payment Mode</label>
+      <select id="editPayment">
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <label>Items (JSON)</label>
+      <textarea id="editItems" rows="4" placeholder='[{"name":"Item","qty":1,"price":100}]'></textarea>
+      <label>Total (₹)</label>
+      <input type="number" id="editTotal" step="0.01" />
+      <div class="modal-buttons">
+        <button class="btn btn-delete" id="modalDelete">Delete</button>
+        <button class="btn" onclick="document.getElementById('modifyModal').style.display='none'">Cancel</button>
+        <button class="btn btn-update" id="saveEdit">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📍 Track Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
@@ -265,23 +306,23 @@
     </div>
   </div>
 
-  <!-- 📊 Dashboard Content -->
-  <h1>🧾 Mirdhuna Admin Dashboard</h1>
-
-  <div class="controls">
-    <input type="text" id="searchPhone" placeholder="Search by phone..." />
-    <select id="filterStatus">
-      <option value="">All Statuses</option>
-      <option value="pending">Pending</option>
-      <option value="on the way">On the Way</option>
-      <option value="delivered">Delivered</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
-    <input type="date" id="filterDate" />
-    <button class="btn btn-export" id="exportBtn">Export CSV</button>
+  <!-- 📊 Dashboard -->
+  <div id="dashboard">
+    <h1>🧾 Mirdhuna Admin Dashboard</h1>
+    <div class="controls">
+      <input type="text" id="searchPhone" placeholder="Search by phone..." />
+      <select id="filterStatus">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="on the way">On the Way</option>
+        <option value="delivered">Delivered</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <input type="date" id="filterDate" />
+      <button class="btn btn-export" id="exportBtn">Export CSV</button>
+    </div>
+    <div id="ordersContainer"></div>
   </div>
-
-  <div id="ordersContainer"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -298,17 +339,17 @@
     };
 
     const CORRECT_PASSWORD = "Sanu.0000";
-    const passwordLock = document.getElementById("password-lock");
+    const PARTNER_NUMBER = "916454678866"; // Your number with country code
+
+    // 🔐 Unlock
     const passwordInput = document.getElementById("password-input");
     const unlockBtn = document.getElementById("unlock-btn");
     const errorMsg = document.getElementById("error-msg");
 
-    // 🔐 Unlock Logic
     function unlockDashboard() {
-      const entered = passwordInput.value.trim();
-      if (entered === CORRECT_PASSWORD) {
+      if (passwordInput.value.trim() === CORRECT_PASSWORD) {
         document.body.classList.remove("locked");
-        passwordLock.style.display = "none";
+        document.getElementById("password-screen").style.display = "none";
         sessionStorage.setItem("unlocked", "true");
       } else {
         errorMsg.textContent = "❌ Incorrect password";
@@ -318,14 +359,11 @@
     }
 
     unlockBtn.addEventListener("click", unlockDashboard);
-    passwordInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") unlockDashboard();
-    });
+    passwordInput.addEventListener("keypress", e => { if (e.key === "Enter") unlockDashboard(); });
 
-    // Check if already unlocked in this session
     if (sessionStorage.getItem("unlocked") === "true") {
       document.body.classList.remove("locked");
-      passwordLock.style.display = "none";
+      document.getElementById("password-screen").style.display = "none";
     }
 
     // 🔥 Firebase
@@ -339,6 +377,7 @@
     const printReceiptDiv = document.getElementById("printReceipt");
 
     let allOrders = [];
+    let currentEditKey = null;
 
     onValue(ref(db, "orders"), snapshot => {
       const data = snapshot.val();
@@ -363,32 +402,46 @@
       });
 
       ordersContainer.innerHTML = filtered.length === 0 
-        ? "<p style='text-align:center;'>No orders found.</p>"
+        ? `<p style='text-align:center; padding:30px;'>No orders found.</p>`
         : filtered.map(order => {
             const itemsHtml = (order.items || []).map(i => 
               `<li><span>${i.name} ×${i.qty}</span> <span>₹${((i.price || 0) * i.qty).toFixed(2)}</span></li>`
             ).join("") || "<li>No items</li>";
 
+            const images = Array.isArray(order.images) ? order.images : (order.imageUrl ? [order.imageUrl] : []);
+            const imageHtml = images.length > 0
+              ? `<div class="order-images">${images.map(url => `<img src="${url}" alt="Order" loading="lazy">`).join('')}</div>`
+              : '';
+
+            const paymentMode = order.paymentMode || "COD";
+
+            // WhatsApp message
+            let waMsg = `*Mirdhuna Order*\n\n`;
+            waMsg += `🆔 Order ID: ${order.key.substring(0,8)}\n`;
+            waMsg += `📱 Phone: ${order.phoneNumber || 'N/A'}\n`;
+            waMsg += `💳 Payment: ${paymentMode}\n`;
+            waMsg += `📦 Items: ${(order.items || []).map(i => `${i.name} x${i.qty}`).join(", ") || 'None'}\n`;
+            waMsg += `💰 Total: ₹${(order.total || 0).toFixed(2)}\n`;
+            if (images.length > 0) {
+              waMsg += `\n📸 Images:\n${images.join('\n')}`;
+            }
+            waMsg += `\n\n📍 Ready for delivery!`;
+
             return `
-              <div class="order-card">
+              <div class="order-card" data-key="${order.key}">
                 <div class="order-header">
-                  <span class="order-id">Order #${(order.key || '').substring(0,8)}</span>
+                  <span class="order-id">Order #${order.key.substring(0,8)}</span>
                   <span>📱 ${order.phoneNumber || 'N/A'}</span>
                 </div>
                 <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'N/A'}</p>
+                <p><strong>Payment:</strong> ${paymentMode}</p>
                 <ul class="items-list">${itemsHtml}</ul>
                 <div class="total-row">Total: ₹${(order.total || 0).toFixed(2)}</div>
+                ${imageHtml}
                 <div class="actions">
-                  <select class="status-select" data-key="${order.key}">
-                    <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
-                    <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
-                    <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
-                    <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
-                  </select>
-                  <button class="btn btn-update" data-key="${order.key}">Update</button>
                   <button class="btn btn-print no-print" data-order='${JSON.stringify(order)}'>Print</button>
                   <button class="btn btn-edit no-print" data-key="${order.key}">Modify</button>
-                  <button class="btn btn-delete no-print" data-key="${order.key}">Delete</button>
+                  <button class="btn btn-whatsapp no-print" data-msg="${encodeURIComponent(waMsg)}" data-raw="${waMsg}">WhatsApp</button>
                   ${order.status === "on the way" 
                     ? `<button class="btn btn-track no-print" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>` 
                     : ""}
@@ -396,65 +449,64 @@
               </div>
             `;
           }).join("");
-
-      // Attach event listeners (delegated below)
     }
 
-    // 🎛️ Controls
     [searchInput, filterStatus, filterDate].forEach(el => 
       el.addEventListener("input", renderOrders)
     );
 
-    // 🖱️ Delegated Click Handler
+    // 🖱️ Delegated Clicks
     document.addEventListener("click", async (e) => {
       const key = e.target.dataset.key;
-      const orderEl = e.target.closest('.order-card');
+      const order = allOrders.find(o => o.key === key);
 
-      if (e.target.classList.contains("btn-update")) {
-        const newStatus = orderEl.querySelector(`select[data-key="${key}"]`).value;
-        try {
-          await update(ref(db, "orders/" + key), { status: newStatus });
-          alert(`✅ Status updated to "${newStatus}"`);
-        } catch (err) {
-          alert("❌ Update failed: " + err.message);
-        }
+      // 📞 WhatsApp
+      if (e.target.classList.contains("btn-whatsapp")) {
+        const raw = e.target.dataset.raw;
+        if (navigator.clipboard) navigator.clipboard.writeText(raw);
+        window.open(`https://wa.me/?text=${e.target.dataset.msg}`, '_blank');
       }
 
+      // 🖨️ Print
       if (e.target.classList.contains("btn-print")) {
         const order = JSON.parse(e.target.dataset.order);
-        const receipt = `
-          <h2 style="text-align:center;">Mirdhuna</h2>
-          <p style="text-align:center;">Order Receipt</p>
-          <p><strong>Order ID:</strong> ${order.key?.substring(0,8) || 'N/A'}</p>
-          <p><strong>Phone:</strong> ${order.phoneNumber || 'N/A'}</p>
-          <p><strong>Date:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</p>
-          <hr>
-          ${(order.items || []).map(i => 
-            `${i.name} ×${i.qty}        ₹${((i.price || 0) * i.qty).toFixed(2)}`
-          ).join('<br>')}
-          <hr>
-          <p style="text-align:right;"><strong>Total: ₹${(order.total || 0).toFixed(2)}</strong></p>
-          <p style="text-align:center;margin-top:20px;">Thank You!</p>
-        `;
-        printReceiptDiv.innerHTML = receipt;
-        window.print();
+        const win = window.open('', '', 'width=400,height=600');
+        const items = (order.items || []).map(i => 
+          `${i.name} ×${i.qty}        ₹${((i.price || 0) * i.qty).toFixed(2)}`
+        ).join('<br>');
+        win.document.write(`
+          <html><head><title>Receipt</title>
+          <style>body{font-family:monospace;font-size:14px;padding:15px;}</style></head>
+          <body>
+            <h2 style="text-align:center;">Mirdhuna</h2>
+            <p style="text-align:center;">Order Receipt</p>
+            <p><strong>Order ID:</strong> ${order.key?.substring(0,8) || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${order.phoneNumber || 'N/A'}</p>
+            <p><strong>Date:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</p>
+            <hr>${items}<hr>
+            <p style="text-align:right;"><strong>Total: ₹${(order.total || 0).toFixed(2)}</strong></p>
+            <p style="text-align:center;margin-top:20px;">Thank You!</p>
+          </body></html>
+        `);
+        win.document.close();
+        win.focus();
+        win.print();
+        win.close();
       }
 
-      if (e.target.classList.contains("btn-delete")) {
-        if (confirm("⚠️ Permanently delete this order?")) {
-          try {
-            await remove(ref(db, "orders/" + key));
-            alert("🗑️ Order deleted.");
-          } catch (err) {
-            alert("❌ Delete failed: " + err.message);
-          }
-        }
-      }
-
+      // 🛠️ Modify
       if (e.target.classList.contains("btn-edit")) {
-        alert("🛠️ Modify feature: You can extend this with a form modal.");
+        if (!order) return;
+        currentEditKey = key;
+        document.getElementById("editPhone").value = order.phoneNumber || '';
+        document.getElementById("editStatus").value = order.status || 'pending';
+        document.getElementById("editPayment").value = order.paymentMode || 'COD';
+        document.getElementById("editItems").value = JSON.stringify(order.items || [], null, 2);
+        document.getElementById("editTotal").value = order.total || 0;
+        document.getElementById("modifyModal").style.display = "flex";
       }
 
+      // 🚚 Track
       if (e.target.classList.contains("btn-track")) {
         const lat = e.target.dataset.lat;
         const lng = e.target.dataset.lng;
@@ -463,13 +515,47 @@
       }
     });
 
-    // 📤 Export to CSV
+    // 💾 Save Edit
+    document.getElementById("saveEdit").addEventListener("click", async () => {
+      try {
+        const phone = document.getElementById("editPhone").value;
+        const status = document.getElementById("editStatus").value;
+        const paymentMode = document.getElementById("editPayment").value;
+        const total = parseFloat(document.getElementById("editTotal").value) || 0;
+        let items = [];
+        try {
+          items = JSON.parse(document.getElementById("editItems").value);
+        } catch (ex) {
+          alert("⚠️ Invalid items JSON.");
+          return;
+        }
+        await update(ref(db, "orders/" + currentEditKey), { phoneNumber: phone, status, paymentMode, total, items });
+        alert("✅ Order updated!");
+        document.getElementById("modifyModal").style.display = "none";
+      } catch (err) {
+        alert("❌ Save failed: " + err.message);
+      }
+    });
+
+    // 🗑️ Delete
+    document.getElementById("modalDelete").addEventListener("click", async () => {
+      if (!confirm("⚠️ Delete permanently?")) return;
+      try {
+        await remove(ref(db, "orders/" + currentEditKey));
+        alert("🗑️ Deleted.");
+        document.getElementById("modifyModal").style.display = "none";
+      } catch (err) {
+        alert("❌ Delete failed: " + err.message);
+      }
+    });
+
+    // 📤 Export CSV
     exportBtn.addEventListener("click", () => {
       if (allOrders.length === 0) return alert("No orders to export.");
-      let csv = "Order ID,Phone,Date,Status,Items,Total\n";
+      let csv = "Order ID,Phone,Date,Status,Payment,Items,Total\n";
       allOrders.forEach(o => {
         const items = (o.items || []).map(i => `${i.name}(${i.qty})`).join("; ");
-        csv += `"${o.key}","${o.phoneNumber || ''}","${o.timestamp ? new Date(o.timestamp).toLocaleString() : ''}","${o.status || ''}","${items}","${o.total || 0}"\n`;
+        csv += `"${o.key}","${o.phoneNumber || ''}","${o.timestamp ? new Date(o.timestamp).toLocaleString() : ''}","${o.status || ''}","${o.paymentMode || 'COD'}","${items.replace(/"/g,'""')}","${o.total || 0}"\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -480,10 +566,15 @@
       URL.revokeObjectURL(url);
     });
 
-    // ❌ Close Track Popup
+    // ❌ Close Popups
     document.getElementById("close-track").addEventListener("click", () => {
       document.getElementById("track-popup").style.display = "none";
     });
+    window.onclick = e => {
+      if (e.target === document.getElementById("modifyModal")) {
+        document.getElementById("modifyModal").style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
