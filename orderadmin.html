@@ -16,7 +16,6 @@
       --light: #f5f5f5;
       --card: #ffffff;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -25,6 +24,7 @@
       color: #333;
     }
 
+    /* 🔒 Password Screen */
     #password-screen {
       position: fixed;
       inset: 0;
@@ -69,6 +69,7 @@
       75% { transform: translateX(8px); }
     }
 
+    /* 📊 Dashboard */
     #dashboard {
       padding: 20px;
       transition: filter 0.3s ease;
@@ -170,6 +171,7 @@
       margin-right: 6px;
     }
 
+    /* Modals */
     .modal {
       display: none;
       position: fixed;
@@ -188,7 +190,22 @@
       max-height: 80vh;
       overflow-y: auto;
     }
+    .modal h3 { margin-top: 0; color: var(--primary); }
+    .modal label { display: block; margin-top: 12px; font-weight: 500; }
+    .modal input, .modal select, .modal textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .modal-buttons {
+      margin-top: 20px;
+      text-align: right;
+    }
+    .modal-buttons button { margin-left: 8px; }
 
+    /* Tracking Popup */
     #track-popup {
       display: none;
       position: fixed;
@@ -224,7 +241,7 @@
   </style>
 </head>
 <body class="locked">
-
+  <!-- 🔒 Password Screen -->
   <div id="password-screen">
     <h2>🔒 Mirdhuna Admin Access</h2>
     <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" />
@@ -232,8 +249,10 @@
     <div class="error-msg" id="error-msg"></div>
   </div>
 
-  <div id="printReceipt" style="display:none;"></div>
+  <!-- 🖨️ Print Area -->
+  <div id="printReceipt" class="print-receipt" style="display:none;"></div>
 
+  <!-- 🛠️ Modify Modal -->
   <div id="modifyModal" class="modal">
     <div class="modal-content">
       <h3>✏️ Modify Order</h3>
@@ -255,7 +274,7 @@
       <textarea id="editItems" rows="4" placeholder='[{"name":"Item","qty":1,"price":100}]'></textarea>
       <label>Total (₹)</label>
       <input type="number" id="editTotal" step="0.01" />
-      <div class="modal-buttons" style="text-align:right;margin-top:20px;">
+      <div class="modal-buttons">
         <button class="btn btn-delete" id="modalDelete">Delete</button>
         <button class="btn" onclick="document.getElementById('modifyModal').style.display='none'">Cancel</button>
         <button class="btn btn-update" id="saveEdit">Save Changes</button>
@@ -263,6 +282,7 @@
     </div>
   </div>
 
+  <!-- 📍 Track Popup -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
@@ -271,6 +291,7 @@
     </div>
   </div>
 
+  <!-- 📊 Dashboard -->
   <div id="dashboard">
     <h1>🧾 Mirdhuna Admin Dashboard</h1>
     <div class="controls">
@@ -291,7 +312,6 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import { getStorage, ref as sRef, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -304,6 +324,8 @@
     };
 
     const CORRECT_PASSWORD = "Sanu.0000";
+
+    // 🔐 Unlock
     const passwordInput = document.getElementById("password-input");
     const unlockBtn = document.getElementById("unlock-btn");
     const errorMsg = document.getElementById("error-msg");
@@ -322,14 +344,15 @@
 
     unlockBtn.addEventListener("click", unlockDashboard);
     passwordInput.addEventListener("keypress", e => { if (e.key === "Enter") unlockDashboard(); });
+
     if (sessionStorage.getItem("unlocked") === "true") {
       document.body.classList.remove("locked");
       document.getElementById("password-screen").style.display = "none";
     }
 
+    // 🔥 Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const storage = getStorage(app);
     const ordersContainer = document.getElementById("ordersContainer");
     const searchInput = document.getElementById("searchPhone");
     const filterStatus = document.getElementById("filterStatus");
@@ -349,7 +372,7 @@
       return timestamp ? new Date(timestamp).toISOString().split('T')[0] : '';
     }
 
-    async function renderOrders() {
+    function renderOrders() {
       const phone = searchInput.value.trim().toLowerCase();
       const status = filterStatus.value;
       const date = filterDate.value;
@@ -361,64 +384,212 @@
         return matchesPhone && matchesStatus && matchesDate;
       });
 
-      const cards = await Promise.all(filtered.map(async order => {
-        const itemsHtml = (order.items || []).map(i => 
-          `<li><span>${i.name} ×${i.qty}</span> <span>₹${((i.price || 0) * i.qty).toFixed(2)}</span></li>`
-        ).join("") || "<li>No items</li>";
+      ordersContainer.innerHTML = filtered.length === 0
+        ? `<p style='text-align:center; padding:30px;'>No orders found.</p>`
+        : filtered.map(order => {
+            const itemsHtml = (order.items || []).map(i =>
+              `<li><span>${i.name} ×${i.qty}</span> <span>₹${((i.price || 0) * i.qty).toFixed(2)}</span></li>`
+            ).join("") || "<li>No items</li>";
 
-        const imagePaths = Array.isArray(order.images) ? order.images : (order.imageUrl ? [order.imageUrl] : []);
-        const imageHtmlArr = await Promise.all(imagePaths.map(async path => {
-          try {
-            const url = await getDownloadURL(sRef(storage, path));
-            return `<img src="${url}" alt="Order" loading="lazy">`;
-          } catch (err) {
-            return `<img src="${path}" alt="Order" loading="lazy">`;
-          }
-        }));
-        const imageHtml = imageHtmlArr.length ? `<div class="order-images">${imageHtmlArr.join('')}</div>` : '';
+            const images = Array.isArray(order.images) ? order.images : (order.imageUrl ? [order.imageUrl] : []);
+            const imageHtml = images.length > 0
+              ? `<div class="order-images">${images.map(url => `<img src="${url}" alt="Order" loading="lazy">`).join('')}</div>`
+              : '';
 
-        const paymentMode = order.paymentMode || "COD";
-        const locHtml = order.lat && order.lng
-          ? `<a href="https://www.google.com/maps?q=${order.lat},${order.lng}" target="_blank">📍 View on Map</a>`
-          : (order.address || "Not available");
+            const paymentMode = order.paymentMode || "COD";
 
-        return `
-          <div class="order-card" data-key="${order.key}">
-            <div class="order-header">
-              <span class="order-id">Order #${order.key.substring(0,8)}</span>
-              <span>📱 ${order.phoneNumber || 'N/A'}</span>
-            </div>
-            <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'N/A'}</p>
-            <p><strong>Payment:</strong> ${paymentMode}</p>
-            <p><strong>Location:</strong> ${locHtml}</p>
-            <ul class="items-list">${itemsHtml}</ul>
-            <div class="total-row">Total: ₹${(order.total || 0).toFixed(2)}</div>
-            ${imageHtml}
-            <p><strong>Status:</strong>
-              <select class="status-select" data-key="${order.key}">
-                <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
-                <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
-                <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
-                <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
-              </select>
-              <button class="btn btn-update" data-key="${order.key}">Update</button>
-            </p>
-            <div class="actions">
-              <button class="btn btn-print" data-order='${JSON.stringify(order)}'>Print</button>
-              <button class="btn btn-edit" data-key="${order.key}">Modify</button>
-              <button class="btn btn-whatsapp" data-msg="${encodeURIComponent(`Order ${order.key}`)}">WhatsApp</button>
-              ${order.status === "on the way" 
-                ? `<button class="btn btn-track" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>` 
-                : ""}
-            </div>
-          </div>
-        `;
-      }));
+            // ✅ Enhanced WhatsApp message with location & clearer image links
+            let waMsg = `*Mirdhuna Order*\n\n`;
+            waMsg += `🆔 Order ID: ${order.key.substring(0,8)}\n`;
+            waMsg += `📱 Phone: ${order.phoneNumber || 'N/A'}\n`;
+            waMsg += `💳 Payment: ${paymentMode}\n`;
+            waMsg += `📦 Items: ${(order.items || []).map(i => `${i.name} x${i.qty}`).join(", ") || 'None'}\n`;
+            waMsg += `💰 Total: ₹${(order.total || 0).toFixed(2)}\n`;
 
-      ordersContainer.innerHTML = cards.length ? cards.join("") : `<p style='text-align:center;padding:30px;'>No orders found.</p>`;
+            // 📍 Add location if available
+            if (order.lat && order.lng) {
+              waMsg += `\n📍 Live Location: https://maps.google.com/?q=${order.lat},${order.lng}`;
+            }
+
+            // 📸 Add image links with clear instruction
+            if (images.length > 0) {
+              waMsg += `\n\n📸 *Tap to view order images:*`;
+              images.forEach(url => {
+                waMsg += `\n${url}`;
+              });
+            }
+
+            waMsg += `\n\n✅ Ready for delivery!`;
+
+            return `
+              <div class="order-card" data-key="${order.key}">
+                <div class="order-header">
+                  <span class="order-id">Order #${order.key.substring(0,8)}</span>
+                  <span>📱 ${order.phoneNumber || 'N/A'}</span>
+                </div>
+                <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'N/A'}</p>
+                <p><strong>Payment:</strong> ${paymentMode}</p>
+                <ul class="items-list">${itemsHtml}</ul>
+                <div class="total-row">Total: ₹${(order.total || 0).toFixed(2)}</div>
+                ${imageHtml}
+                <p><strong>Status:</strong>
+                  <select class="status-select" data-key="${order.key}">
+                    <option value="pending" ${order.status === "pending" ? "selected" : ""}>Pending</option>
+                    <option value="on the way" ${order.status === "on the way" ? "selected" : ""}>On the Way</option>
+                    <option value="delivered" ${order.status === "delivered" ? "selected" : ""}>Delivered</option>
+                    <option value="cancelled" ${order.status === "cancelled" ? "selected" : ""}>Cancelled</option>
+                  </select>
+                  <button class="btn btn-update" data-key="${order.key}">Update</button>
+                </p>
+                <div class="actions">
+                  <button class="btn btn-print" data-order='${JSON.stringify(order)}'>Print</button>
+                  <button class="btn btn-edit" data-key="${order.key}">Modify</button>
+                  <button class="btn btn-whatsapp" data-msg="${encodeURIComponent(waMsg)}" data-raw="${waMsg}">WhatsApp</button>
+                  ${order.status === "on the way"
+                    ? `<button class="btn btn-track" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>`
+                    : ""}
+                </div>
+              </div>
+            `;
+          }).join("");
     }
 
-    [searchInput, filterStatus, filterDate].forEach(el => el.addEventListener("input", renderOrders));
+    [searchInput, filterStatus, filterDate].forEach(el =>
+      el.addEventListener("input", renderOrders)
+    );
+
+    // 🖱️ Delegated Clicks
+    document.addEventListener("click", async (e) => {
+      const key = e.target.dataset.key;
+      const order = allOrders.find(o => o.key === key);
+
+      // 🔄 Update Status
+      if (e.target.classList.contains("btn-update")) {
+        const select = document.querySelector(`select[data-key="${key}"]`);
+        const newStatus = select.value;
+        try {
+          await update(ref(db, "orders/" + key), { status: newStatus });
+          alert(`✅ Status updated to "${newStatus}"`);
+        } catch (err) {
+          alert("❌ Update failed: " + err.message);
+        }
+      }
+
+      // 📞 WhatsApp
+      if (e.target.classList.contains("btn-whatsapp")) {
+        const raw = e.target.dataset.raw;
+        if (navigator.clipboard) navigator.clipboard.writeText(raw);
+        window.open(`https://wa.me/?text=${e.target.dataset.msg}`, '_blank');
+      }
+
+      // 🖨️ Print
+      if (e.target.classList.contains("btn-print")) {
+        const order = JSON.parse(e.target.dataset.order);
+        const win = window.open('', '', 'width=400,height=600');
+        const items = (order.items || []).map(i =>
+          `${i.name} ×${i.qty}        ₹${((i.price || 0) * i.qty).toFixed(2)}`
+        ).join('<br>');
+        win.document.write(`
+          <html><head><title>Receipt</title>
+          <style>body{font-family:monospace;font-size:14px;padding:15px;}</style></head>
+          <body>
+            <h2 style="text-align:center;">Mirdhuna</h2>
+            <p style="text-align:center;">Order Receipt</p>
+            <p><strong>Order ID:</strong> ${order.key?.substring(0,8) || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${order.phoneNumber || 'N/A'}</p>
+            <p><strong>Date:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</p>
+            <hr>${items}<hr>
+            <p style="text-align:right;"><strong>Total: ₹${(order.total || 0).toFixed(2)}</strong></p>
+            <p style="text-align:center;margin-top:20px;">Thank You!</p>
+          </body></html>
+        `);
+        win.document.close();
+        win.focus();
+        win.print();
+        win.close();
+      }
+
+      // 🛠️ Modify
+      if (e.target.classList.contains("btn-edit")) {
+        if (!order) return;
+        currentEditKey = key;
+        document.getElementById("editPhone").value = order.phoneNumber || '';
+        document.getElementById("editStatus").value = order.status || 'pending';
+        document.getElementById("editPayment").value = order.paymentMode || 'COD';
+        document.getElementById("editItems").value = JSON.stringify(order.items || [], null, 2);
+        document.getElementById("editTotal").value = order.total || 0;
+        document.getElementById("modifyModal").style.display = "flex";
+      }
+
+      // 🚚 Track
+      if (e.target.classList.contains("btn-track")) {
+        const lat = e.target.dataset.lat;
+        const lng = e.target.dataset.lng;
+        document.getElementById("track-map").src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+        document.getElementById("track-popup").style.display = "flex";
+      }
+    });
+
+    // 💾 Save Edit
+    document.getElementById("saveEdit").addEventListener("click", async () => {
+      try {
+        const phone = document.getElementById("editPhone").value;
+        const status = document.getElementById("editStatus").value;
+        const paymentMode = document.getElementById("editPayment").value;
+        const total = parseFloat(document.getElementById("editTotal").value) || 0;
+        let items = [];
+        try {
+          items = JSON.parse(document.getElementById("editItems").value);
+        } catch (ex) {
+          alert("⚠️ Invalid items JSON.");
+          return;
+        }
+        await update(ref(db, "orders/" + currentEditKey), { phoneNumber: phone, status, paymentMode, total, items });
+        alert("✅ Order updated!");
+        document.getElementById("modifyModal").style.display = "none";
+      } catch (err) {
+        alert("❌ Save failed: " + err.message);
+      }
+    });
+
+    // 🗑️ Delete
+    document.getElementById("modalDelete").addEventListener("click", async () => {
+      if (!confirm("⚠️ Delete permanently?")) return;
+      try {
+        await remove(ref(db, "orders/" + currentEditKey));
+        alert("🗑️ Deleted.");
+        document.getElementById("modifyModal").style.display = "none";
+      } catch (err) {
+        alert("❌ Delete failed: " + err.message);
+      }
+    });
+
+    // 📤 Export CSV
+    exportBtn.addEventListener("click", () => {
+      if (allOrders.length === 0) return alert("No orders to export.");
+      let csv = "Order ID,Phone,Date,Status,Payment,Items,Total,Lat,Lng\n";
+      allOrders.forEach(o => {
+        const items = (o.items || []).map(i => `${i.name}(${i.qty})`).join("; ");
+        csv += `"${o.key}","${o.phoneNumber || ''}","${o.timestamp ? new Date(o.timestamp).toLocaleString() : ''}","${o.status || ''}","${o.paymentMode || 'COD'}","${items.replace(/"/g,'""')}","${o.total || 0}","${o.lat || ''}","${o.lng || ''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mirdhuna_orders_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ❌ Close Popups
+    document.getElementById("close-track").addEventListener("click", () => {
+      document.getElementById("track-popup").style.display = "none";
+    });
+    window.onclick = e => {
+      if (e.target === document.getElementById("modifyModal")) {
+        document.getElementById("modifyModal").style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
