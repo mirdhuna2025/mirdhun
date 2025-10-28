@@ -189,7 +189,7 @@ authButton.addEventListener('click', () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('mobileNumber');
     updateAuthUI();
-    alert('Logged out successfully.');
+  
     ordersPopup.style.display = 'none';
   } else {
     popup.style.display = 'flex';
