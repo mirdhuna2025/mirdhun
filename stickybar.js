@@ -87,7 +87,7 @@ async function handleLogin() {
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('mobileNumber', number);
     updateAuthUI();
-    alert('Login successful!');
+   
     closeLoginPopup();
   } catch (error) {
     console.error('Firebase error:', error);
