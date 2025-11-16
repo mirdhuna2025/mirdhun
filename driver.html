@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Delivery Partner - Live GPS</title>
+
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ&callback=initMap&libraries=geometry&v=beta">
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial;
+    }
+    #map {
+      height: 85vh;
+      width: 100%;
+    }
+    #panel {
+      height: 15vh;
+      background: #000;
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+    }
+    input {
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      padding: 10px 15px;
+      background: #1e90ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:active {
+      transform: scale(.97);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="panel">
+    <input id="orderId" placeholder="Enter Order ID" />
+    <button onclick="startDelivery()">Start Delivery</button>
+    <span id="statusText">Waiting...</span>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { getDatabase, ref, update, onValue } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
+
+    // ================= FIREBASE CONFIG ==================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.firebasestorage.app",
+      messagingSenderId: "757480713352",
+      appId: "1:757480713352:web:fbc013764a2f2107d79990",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let map, driverMarker, customerMarker, routePolyline, orderId;
+    let gpsWatcher = null;
+
+    // ================= INIT MAP ==================
+    window.initMap = function () {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 20.5937, lng: 78.9629 },
+        zoom: 13,
+      });
+    };
+
+    // ================= START DELIVERY ==================
+    window.startDelivery = function () {
+      orderId = document.getElementById("orderId").value.trim();
+      if (!orderId) return alert("Enter Order ID First");
+
+      document.getElementById("statusText").innerText = "Sharing Live Location...";
+
+      // Set status to on the way
+      update(ref(db, `orders/${orderId}`), { status: "ontheway" });
+
+      // Listen to customer location
+      startCustomerLocationWatch();
+
+      // Start GPS watcher to update Firebase
+      gpsWatcher = navigator.geolocation.watchPosition(pos => {
+        const coords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          updatedAt: Date.now()
+        };
+
+        update(ref(db, `orders/${orderId}/driverLocation`), coords);
+
+        updateDriverMarker(coords);
+        drawRoute();
+      }, err => {
+        console.error("GPS error", err);
+      }, { enableHighAccuracy: true });
+    };
+
+    // ================= WATCH CUSTOMER LOCATION ==================
+    function startCustomerLocationWatch() {
+      const customerRef = ref(db, `orders/${orderId}/customerLocation`);
+      onValue(customerRef, snap => {
+        const loc = snap.val();
+        if (!loc) return;
+        updateCustomerMarker(loc);
+        drawRoute();
+      });
+    }
+
+    // ================= UPDATE MARKERS ==================
+    function updateDriverMarker(position) {
+      if (!driverMarker) {
+        driverMarker = new google.maps.marker.AdvancedMarkerView({
+          map,
+          position,
+          title: "Delivery Partner",
+        });
+      } else {
+        driverMarker.position = position;
+      }
+      map.setCenter(position);
+    }
+
+    function updateCustomerMarker(position) {
+      if (!customerMarker) {
+        customerMarker = new google.maps.marker.AdvancedMarkerView({
+          map,
+          position,
+          title: "Customer",
+        });
+      } else {
+        customerMarker.position = position;
+      }
+    }
+
+    // ================= DRAW ROUTE ==================
+    function drawRoute() {
+      if (!driverMarker || !customerMarker) return;
+
+      const path = [
+        driverMarker.position,
+        customerMarker.position
+      ];
+
+      if (routePolyline) routePolyline.setMap(null);
+
+      routePolyline = new google.maps.Polyline({
+        path,
+        map,
+        strokeWeight: 5
+      });
+
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(driverMarker.position);
+      bounds.extend(customerMarker.position);
+      map.fitBounds(bounds);
+    }
+  </script>
+</body>
+</html>
