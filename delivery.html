@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Delivery Partner — Live Share</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@4.2.12/dist/leaflet-routing-machine.css"/>
+  <style>
+    body{margin:0;font-family:system-ui,Arial;background:#f6f8fb}
+    header{padding:12px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.06);display:flex;gap:8px;align-items:center;justify-content:space-between}
+    header h1{font-size:16px;margin:0}
+    .controls{padding:10px;display:flex;gap:8px;align-items:center;background:#fff;margin:10px;border-radius:10px}
+    input,button,select{padding:8px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px}
+    button{background:#1976d2;color:#fff;border:none}
+    #map{height:62vh;margin:12px;border-radius:10px;overflow:hidden}
+    .info{padding:10px;background:#fff;margin:10px;border-radius:10px;font-size:14px}
+    .small{font-size:13px;color:#666}
+    .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#e8f0ff;color:#0b57b7;font-weight:600}
+    @media(min-width:800px){#map{height:70vh}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Delivery Partner</h1>
+    <div class="small">Share live location → Customer sees moving icon</div>
+  </header>
+
+  <div class="controls">
+    <input id="orderId" placeholder="Order ID (e.g. ORDxxx)" />
+    <input id="driverName" placeholder="Your name (Rahul)" />
+    <button id="loadBtn">Load Order</button>
+    <button id="startBtn">Start Sharing</button>
+    <button id="stopBtn" style="background:#d32f2f">Stop</button>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="info">
+    <div>Status: <span id="statusBadge" class="badge">—</span></div>
+    <div class="small">Last update: <span id="lastUpdate">—</span></div>
+    <div class="small">ETA: <span id="eta">—</span></div>
+  </div>
+
+  <!-- Leaflet + Routing -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@4.2.12/dist/leaflet-routing-machine.min.js"></script>
+
+  <!-- Firebase modular (v10) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // UI
+    const orderIdEl = document.getElementById('orderId');
+    const driverNameEl = document.getElementById('driverName');
+    const loadBtn = document.getElementById('loadBtn');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusBadge = document.getElementById('statusBadge');
+    const lastUpdate = document.getElementById('lastUpdate');
+    const etaEl = document.getElementById('eta');
+
+    // Map
+    const map = L.map('map').setView([20.5937,78.9629], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+    let driverMarker = null;
+    let customerMarker = null;
+    let routingControl = null;
+
+    // simple scooter icon SVG DataURI
+    const scooterIcon = L.icon({
+      iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><path fill="%231976d2" d="M6 24a2 2 0 110-4 2 2 0 010 4zm24-4a2 2 0 110 4 2 2 0 010-4z"/><path fill="%231976d2" d="M9 18h18v-2l-3-4h-6l-3 4v2z"/></svg>',
+      iconSize:[36,36],
+      iconAnchor:[18,18]
+    });
+
+    let watchId = null;
+    let orderRefUnsub = null;
+    let currentOrderId = null;
+
+    function setStatus(s){
+      statusBadge.textContent = s || '—';
+    }
+
+    function parseLocation(obj){
+      if(!obj) return null;
+      const lat = Number(obj.lat), lng = Number(obj.lng);
+      if(!isFinite(lat) || !isFinite(lng)) return null;
+      return [lat,lng];
+    }
+
+    function loadOrder(orderId){
+      if(!orderId) return alert('Enter order ID');
+      currentOrderId = orderId;
+      const r = ref(db, 'orders/' + orderId);
+      if(orderRefUnsub) orderRefUnsub(); // noop — we will overwrite by replacing listener
+      onValue(r, snap=>{
+        const data = snap.val() || {};
+        setStatus(data.status || 'pending');
+        const custLoc = parseLocation(data.customerLocation);
+        const drvLoc = parseLocation(data.driverLocation);
+        if(data.driverName) driverNameEl.value = data.driverName;
+
+        if(custLoc){
+          if(!customerMarker){
+            customerMarker = L.marker(custLoc).addTo(map).bindPopup('Customer').openPopup();
+          } else customerMarker.setLatLng(custLoc);
+        }
+
+        if(drvLoc){
+          if(!driverMarker){
+            driverMarker = L.marker(drvLoc, {icon: scooterIcon}).addTo(map).bindPopup('You');
+          } else driverMarker.setLatLng(drvLoc);
+        }
+
+        // update route using routing machine (if both available)
+        if(custLoc && drvLoc){
+          if(routingControl) routingControl.setWaypoints([L.latLng(drvLoc), L.latLng(custLoc)]);
+          else {
+            routingControl = L.Routing.control({
+              waypoints: [L.latLng(drvLoc), L.latLng(custLoc)],
+              show: false,
+              addWaypoints: false,
+              draggableWaypoints: false,
+              routeWhileDragging: false
+            }).addTo(map);
+          }
+          // compute ETA from routing if available (use last route)
+          routingControl.on('routesfound', function(e){
+            const routes = e.routes || [];
+            if(routes[0] && routes[0].summary && routes[0].summary.totalTime){
+              const mins = Math.round(routes[0].summary.totalTime / 60);
+              etaEl.textContent = mins + ' min';
+            }
+          });
+        }
+
+        const updated = data.updatedAt || data.timestamp || new Date().toISOString();
+        lastUpdate.textContent = new Date(updated).toLocaleString();
+      });
+    }
+
+    loadBtn.addEventListener('click', ()=> {
+      const id = orderIdEl.value.trim();
+      if(!id) return alert('Order id needed');
+      loadOrder(id);
+    });
+
+    // send driver location to firebase
+    function sendDriverLocation(orderId, lat, lng){
+      if(!orderId) return;
+      const path = 'orders/' + orderId + '/driverLocation';
+      set(ref(db, path), { lat: lat, lng: lng, updatedAt: new Date().toISOString() })
+        .catch(err => console.error('update driverLocation error', err));
+    }
+
+    // start sharing geolocation
+    startBtn.addEventListener('click', ()=> {
+      const id = orderIdEl.value.trim();
+      const name = (driverNameEl.value || '').trim();
+      if(!id) return alert('Enter order id');
+      if(name) update(ref(db, 'orders/' + id), { driverName: name }).catch(()=>{});
+      // set status to onTheWay
+      update(ref(db, 'orders/' + id), { status: 'onTheWay' }).catch(()=>{});
+      if(navigator.geolocation){
+        if(watchId) navigator.geolocation.clearWatch(watchId);
+        watchId = navigator.geolocation.watchPosition(pos => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          sendDriverLocation(id, lat, lng);
+          // keep local marker updated immediately for driver
+          if(!driverMarker) { driverMarker = L.marker([lat,lng],{icon:scooterIcon}).addTo(map).bindPopup('You').openPopup(); }
+          else driverMarker.setLatLng([lat,lng]);
+          map.panTo([lat,lng]);
+        }, err => {
+          console.error('geo error', err);
+          alert('Unable to get device location: ' + err.message);
+        }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+        alert('Sharing started — location updates will be sent every GPS update.');
+      } else alert('Geolocation not supported');
+    });
+
+    stopBtn.addEventListener('click', ()=> {
+      const id = orderIdEl.value.trim();
+      if(!id) return alert('Enter order id to stop');
+      if(watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+      // update status to delivered (or stopped)
+      update(ref(db, 'orders/' + id), { status: 'delivered' }).then(()=>{
+        alert('Stopped and status set to delivered');
+      }).catch(err=> console.error(err));
+    });
+
+    // quick auto-load if ?orderId=
+    (function(){
+      const qp = new URLSearchParams(location.search).get('orderId');
+      if(qp) { orderIdEl.value = qp; loadOrder(qp); }
+    })();
+
+  </script>
+</body>
+</html>
