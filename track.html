@@ -1,10 +1,9 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Track Your Order</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@4.2.12/dist/leaflet-routing-machine.css"/>
   <style>
@@ -14,6 +13,7 @@
     #map{height:78vh}
     .meta{padding:10px;background:#fff;margin:10px;border-radius:10px}
     .small{font-size:13px;color:#666}
+    input[readonly]{background:#f0f0f0;padding:6px;border-radius:6px;border:1px solid #e6e9ef}
   </style>
 </head>
 <body>
@@ -35,120 +35,37 @@
     <div class="small">Share this page: <input id="shareUrl" style="width:70%" readonly /></div>
   </div>
 
+  <!-- Leaflet & Routing -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@4.2.12/dist/leaflet-routing-machine.min.js"></script>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <!-- Your main app.js already contains Firebase init and functions (initTracking) -->
+  <script src="/path/to/app.js" type="module"></script>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
-      authDomain: "mirdhuna-25542.firebaseapp.com",
-      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
-      projectId: "mirdhuna-25542",
-      storageBucket: "mirdhuna-25542.appspot.com",
-      messagingSenderId: "575924409876",
-      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+  <script>
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const orderId = params.get('orderId') || params.get('order');
+      if (!orderId) {
+        alert('Order ID missing from URL. Open link like track.html?orderId=ORD123');
+        return;
+      }
+      document.getElementById('orderLabel').textContent = orderId;
+      const url = location.origin + location.pathname + '?orderId=' + encodeURIComponent(orderId);
+      document.getElementById('shareUrl').value = url;
 
-    // UI
-    const orderLabel = document.getElementById('orderLabel');
-    const driverNameEl = document.getElementById('driverName');
-    const statusEl = document.getElementById('status');
-    const etaEl = document.getElementById('eta');
-    const lastEl = document.getElementById('last');
-    const shareUrl = document.getElementById('shareUrl');
+      // ensure map container exists for app.js initTracking
+      const mapEl = document.getElementById('map');
+      mapEl.style.height = '78vh';
 
-    // map
-    const map = L.map('map').setView([20.5937,78.9629], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-
-    let driverMarker = null;
-    let customerMarker = null;
-    let routingControl = null;
-
-    // nice vehicle icon
-    const vehicleIcon = L.icon({
-      iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><path fill="%23ff6f00" d="M6 24a2 2 0 110-4 2 2 0 010 4zm24-4a2 2 0 110 4 2 2 0 010-4z"/><path fill="%23ff6f00" d="M9 18h18v-2l-3-4h-6l-3 4v2z"/></svg>',
-      iconSize:[36,36],iconAnchor:[18,18]
-    });
-
-    // helper
-    function parseLocation(obj){
-      if(!obj) return null;
-      const lat = Number(obj.lat), lng = Number(obj.lng);
-      if(!isFinite(lat) || !isFinite(lng)) return null;
-      return [lat,lng];
-    }
-
-    // get orderId from query param
-    const orderId = new URLSearchParams(location.search).get('orderId') || new URLSearchParams(location.search).get('order');
-    if(!orderId){
-      alert('Order id missing from URL. Use ?orderId=ORDxxx');
-    } else {
-      orderLabel.textContent = orderId;
-      shareUrl.value = location.origin + location.pathname + '?orderId=' + encodeURIComponent(orderId);
-      // subscribe
-      const r = ref(db, 'orders/' + orderId);
-      onValue(r, snap=>{
-        const data = snap.val() || {};
-        const status = data.status || 'pending';
-        statusEl.textContent = status;
-        driverNameEl.textContent = data.driverName || '—';
-        lastEl.textContent = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : (data.timestamp? new Date(data.timestamp).toLocaleString(): '—');
-
-        const custLoc = parseLocation(data.customerLocation);
-        const drvLoc = parseLocation(data.driverLocation);
-
-        // show markers
-        if(custLoc){
-          if(!customerMarker) customerMarker = L.marker(custLoc).addTo(map).bindPopup('Delivery Address').openPopup();
-          else customerMarker.setLatLng(custLoc);
+      // wait a tick to ensure app.js loaded and provides initTracking
+      const waitForInit = setInterval(() => {
+        if (window.initTracking) {
+          clearInterval(waitForInit);
+          window.initTracking(orderId);
         }
-        if(drvLoc){
-          if(!driverMarker) driverMarker = L.marker(drvLoc, {icon: vehicleIcon}).addTo(map).bindPopup('Driver').openPopup();
-          else {
-            // move smoothly by setLatLng (leaflet does simple update)
-            driverMarker.setLatLng(drvLoc);
-          }
-        }
-
-        // route display
-        if(custLoc && drvLoc){
-          if(routingControl) routingControl.setWaypoints([L.latLng(drvLoc), L.latLng(custLoc)]);
-          else {
-            routingControl = L.Routing.control({
-              waypoints: [L.latLng(drvLoc), L.latLng(custLoc)],
-              show: false,
-              addWaypoints: false,
-              draggableWaypoints: false,
-              routeWhileDragging: false
-            }).addTo(map);
-            routingControl.on('routesfound', function(e){
-              const routes = e.routes || [];
-              if(routes[0] && routes[0].summary && routes[0].summary.totalTime){
-                const mins = Math.round(routes[0].summary.totalTime / 60);
-                etaEl.textContent = mins + ' min';
-              }
-            });
-          }
-          // zoom to fit both
-          const group = L.featureGroup([L.marker(drvLoc), L.marker(custLoc)]);
-          map.fitBounds(group.getBounds().pad(0.25));
-        } else if(drvLoc){
-          map.panTo(drvLoc);
-        } else if(custLoc){
-          map.panTo(custLoc);
-        }
-
-      }, err => {
-        console.error('subscribe error', err);
-      });
-    }
-
+      }, 150);
+    })();
   </script>
 </body>
 </html>
