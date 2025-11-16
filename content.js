@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, update, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -407,8 +407,16 @@ function placeOrder() {
     status: 'pending'
   };
 
+  // --- push and then capture the new order id so we can watch for status changes ---
   push(ref(db, 'orders'), order)
-    .then(() => {
+    .then((res) => {
+      // capture the orderId (res.key) and start watching it for status change
+      const newOrderId = res?.key;
+      if (newOrderId) {
+        localStorage.setItem('lastOrderId', newOrderId);
+        // watch status and redirect when driver sets ontheway
+        watchOrderStatus(newOrderId);
+      }
       showToast('Order placed successfully!');
       cart = [];
       saveCart();
@@ -545,3 +553,178 @@ window.addToCart = addToCart;
 window.placeOrder = placeOrder;
 window.openProductPopup = openProductPopup;
 window.updateCartUI = updateCartUI;
+
+// ====================== LIVE TRACKING ADDITIONS (APPENDED) ======================
+
+// 1) Watch order status for a specific order ID.
+// When status becomes 'ontheway' this redirects the customer to tracking page.
+function watchOrderStatus(orderId) {
+  if (!orderId) return;
+  try {
+    const orderRef = ref(db, `orders/${orderId}`);
+    onValue(orderRef, snapshot => {
+      const data = snapshot.val();
+      if (!data) return;
+      const status = (data.status || '').toString().toLowerCase();
+      if (status === 'ontheway' || status === 'onTheWay' || status === 'on_the_way') {
+        // redirect to tracking page (tracking.html) with orderId param
+        try {
+          const url = new URL(window.location.href);
+          // if user already on site, open track.html page in same origin
+          const trackingPath = '/track.html';
+          window.location.href = trackingPath + '?orderId=' + encodeURIComponent(orderId);
+        } catch (e) {
+          // fallback
+          window.location.href = 'track.html?orderId=' + encodeURIComponent(orderId);
+        }
+      }
+    });
+  } catch (e) {
+    console.error('watchOrderStatus error', e);
+  }
+}
+
+// 2) Customer tracking initializer — to be called from track.html
+// Usage in track.html: window.initTracking(orderId)
+window.initTracking = function(orderId) {
+  if (!orderId) {
+    alert('Order ID missing for tracking');
+    return;
+  }
+
+  // lazy-load Leaflet if not present (track.html will include leaflet)
+  if (typeof L === 'undefined') {
+    console.error('Leaflet not loaded on this page. Include leaflet in track.html.');
+    return;
+  }
+
+  const mapEl = document.getElementById('map');
+  if (!mapEl) {
+    console.error('map element not found in track.html (id="map")');
+    return;
+  }
+
+  // create map
+  const map = L.map('map').setView([20.5937, 78.9629], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  // vehicle icon
+  const vehicleIcon = L.icon({
+    iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><path fill="%23ff6f00" d="M6 24a2 2 0 110-4 2 2 0 010 4zm24-4a2 2 0 110 4 2 2 0 010-4z"/><path fill="%23ff6f00" d="M9 18h18v-2l-3-4h-6l-3 4v2z"/></svg>',
+    iconSize: [44, 44],
+    iconAnchor: [22, 22]
+  });
+
+  let driverMarker = null;
+  let customerMarker = null;
+  let routingControl = null;
+
+  // subscribe to full order object (status, driverLocation, customerLocation, driverName)
+  const orderRef = ref(db, `orders/${orderId}`);
+  onValue(orderRef, snap => {
+    const data = snap.val() || {};
+    // update driver marker
+    const drv = data.driverLocation || data.driver || null;
+    const cust = data.customerLocation || null;
+    const status = data.status || '—';
+    const driverName = data.driverName || data.driver_name || '—';
+
+    // set customer marker if available
+    if (cust && isFinite(Number(cust.lat)) && isFinite(Number(cust.lng))) {
+      const clat = Number(cust.lat), clng = Number(cust.lng);
+      if (!customerMarker) {
+        customerMarker = L.marker([clat, clng]).addTo(map).bindPopup('Delivery address').openPopup();
+      } else {
+        customerMarker.setLatLng([clat, clng]);
+      }
+    }
+
+    if (drv && isFinite(Number(drv.lat)) && isFinite(Number(drv.lng))) {
+      const dlat = Number(drv.lat), dlng = Number(drv.lng);
+      if (!driverMarker) {
+        driverMarker = L.marker([dlat, dlng], { icon: vehicleIcon }).addTo(map).bindPopup(driverName || 'Driver').openPopup();
+      } else {
+        driverMarker.setLatLng([dlat, dlng]);
+      }
+    }
+
+    // attempt to show route if both points present and Leaflet Routing Machine is loaded
+    if (cust && drv && typeof L.Routing !== 'undefined') {
+      const wp1 = L.latLng(Number(drv.lat), Number(drv.lng));
+      const wp2 = L.latLng(Number(cust.lat), Number(cust.lng));
+      if (routingControl) {
+        routingControl.setWaypoints([wp1, wp2]);
+      } else {
+        routingControl = L.Routing.control({
+          waypoints: [wp1, wp2],
+          show: false,
+          addWaypoints: false,
+          draggableWaypoints: false,
+          routeWhileDragging: false
+        }).addTo(map);
+
+        routingControl.on('routesfound', e => {
+          const routes = e.routes || [];
+          if (routes[0] && routes[0].summary && routes[0].summary.totalTime) {
+            const mins = Math.round(routes[0].summary.totalTime / 60);
+            // expose ETA in DOM if track.html uses #eta
+            const etaEl = document.getElementById('eta');
+            if (etaEl) etaEl.textContent = mins + ' min';
+          }
+        });
+      }
+      // fit bounds to both markers
+      try {
+        const group = L.featureGroup([L.marker([Number(drv.lat), Number(drv.lng)]), L.marker([Number(cust.lat), Number(cust.lng)])]);
+        map.fitBounds(group.getBounds().pad(0.2));
+      } catch (e) { /* ignore */ }
+    } else {
+      // if only driver present, pan to driver
+      if (driverMarker) map.panTo(driverMarker.getLatLng());
+      else if (customerMarker) map.panTo(customerMarker.getLatLng());
+    }
+
+    // update some DOM if available
+    const statusEl = document.getElementById('status');
+    if (statusEl) statusEl.textContent = status;
+    const orderLabel = document.getElementById('orderLabel');
+    if (orderLabel) orderLabel.textContent = orderId;
+    const driverNameEl = document.getElementById('driverName');
+    if (driverNameEl) driverNameEl.textContent = driverName;
+    const lastEl = document.getElementById('last');
+    if (lastEl) lastEl.textContent = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : (data.timestamp ? new Date(data.timestamp).toLocaleString() : '—');
+  });
+};
+
+// 3) Driver helper to start sharing the device's GPS to the order driverLocation path
+// Usage in delivery-driver.html: window.startDriverTracking(orderId)
+window.startDriverTracking = function(orderId) {
+  if (!orderId) {
+    alert('Order ID missing');
+    return;
+  }
+  if (!navigator.geolocation) {
+    alert('Geolocation not supported by this device/browser');
+    return;
+  }
+
+  let watchId = null;
+  // attempt to write status to 'onTheWay' when starting
+  update(ref(db, `orders/${orderId}`), { status: 'ontheway', updatedAt: new Date().toISOString() }).catch(()=>{});
+
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const payload = { lat: lat, lng: lng, updatedAt: new Date().toISOString() };
+    set(ref(db, `orders/${orderId}/driverLocation`), payload).catch(err => console.error('driverLocation write failed', err));
+  }, err => {
+    console.error('watchPosition error', err);
+    showToast('Unable to get location: ' + (err.message || err.code));
+  }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+
+  // return a stop function for convenience
+  return function stopSharing() {
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    update(ref(db, `orders/${orderId}`), { status: 'delivered', updatedAt: new Date().toISOString() }).catch(()=>{});
+  };
+};
