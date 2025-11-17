@@ -164,8 +164,9 @@
     .btn-whatsapp { background: var(--whatsapp); color: white; }
     .btn-export { background: #9c27b0; color: white; }
     .btn-live { background: linear-gradient(135deg, #ff4c4c, #d40000); color: white; }
+    .btn-assign { background: #673ab7; color: white; }
 
-    select.status-select {
+    select.status-select, .partner-select {
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 13px;
@@ -282,6 +283,16 @@
         <option value="on the way">On the Way</option>
         <option value="delivered">Delivered</option>
         <option value="cancelled">Cancelled</option>
+      </select>
+      <label>Assigned To</label>
+      <select id="editPartner">
+        <option value="">— Unassigned —</option>
+        <option value="Raj">Raj (+91 98765 43210)</option>
+        <option value="Suresh">Suresh (+91 87654 32109)</option>
+        <option value="Amit">Amit (+91 76543 21098)</option>
+        <option value="Priya">Priya (+91 65432 10987)</option>
+        <option value="Vikas">Vikas (+91 54321 09876)</option>
+        <option value="Neha">Neha (+91 43210 98765)</option>
       </select>
       <label>Payment Mode</label>
       <select id="editPayment">
@@ -469,16 +480,20 @@
               : '';
 
             const paymentMode = order.paymentMode || "COD";
+            const assignedPartner = order.assignedTo || '—';
 
             // ✅ Enhanced WhatsApp message
             let waMsg = `*Mirdhuna Order*\n\n`;
-            waMsg += `🆔 Order ID: ${order.key.substring(0,8)}\n`;
+            waMsg += `🆔 Order ID: ${order.orderId || order.key.substring(0,8)}\n`;
             waMsg += `📱 Phone: ${order.phoneNumber || 'N/A'}\n`;
             waMsg += `💳 Payment: ${paymentMode}\n`;
             waMsg += `📦 Items: ${(order.items || []).map(i => `${i.name} x${i.qty}`).join(", ") || 'None'}\n`;
             waMsg += `💰 Total: ₹${(order.total || 0).toFixed(2)}\n`;
             if (order.lat && order.lng) {
               waMsg += `\n📍 Live Location: https://maps.google.com/?q=${order.lat},${order.lng}`;
+            }
+            if (order.address) {
+              waMsg += `\n🏠 Address: ${order.address}`;
             }
             if (images.length > 0) {
               waMsg += `\n\n📸 *Tap to view order images:*`;
@@ -491,11 +506,12 @@
             return `
               <div class="order-card" data-key="${order.key}">
                 <div class="order-header">
-                  <span class="order-id">Order #${order.key.substring(0,8)}</span>
+                  <span class="order-id">Order #${order.orderId || order.key.substring(0,5)}</span>
                   <span>📱 ${order.phoneNumber || 'N/A'}</span>
                 </div>
                 <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : 'N/A'}</p>
                 <p><strong>Payment:</strong> ${paymentMode}</p>
+                <p><strong>Assigned To:</strong> ${assignedPartner}</p>
                 <ul class="items-list">${itemsHtml}</ul>
                 <div class="total-row">Total: ₹${(order.total || 0).toFixed(2)}</div>
                 ${imageHtml}
@@ -508,18 +524,52 @@
                   </select>
                   <button class="btn btn-update" data-key="${order.key}">Update</button>
                 </p>
+                <p><strong>Assign to:</strong>
+                  <select class="partner-select" data-key="${order.key}">
+                    <option value="" ${!order.assignedTo ? 'selected' : ''}>— Select —</option>
+                    <option value="Raj" ${order.assignedTo === 'Raj' ? 'selected' : ''}>Raj (+91 98765 43210)</option>
+                    <option value="Suresh" ${order.assignedTo === 'Suresh' ? 'selected' : ''}>Suresh (+91 87654 32109)</option>
+                    <option value="Amit" ${order.assignedTo === 'Amit' ? 'selected' : ''}>Amit (+91 76543 21098)</option>
+                    <option value="Priya" ${order.assignedTo === 'Priya' ? 'selected' : ''}>Priya (+91 65432 10987)</option>
+                    <option value="Vikas" ${order.assignedTo === 'Vikas' ? 'selected' : ''}>Vikas (+91 54321 09876)</option>
+                    <option value="Neha" ${order.assignedTo === 'Neha' ? 'selected' : ''}>Neha (+91 43210 98765)</option>
+                  </select>
+                  <button class="btn btn-assign assign-btn" data-key="${order.key}">Assign</button>
+                </p>
                 <div class="actions">
                   <button class="btn btn-print" data-order='${JSON.stringify(order)}'>Print</button>
                   <button class="btn btn-edit" data-key="${order.key}">Modify</button>
                   <button class="btn btn-whatsapp" data-msg="${encodeURIComponent(waMsg)}" data-raw="${waMsg}">WhatsApp</button>
-                  ${order.status === "on the way"
-                    ? `<button class="btn btn-track" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>`
-                    : `<button class="btn btn-live" data-key="${order.key}" data-status="${order.status}">Go Live 🚀</button>`
+                  
+                  ${
+                    order.status === "on the way"
+                      ? `<button class="btn btn-track" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>`
+                      : order.assignedTo
+                      ? `<button class="btn btn-live" data-key="${order.key}" data-status="${order.status}">Go Live 🚀</button>`
+                      : `<button class="btn btn-live" disabled title="Assign to partner first">Go Live 🚀</button>`
+                  }
+                  ${
+                    order.assignedTo
+                      ? `<button class="btn btn-whatsapp" 
+                          onclick="generateDeliveryLink('${order.key}', '${order.assignedTo}')">
+                          📲 Share Delivery Link
+                        </button>`
+                      : ''
                   }
                 </div>
               </div>
             `;
           }).join("");
+    }
+
+    // ✅ Generate delivery link for partner
+    function generateDeliveryLink(orderKey, partnerName) {
+      // ✅ Direct link to delivery.html with order ID only
+      const url = `https://mirdhuna-25542.web.app/delivery.html?order=${orderKey}`;
+      const msg = `📦 New order assigned to ${partnerName}!\n\nClick to start tracking:\n${url}`;
+      
+      if (navigator.clipboard) navigator.clipboard.writeText(url);
+      alert('✅ Delivery link copied to clipboard!\nSend via WhatsApp.');
     }
 
     [searchInput, filterStatus, filterDate].forEach(el =>
@@ -532,7 +582,7 @@
       const order = allOrders.find(o => o.key === key);
 
       // 🚀 Go Live
-      if (e.target.classList.contains("btn-live")) {
+      if (e.target.classList.contains("btn-live") && order && order.assignedTo) {
         if (!order) return;
         if (confirm(`🚀 Start live tracking for ${order.phoneNumber}?\n\nThis will:\n• Set status to "On the Way"\n• Capture your current location\n• Enable real-time tracking`)) {
           await goLive(key, order);
@@ -551,6 +601,21 @@
         }
       }
 
+      // 🚚 Assign to Partner
+      if (e.target.classList.contains("assign-btn")) {
+        const select = document.querySelector(`.partner-select[data-key="${key}"]`);
+        const partnerId = select.value;
+        if (!partnerId) return alert("❌ Select a delivery partner");
+        
+        try {
+          await update(ref(db, "orders/" + key), { assignedTo: partnerId });
+          showAdminToast(`✅ Assigned to ${partnerId}`);
+          renderOrders();
+        } catch (err) {
+          alert("❌ Assignment failed: " + err.message);
+        }
+      }
+
       // 📞 WhatsApp
       if (e.target.classList.contains("btn-whatsapp")) {
         const raw = e.target.dataset.raw;
@@ -561,22 +626,37 @@
       // 🖨️ Print
       if (e.target.classList.contains("btn-print")) {
         const order = JSON.parse(e.target.dataset.order);
-        const win = window.open('', '', 'width=400,height=600');
+        const win = window.open('', '', 'width=600,height=800');
         const items = (order.items || []).map(i =>
           `${i.name} ×${i.qty}        ₹${((i.price || 0) * i.qty).toFixed(2)}`
         ).join('<br>');
+        const locationLink = order.lat && order.lng
+          ? `<p><strong>Location:</strong> <a href="https://maps.google.com/?q=${order.lat},${order.lng}" target="_blank">View on Map</a></p>`
+          : '';
+        const address = order.address ? `<p><strong>Address:</strong> ${order.address}</p>` : '';
+        const instructions = order.instructions ? `<p><strong>Instructions:</strong> ${order.instructions}</p>` : '';
+
         win.document.write(`
           <html><head><title>Receipt</title>
-          <style>body{font-family:monospace;font-size:14px;padding:15px;}</style></head>
+          <style>
+            body{font-family:monospace;font-size:14px;padding:15px;line-height:1.5;}
+            h2{text-align:center;margin-bottom:5px;}
+            p{margin:4px 0;}
+            hr{border:1px solid #ccc;margin:10px 0;}
+          </style></head>
           <body>
-            <h2 style="text-align:center;">Mirdhuna</h2>
-            <p style="text-align:center;">Order Receipt</p>
-            <p><strong>Order ID:</strong> ${order.key?.substring(0,8) || 'N/A'}</p>
+            <h2>Mirdhuna</h2>
+            <p style="text-align:center;font-size:16px;">Order Receipt</p>
+            <p><strong>Order ID:</strong> ${order.orderId || 'N/A'}</p>
             <p><strong>Phone:</strong> ${order.phoneNumber || 'N/A'}</p>
-            <p><strong>Date:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</p>
+            <p><strong>Payment:</strong> ${order.paymentMode || 'COD'}</p>
+            <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</p>
+            ${address}
+            ${instructions}
+            ${locationLink}
             <hr>${items}<hr>
-            <p style="text-align:right;"><strong>Total: ₹${(order.total || 0).toFixed(2)}</strong></p>
-            <p style="text-align:center;margin-top:20px;">Thank You!</p>
+            <p style="text-align:right;font-weight:bold;">Total: ₹${(order.total || 0).toFixed(2)}</p>
+            <p style="text-align:center;margin-top:20px;">Thank You for Ordering!</p>
           </body></html>
         `);
         win.document.close();
@@ -591,6 +671,7 @@
         currentEditKey = key;
         document.getElementById("editPhone").value = order.phoneNumber || '';
         document.getElementById("editStatus").value = order.status || 'pending';
+        document.getElementById("editPartner").value = order.assignedTo || '';
         document.getElementById("editPayment").value = order.paymentMode || 'COD';
         document.getElementById("editItems").value = JSON.stringify(order.items || [], null, 2);
         document.getElementById("editTotal").value = order.total || 0;
@@ -601,7 +682,9 @@
       if (e.target.classList.contains("btn-track")) {
         const lat = e.target.dataset.lat;
         const lng = e.target.dataset.lng;
-        document.getElementById("track-map").src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+        // ✅ Use static map (no iframe block)
+        document.getElementById("track-map").src = 
+          `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=500x350&scale=2&markers=color:blue%7Clabel:D%7C${lat},${lng}&key=`;
         document.getElementById("track-popup").style.display = "flex";
       }
     });
@@ -611,6 +694,7 @@
       try {
         const phone = document.getElementById("editPhone").value;
         const status = document.getElementById("editStatus").value;
+        const assignedTo = document.getElementById("editPartner").value;
         const paymentMode = document.getElementById("editPayment").value;
         const total = parseFloat(document.getElementById("editTotal").value) || 0;
         let items = [];
@@ -620,7 +704,14 @@
           alert("⚠️ Invalid items JSON.");
           return;
         }
-        await update(ref(db, "orders/" + currentEditKey), { phoneNumber: phone, status, paymentMode, total, items });
+        await update(ref(db, "orders/" + currentEditKey), { 
+          phoneNumber: phone, 
+          status, 
+          assignedTo, 
+          paymentMode, 
+          total, 
+          items 
+        });
         showAdminToast("✅ Order updated!");
         document.getElementById("modifyModal").style.display = "none";
       } catch (err) {
@@ -643,10 +734,10 @@
     // 📤 Export CSV
     exportBtn.addEventListener("click", () => {
       if (allOrders.length === 0) return alert("No orders to export.");
-      let csv = "Order ID,Phone,Date,Status,Payment,Items,Total,Lat,Lng\n";
+      let csv = "Order ID,Phone,Date,Status,AssignedTo,Payment,Items,Total,Lat,Lng\n";
       allOrders.forEach(o => {
         const items = (o.items || []).map(i => `${i.name}(${i.qty})`).join("; ");
-        csv += `"${o.key}","${o.phoneNumber || ''}","${o.timestamp ? new Date(o.timestamp).toLocaleString() : ''}","${o.status || ''}","${o.paymentMode || 'COD'}","${items.replace(/"/g,'""')}","${o.total || 0}","${o.lat || ''}","${o.lng || ''}"\n`;
+        csv += `"${o.orderId || o.key}","${o.phoneNumber || ''}","${o.timestamp ? new Date(o.timestamp).toLocaleString() : ''}","${o.status || ''}","${o.assignedTo || ''}","${o.paymentMode || 'COD'}","${items.replace(/"/g,'""')}","${o.total || 0}","${o.lat || ''}","${o.lng || ''}"\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
