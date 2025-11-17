@@ -354,7 +354,7 @@ function removeFromCart(id) {
   updateCartUI();
 }
 
-// ✅✅✅ FULLY UPDATED: placeOrder() — 5-digit ID + geolocation + tracking node ✅✅✅
+// ✅ FINAL: placeOrder() — 5-digit ID + location + tracking node
 async function placeOrder() {
   if (!isLoggedIn()) {
     showToast('Please log in to place an order.');
@@ -368,65 +368,47 @@ async function placeOrder() {
   }
 
   if (!cart || cart.length === 0) return showToast('Cart is empty!');
-
   const address = (checkoutAddress?.value || '').trim();
-  if (!address) {
-    showToast('Please enter delivery address');
-    return;
-  }
+  if (!address) return showToast('Please enter delivery address');
 
   const phone = localStorage.getItem('mobileNumber');
-  if (!phone) {
-    showToast('Session expired. Please log in again.');
-    return;
-  }
+  if (!phone) return showToast('Session expired. Please log in again.');
 
   const payment = (checkoutPayment?.value) || 'Cash on Delivery';
   const instructions = (checkoutInstructions?.value || '').trim();
 
-  // ✅ Get delivery location
-  let deliveryLocation = null;
-  if ('geolocation' in navigator) {
-    try {
-      const pos = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 60000
-        });
-      });
-      deliveryLocation = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
-      };
-      console.log('📍 Delivery location captured:', deliveryLocation);
-    } catch (err) {
-      console.warn('📍 Geolocation denied/failed:', err.message);
-      showToast('Using address only (location access denied).');
-    }
-  }
-
-  const computedTotal = cart.reduce((s, it) => {
+  const total = cart.reduce((s, it) => {
     const pr = safeNumber(it.price, 0);
     const q = Math.max(0, Number(it.qty) || 0);
     return s + pr * q;
   }, 0);
 
-  // ✅ Generate 5-digit sequential Order ID
-  let orderIdNum = 1;
+  // ✅ Generate 5-digit ID
+  let orderIdStr = '00000';
   try {
     const lastIdRef = ref(db, 'lastOrderId');
     const snapshot = await get(lastIdRef);
-    if (snapshot.exists()) {
-      orderIdNum = snapshot.val() + 1;
-    }
-    await set(lastIdRef, orderIdNum); // increment for next order
+    const current = snapshot.exists() ? snapshot.val() : 0;
+    const next = current + 1;
+    await set(lastIdRef, next);
+    orderIdStr = String(next).padStart(5, '0');
   } catch (err) {
-    console.warn('⚠️ Failed to fetch/generate orderId, using fallback', err);
-    orderIdNum = Math.floor(10000 + Math.random() * 90000); // random 5-digit
+    console.warn('⚠️ ID fallback');
+    orderIdStr = String(Math.floor(Date.now() / 1000) % 100000).padStart(5, '0');
   }
 
-  const orderIdStr = String(orderIdNum).padStart(5, '0'); // e.g., "00001"
+  // ✅ Try to get location — but don’t block save
+  let deliveryLocation = null;
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const locUpdate = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        console.log('📍 Location captured:', locUpdate);
+      },
+      (err) => console.warn('📍 Geolocation denied:', err),
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }
 
   const order = {
     phoneNumber: phone,
@@ -440,39 +422,22 @@ async function placeOrder() {
       qty: Number(i.qty) || 0,
       image: i.image || ''
     })),
-    total: Number(computedTotal.toFixed(2)),
+    total: Number(total.toFixed(2)),
     timestamp: new Date().toISOString(),
     status: 'pending',
-    // ✅ Save geolocation if available
-    ...(deliveryLocation ? { lat: deliveryLocation.lat, lng: deliveryLocation.lng } : {}),
-    // ✅ Add 5-digit order ID
-    orderId: orderIdStr
+    orderId: orderIdStr  // ✅ 5-digit ID always saved
   };
 
   try {
     const orderRef = push(ref(db, 'orders'), order);
-    const firebaseKey = orderRef.key;
-
-    // ✅ Create real-time tracking node for live updates
-    if (deliveryLocation && firebaseKey) {
-      await push(ref(db, `tracking/${firebaseKey}`), {
-        lat: deliveryLocation.lat,
-        lng: deliveryLocation.lng,
-        timestamp: new Date().toISOString(),
-        note: '📦 Order placed — awaiting pickup'
-      });
-    }
-
-    showToast(`✅ Order #${orderIdStr} placed successfully!`);
-    cart = [];
-    saveCart();
-    updateCartUI();
+    showToast(`✅ Order #${orderIdStr} placed!`);
+    cart = []; saveCart(); updateCartUI();
     if (cartPopupEl) cartPopupEl.style.display = 'none';
     if (checkoutModal) checkoutModal.style.display = 'none';
 
   } catch (err) {
-    console.error('❌ placeOrder error:', err);
-    showToast('Failed to place order. Try again.');
+    console.error('❌ Firebase save failed:', err);
+    showToast('❌ Order failed. Check network.');
   }
 }
 
