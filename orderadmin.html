@@ -207,7 +207,7 @@
     }
     .modal-buttons button { margin-left: 8px; }
 
-    /* Tracking Popup */
+    /* ✅ TRACK POPUP — FIXED IFRAME */
     #track-popup {
       display: none;
       position: fixed;
@@ -311,12 +311,22 @@
     </div>
   </div>
 
-  <!-- 📍 Track Popup -->
+  <!-- ✅ TRACK POPUP — FIXED IFRAME -->
   <div id="track-popup">
     <div class="popup-inner">
       <span id="close-track">✖</span>
       <h3>🚚 Delivery Tracking</h3>
-      <iframe id="track-map" loading="lazy"></iframe>
+      <!-- ✅ CORRECT IFRAME — allow + referrerpolicy -->
+      <iframe
+        id="track-map"
+        width="100%"
+        height="350"
+        frameborder="0"
+        style="border:0"
+        allow="geolocation"
+        referrerpolicy="no-referrer-when-downgrade"
+        loading="lazy">
+      </iframe>
     </div>
   </div>
 
@@ -551,7 +561,7 @@
                   ${
                     order.assignedTo
                       ? `<button class="btn btn-whatsapp" 
-                          onclick="generateDeliveryLink('${order.key}', '${order.assignedTo}')">
+                          onclick="generateDeliveryLink('${order.orderId}')">
                           📲 Share Delivery Link
                         </button>`
                       : ''
@@ -563,13 +573,20 @@
     }
 
     // ✅ Generate delivery link for partner
-    function generateDeliveryLink(orderKey, partnerName) {
-      // ✅ Direct link to delivery.html with order ID only
-      const url = `https://mirdhuna-25542.web.app/delivery.html?order=${orderKey}`;
-      const msg = `📦 New order assigned to ${partnerName}!\n\nClick to start tracking:\n${url}`;
+    function generateDeliveryLink(orderId) {
+      const baseUrl = window.location.origin;
+      const url = `${baseUrl}/delivery.html`;
+      const msg = `📦 New order #${orderId} assigned!\n\nOpen to start tracking:\n${url}`;
       
-      if (navigator.clipboard) navigator.clipboard.writeText(url);
-      alert('✅ Delivery link copied to clipboard!\nSend via WhatsApp.');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert('✅ Delivery link copied to clipboard!\nSend via WhatsApp.');
+        }).catch(() => {
+          prompt('📋 Copy link:', url);
+        });
+      } else {
+        prompt('📋 Copy link:', url);
+      }
     }
 
     [searchInput, filterStatus, filterDate].forEach(el =>
@@ -678,13 +695,13 @@
         document.getElementById("modifyModal").style.display = "flex";
       }
 
-      // 🚚 Track
+      // 🚚 Track — ✅ FIXED (Embed API /place)
       if (e.target.classList.contains("btn-track")) {
         const lat = e.target.dataset.lat;
         const lng = e.target.dataset.lng;
-        // ✅ Use static map (no iframe block)
-        document.getElementById("track-map").src = 
-          `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=500x350&scale=2&markers=color:blue%7Clabel:D%7C${lat},${lng}&key=`;
+        // ✅ CORRECT URL — works with your key
+        const url = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ&q=${lat},${lng}`;
+        document.getElementById("track-map").src = url;
         document.getElementById("track-popup").style.display = "flex";
       }
     });
