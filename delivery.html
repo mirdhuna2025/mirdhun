@@ -1,66 +1,281 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Delivery Partner — Live Share</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mirdhuna Delivery Partner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body{margin:0;font-family:system-ui,Arial;background:#f6f8fb}
-    header{padding:12px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between}
-    .controls{padding:10px;display:flex;gap:8px;align-items:center;background:#fff;margin:10px;border-radius:10px}
-    input,button{padding:8px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px}
-    button{background:#1976d2;color:#fff;border:none}
-    #map{height:62vh;margin:12px;border-radius:10px;overflow:hidden}
+    :root {
+      --primary: #d40000;
+      --success: #4CAF50;
+      --info: #2196F3;
+      --whatsapp: #25D366;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f5f5;
+      padding: 16px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      padding: 16px 0;
+      color: white;
+      background: var(--primary);
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-info { background: var(--info); color: white; }
+    .btn-whatsapp { background: var(--whatsapp); color: white; }
+    .status { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+    .status.pending { background: #ffe082; color: #5d4037; }
+    .status['on the way'] { background: #a5d6a7; color: #1b5e20; }
+    .status.delivered { background: #c8e6c9; color: #2e7d32; }
+    .loading { text-align: center; padding: 20px; }
+    #otp-screen { display: none; }
+    body.authenticated #login-screen { display: none; }
+    body.authenticated #otp-screen { display: block; }
+    #orders-screen { display: none; }
+    body.ready #orders-screen { display: block; }
+    .small { font-size: 13px; color: #666; margin-top: 4px; }
   </style>
 </head>
-<body>
-  <header><h2>Driver — Live Location Share</h2></header>
-
-  <div class="controls">
-    <input id="orderIdField" placeholder="Order ID (ORDxxx)" />
-    <input id="driverNameField" placeholder="Your name" />
-    <button id="startBtn">Start</button>
-    <button id="stopBtn" style="background:#d32f2f">Stop</button>
+<body class="authenticated">
+  <!-- 🔑 Login Screen -->
+  <div id="login-screen">
+    <div class="header">
+      <h2>🚚 Mirdhuna Delivery</h2>
+    </div>
+    <div class="card">
+      <h3>Enter OTP</h3>
+      <p>Admin sent a 6-digit OTP to your phone.</p>
+      <input type="tel" id="otp-input" placeholder="XXXXXX" maxlength="6" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ccc; border-radius:6px; font-size:18px; text-align:center;" autocomplete="off">
+      <button class="btn btn-primary" id="verify-otp">Verify OTP</button>
+    </div>
   </div>
 
-  <div id="map"></div>
+  <!-- 🔐 OTP Verified -->
+  <div id="otp-screen">
+    <div class="header">
+      <h2>📱 Welcome, Partner!</h2>
+    </div>
+    <div class="card">
+      <p>Fetching your orders...</p>
+      <div class="loading">⏳ Loading...</div>
+    </div>
+  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/path/to/app.js" type="module"></script>
-  <script>
-    (function(){
-      const startBtn = document.getElementById('startBtn');
-      const stopBtn = document.getElementById('stopBtn');
-      let stopFn = null;
+  <!-- 📋 Orders Screen -->
+  <div id="orders-screen">
+    <div class="header">
+      <h2>📦 Your Orders</h2>
+    </div>
+    <div id="orders-container"></div>
+    <div class="card" id="no-orders" style="display:none;">
+      <p>No active orders assigned.</p>
+    </div>
+  </div>
 
-      startBtn.addEventListener('click', () => {
-        const id = document.getElementById('orderIdField').value.trim();
-        const name = document.getElementById('driverNameField').value.trim();
-        if (!id) return alert('Enter order id');
-        if (name) {
-          // set driver name on order
-          fetch('/noop'); // noop: no fetch required; we assume app.js has update() function usage
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
+      authDomain: "mirdhuna-25542.firebaseapp.com",
+      databaseURL: "https://mirdhuna-25542-default-rtdb.firebaseio.com",
+      projectId: "mirdhuna-25542",
+      storageBucket: "mirdhuna-25542.appspot.com",
+      messagingSenderId: "575924409876",
+      appId: "1:575924409876:web:6ba1ed88ce941d9c83b901"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let partnerId = localStorage.getItem('partnerId');
+    let trackingInterval = null;
+
+    // 🔐 Verify OTP (mock: OTP = last 6 digits of phone)
+    document.getElementById('verify-otp').addEventListener('click', () => {
+      const otp = document.getElementById('otp-input').value.trim();
+      if (otp.length !== 6) return alert('❌ Enter 6-digit OTP');
+      
+      // 🔑 In real app: validate OTP via Firebase Auth or SMS gateway
+      // For demo: assume OTP = '123456'
+      if (otp === '123456') {
+        partnerId = 'partner123'; // ← real ID from DB
+        localStorage.setItem('partnerId', partnerId);
+        document.body.classList.add('ready');
+        loadOrders();
+      } else {
+        alert('❌ Invalid OTP. Check WhatsApp.');
+      }
+    });
+
+    // 📥 Load assigned orders
+    function loadOrders() {
+      if (!partnerId) return;
+
+      const ordersRef = ref(db, 'orders');
+      onValue(ordersRef, (snapshot) => {
+        const data = snapshot.val();
+        const orders = data ? Object.entries(data)
+          .filter(([key, order]) => order.assignedTo === partnerId)
+          .map(([key, order]) => ({ key, ...order }))
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+          : [];
+
+        const container = document.getElementById('orders-container');
+        if (orders.length === 0) {
+          document.getElementById('no-orders').style.display = 'block';
+          container.innerHTML = '';
+          return;
         }
-        // call helper in app.js to start sharing
-        stopFn = window.startDriverTracking(id);
-        alert('Started sharing location for ' + id);
-      });
 
-      stopBtn.addEventListener('click', () => {
-        if (typeof stopFn === 'function') {
-          stopFn();
-          alert('Stopped sharing');
-          stopFn = null;
-        } else {
-          alert('Sharing not started');
+        document.getElementById('no-orders').style.display = 'none';
+        container.innerHTML = orders.map(order => `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong>#${order.orderId || order.key.substring(0,5)}</strong>
+              <span class="status ${order.status}">${order.status}</span>
+            </div>
+            <p><strong>Phone:</strong> ${order.phoneNumber}</p>
+            <p><strong>Address:</strong> ${order.address || '—'}</p>
+            <p><strong>Total:</strong> ₹${(order.total || 0).toFixed(2)}</p>
+            <div class="small">Placed: ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</div>
+            
+            ${
+              order.status === 'pending' || order.status === 'confirmed'
+                ? `<button class="btn btn-success start-tracking" data-key="${order.key}">🚀 Start Tracking</button>`
+                : order.status === 'on the way'
+                ? `<button class="btn btn-info" disabled>📍 Tracking...</button>
+                   <button class="btn btn-whatsapp share-location" data-key="${order.key}">💬 Share Location</button>`
+                : ''
+            }
+            ${
+              order.status === 'on the way'
+                ? `<button class="btn btn-primary mark-delivered" data-key="${order.key}">✅ Mark Delivered</button>`
+                : ''
+            }
+          </div>
+        `).join('');
+      });
+    }
+
+    // 🚀 Start real-time tracking
+    document.addEventListener('click', async (e) => {
+      const key = e.target.dataset.key;
+
+      // 📍 Start Tracking
+      if (e.target.classList.contains('start-tracking')) {
+        if (!confirm('🚀 Start live tracking for this order?')) return;
+
+        try {
+          await update(ref(db, 'orders/' + key), { 
+            status: 'on the way',
+            assignedTo: partnerId
+          });
+
+          // Begin GPS sharing
+          startTracking(key);
+          alert('✅ Tracking started!');
+
+        } catch (err) {
+          alert('❌ Failed to start tracking: ' + err.message);
         }
-      });
+      }
 
-      // optional: auto-load a Leaflet map for driver UI (for driver's own view)
-      const map = L.map('map').setView([20.5937,78.9629], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
-    })();
+      // ✅ Mark Delivered
+      if (e.target.classList.contains('mark-delivered')) {
+        if (!confirm('✅ Mark as delivered?')) return;
+        try {
+          await update(ref(db, 'orders/' + key), { 
+            status: 'delivered',
+            deliveredAt: new Date().toISOString()
+          });
+          if (trackingInterval) clearInterval(trackingInterval);
+          alert('📦 Order delivered!');
+        } catch (err) {
+          alert('❌ Failed: ' + err.message);
+        }
+      }
+
+      // 💬 Share Live Location via WhatsApp
+      if (e.target.classList.contains('share-location')) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const loc = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+            const msg = `📍 Live location: ${loc}`;
+            window.open(`https://wa.me/91${key.split('-')[1] || '9876543210'}?text=${encodeURIComponent(msg)}`, '_blank');
+          },
+          (err) => alert('⚠️ Location access needed')
+        );
+      }
+    });
+
+    // 📍 Real-time GPS sharing
+    async function startTracking(orderKey) {
+      if (trackingInterval) clearInterval(trackingInterval);
+
+      const shareLocation = async () => {
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000
+            });
+          });
+
+          const data = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            timestamp: new Date().toISOString(),
+            note: '🚚 En route to delivery'
+          };
+
+          // ✅ Push to /tracking/{orderId} → user sees live map
+          await push(ref(db, `tracking/${orderKey}`), data);
+          console.log('📍 Location sent:', data);
+
+        } catch (err) {
+          console.warn('📍 Location failed:', err);
+        }
+      };
+
+      // Send now + every 15 seconds
+      await shareLocation();
+      trackingInterval = setInterval(shareLocation, 15000);
+    }
+
+    // Initialize
+    if (partnerId) {
+      document.body.classList.add('ready');
+      loadOrders();
+    }
   </script>
 </body>
 </html>
