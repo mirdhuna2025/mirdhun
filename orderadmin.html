@@ -163,6 +163,7 @@
     .btn-track { background: var(--info); color: white; }
     .btn-whatsapp { background: var(--whatsapp); color: white; }
     .btn-export { background: #9c27b0; color: white; }
+    .btn-live { background: linear-gradient(135deg, #ff4c4c, #d40000); color: white; }
 
     select.status-select {
       padding: 4px 8px;
@@ -238,6 +239,23 @@
       font-size: 24px;
       color: var(--danger);
     }
+
+    /* Toast */
+    #admin-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      z-index: 99999;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
   </style>
 </head>
 <body class="locked">
@@ -291,6 +309,9 @@
     </div>
   </div>
 
+  <!-- ✅ Admin Toast -->
+  <div id="admin-toast"></div>
+
   <!-- 📊 Dashboard -->
   <div id="dashboard">
     <h1>🧾 Mirdhuna Admin Dashboard</h1>
@@ -311,7 +332,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, onValue, update, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -372,6 +393,57 @@
       return timestamp ? new Date(timestamp).toISOString().split('T')[0] : '';
     }
 
+    // ✅ Show admin toast
+    function showAdminToast(message) {
+      const toast = document.getElementById("admin-toast");
+      toast.textContent = message;
+      toast.style.opacity = "1";
+      setTimeout(() => { toast.style.opacity = "0"; }, 2500);
+    }
+
+    // ✅ One-click "Go Live" — updates order + creates tracking node
+    async function goLive(key, order) {
+      let location = null;
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000
+          });
+        });
+        location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (err) {
+        alert("⚠️ Location access needed for live tracking.\nPlease allow location, or manually update lat/lng in Modify.");
+        return;
+      }
+
+      try {
+        const newStatus = "on the way";
+        const updateData = {
+          status: newStatus,
+          lat: location.lat,
+          lng: location.lng
+        };
+
+        // ✅ Update order
+        await update(ref(db, "orders/" + key), updateData);
+
+        // ✅ Create live tracking node for user-side updates
+        await push(ref(db, `tracking/${key}`), {
+          lat: location.lat,
+          lng: location.lng,
+          timestamp: new Date().toISOString(),
+          note: "🚚 Driver has picked up your order!"
+        });
+
+        showAdminToast(`✅ Live tracking started for ${order.phoneNumber}`);
+        renderOrders(); // refresh UI
+      } catch (err) {
+        console.error("Go Live error:", err);
+        alert("❌ Failed to activate live tracking: " + err.message);
+      }
+    }
+
     function renderOrders() {
       const phone = searchInput.value.trim().toLowerCase();
       const status = filterStatus.value;
@@ -398,27 +470,22 @@
 
             const paymentMode = order.paymentMode || "COD";
 
-            // ✅ Enhanced WhatsApp message with location & clearer image links
+            // ✅ Enhanced WhatsApp message
             let waMsg = `*Mirdhuna Order*\n\n`;
             waMsg += `🆔 Order ID: ${order.key.substring(0,8)}\n`;
             waMsg += `📱 Phone: ${order.phoneNumber || 'N/A'}\n`;
             waMsg += `💳 Payment: ${paymentMode}\n`;
             waMsg += `📦 Items: ${(order.items || []).map(i => `${i.name} x${i.qty}`).join(", ") || 'None'}\n`;
             waMsg += `💰 Total: ₹${(order.total || 0).toFixed(2)}\n`;
-
-            // 📍 Add location if available
             if (order.lat && order.lng) {
               waMsg += `\n📍 Live Location: https://maps.google.com/?q=${order.lat},${order.lng}`;
             }
-
-            // 📸 Add image links with clear instruction
             if (images.length > 0) {
               waMsg += `\n\n📸 *Tap to view order images:*`;
               images.forEach(url => {
                 waMsg += `\n${url}`;
               });
             }
-
             waMsg += `\n\n✅ Ready for delivery!`;
 
             return `
@@ -447,7 +514,8 @@
                   <button class="btn btn-whatsapp" data-msg="${encodeURIComponent(waMsg)}" data-raw="${waMsg}">WhatsApp</button>
                   ${order.status === "on the way"
                     ? `<button class="btn btn-track" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track</button>`
-                    : ""}
+                    : `<button class="btn btn-live" data-key="${order.key}" data-status="${order.status}">Go Live 🚀</button>`
+                  }
                 </div>
               </div>
             `;
@@ -463,13 +531,21 @@
       const key = e.target.dataset.key;
       const order = allOrders.find(o => o.key === key);
 
+      // 🚀 Go Live
+      if (e.target.classList.contains("btn-live")) {
+        if (!order) return;
+        if (confirm(`🚀 Start live tracking for ${order.phoneNumber}?\n\nThis will:\n• Set status to "On the Way"\n• Capture your current location\n• Enable real-time tracking`)) {
+          await goLive(key, order);
+        }
+      }
+
       // 🔄 Update Status
       if (e.target.classList.contains("btn-update")) {
         const select = document.querySelector(`select[data-key="${key}"]`);
         const newStatus = select.value;
         try {
           await update(ref(db, "orders/" + key), { status: newStatus });
-          alert(`✅ Status updated to "${newStatus}"`);
+          showAdminToast(`✅ Status updated to "${newStatus}"`);
         } catch (err) {
           alert("❌ Update failed: " + err.message);
         }
@@ -545,7 +621,7 @@
           return;
         }
         await update(ref(db, "orders/" + currentEditKey), { phoneNumber: phone, status, paymentMode, total, items });
-        alert("✅ Order updated!");
+        showAdminToast("✅ Order updated!");
         document.getElementById("modifyModal").style.display = "none";
       } catch (err) {
         alert("❌ Save failed: " + err.message);
@@ -557,7 +633,7 @@
       if (!confirm("⚠️ Delete permanently?")) return;
       try {
         await remove(ref(db, "orders/" + currentEditKey));
-        alert("🗑️ Deleted.");
+        showAdminToast("🗑️ Deleted order.");
         document.getElementById("modifyModal").style.display = "none";
       } catch (err) {
         alert("❌ Delete failed: " + err.message);
