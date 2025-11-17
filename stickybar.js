@@ -141,7 +141,7 @@ async function loadOrders() {
 
         const total = order.total || 0;
         const payment = order.paymentMode || 'COD';
-        const orderId = order.orderId || 'N/A'; // ✅ 5-digit ID
+        const orderId = order.orderId || 'N/A';
         const placedDate = order.timestamp ? new Date(order.timestamp).toLocaleString() : '—';
 
         const card = document.createElement('div');
@@ -188,7 +188,6 @@ async function loadOrders() {
   }
 }
 
-// ✅ Generate WhatsApp message with all details
 function generateWhatsAppMessage(order) {
   let msg = `*Mirdhuna Order*\n\n`;
   msg += `🔢 Order ID: ${order.orderId || 'N/A'}\n`;
@@ -221,7 +220,7 @@ function generateWhatsAppMessage(order) {
   return msg;
 }
 
-// ===== REAL-TIME TRACKING HANDLER =====
+// 👇 REAL-TIME TRACKING — uses <img> + valid key
 document.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('track-btn')) return;
 
@@ -229,63 +228,60 @@ document.addEventListener('click', async (e) => {
   const initialLat = parseFloat(e.target.dataset.lat) || 28.6139;
   const initialLng = parseFloat(e.target.dataset.lng) || 77.2090;
 
-  const trackMapEl = document.getElementById('track-map');
   const trackStatusEl = document.getElementById('track-status');
   const trackNoteEl = document.getElementById('track-note');
-  const trackRefreshEl = document.getElementById('track-refresh');
+  const trackMapImg = document.getElementById('track-map'); // 👈 img, not iframe
 
-  if (!trackMapEl || !trackStatusEl || !trackNoteEl) {
+  if (!trackMapImg || !trackStatusEl || !trackNoteEl) {
     console.error('Missing track-popup elements!');
     return;
   }
 
-  // Initial view
-  renderMapEmbed(initialLat, initialLng, 15);
+  // ✅ Render static map with YOUR key
+  const apiKey = "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ";
+  const url = `https://maps.googleapis.com/maps/api/staticmap?center=${initialLat},${initialLng}&zoom=15&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${initialLat},${initialLng}&key=${apiKey}`;
+  trackMapImg.src = url;
+
   trackStatusEl.textContent = '🚚 On the way';
   trackNoteEl.textContent = 'Loading location...';
   trackPopup.style.display = 'flex';
 
-  // Setup Firebase realtime listener
-  let unsubscribe = null;
+  // 🔁 Real-time updates
+  let db, onValue;
   try {
-    const { getDatabase, ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-    const database = getDatabase();
-    const trackingRef = ref(database, `tracking/${orderId}`);
-
-    unsubscribe = onValue(trackingRef, (snapshot) => {
-      const updates = snapshot.val();
-      if (!updates) {
-        trackNoteEl.textContent = '📍 Awaiting driver update...';
-        return;
-      }
-
-      let latest;
-      if (Array.isArray(updates)) {
-        latest = updates[updates.length - 1];
-      } else if (typeof updates === 'object') {
-        const keys = Object.keys(updates).sort();
-        latest = updates[keys[keys.length - 1]];
-      } else {
-        latest = updates;
-      }
-
-      if (latest && latest.lat && latest.lng) {
-        renderMapEmbed(latest.lat, latest.lng, 16);
-        const note = latest.note || 'Driver is en route';
-        trackNoteEl.textContent = note;
-        trackStatusEl.innerHTML = `🕒 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${note}`;
-      }
-    }, (error) => {
-      console.warn('Tracking error:', error);
-      trackNoteEl.textContent = '📡 Connection issue';
-    });
-
+    const { getDatabase } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+    const { onValue: _onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+    db = getDatabase();
+    onValue = _onValue;
   } catch (err) {
-    console.error('Firebase tracking import failed:', err);
     trackNoteEl.textContent = '⚠️ Tracking unavailable';
+    return;
   }
 
-  // Cleanup on close
+  const trackingRef = ref(db, `tracking/${orderId}`);
+  const unsubscribe = onValue(trackingRef, (snapshot) => {
+    const updates = snapshot.val();
+    if (!updates) return;
+
+    let latest;
+    if (Array.isArray(updates)) {
+      latest = updates[updates.length - 1];
+    } else if (typeof updates === 'object') {
+      const keys = Object.keys(updates).sort();
+      latest = updates[keys[keys.length - 1]];
+    } else {
+      latest = updates;
+    }
+
+    if (latest && latest.lat && latest.lng) {
+      const url = `https://maps.googleapis.com/maps/api/staticmap?center=${latest.lat},${latest.lng}&zoom=16&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${latest.lat},${latest.lng}&key=${apiKey}`;
+      trackMapImg.src = url;
+      const note = latest.note || 'Driver is en route';
+      trackNoteEl.textContent = note;
+      trackStatusEl.innerHTML = `🕒 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${note}`;
+    }
+  });
+
   const closeTracking = () => {
     if (unsubscribe) unsubscribe();
     trackPopup.style.display = 'none';
@@ -293,22 +289,7 @@ document.addEventListener('click', async (e) => {
 
   closeTrackBtn.onclick = closeTracking;
   trackPopup.onclick = (ev) => { if (ev.target === trackPopup) closeTracking(); };
-
-  // Manual refresh
-  if (trackRefreshEl) {
-    trackRefreshEl.onclick = () => {
-      trackNoteEl.textContent = '↻ Refreshing...';
-    };
-  }
 });
-
-// Helper: Render Google Map embed (using Static Maps API — no key needed)
-function renderMapEmbed(lat, lng, zoom = 15) {
-  const mapEl = document.getElementById('track-map');
-  if (!mapEl) return;
-  // ✅ Key-free static map
-  mapEl.src = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=400x300&scale=2&markers=color:red%7Clabel:📍%7C${lat},${lng}&key=`;
-}
 
 // ===== EVENT LISTENERS =====
 homeBtn?.addEventListener('click', () => {
@@ -352,67 +333,23 @@ ordersPopup?.addEventListener('click', (e) => { if (e.target === ordersPopup) or
 closeTrackBtn?.addEventListener('click', () => { trackPopup.style.display = 'none'; });
 trackPopup?.addEventListener('click', (e) => { if (e.target === trackPopup) trackPopup.style.display = 'none'; });
 
-// Optional: Add status badge styling
+// Status badge styling
 const style = document.createElement('style');
 style.textContent = `
-  .status-badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-  }
+  .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
   .status-badge.pending { background: #ffe082; color: #5d4037; }
   .status-badge.confirmed { background: #81d4fa; color: #01579b; }
   .status-badge['on the way'] { background: #a5d6a7; color: #1b5e20; }
   .status-badge.delivered { background: #c8e6c9; color: #2e7d32; }
   .status-badge.cancelled { background: #ffcdd2; color: #c62828; }
-  .order-card {
-    background: white;
-    padding: 16px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .order-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
-  .order-meta {
-    margin: 8px 0;
-    font-size: 14px;
-  }
-  .order-items {
-    margin: 8px 0;
-    font-size: 14px;
-  }
-  .order-images {
-    display: flex;
-    gap: 4px;
-    margin: 8px 0;
-    flex-wrap: wrap;
-  }
-  .order-images img {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #eee;
-  }
-  .order-actions {
-    margin-top: 12px;
-    display: flex;
-    gap: 8px;
-  }
-  .btn-print, .btn-whatsapp {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 13px;
-  }
+  .order-card { background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .order-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; }
+  .order-meta { margin: 8px 0; font-size: 14px; }
+  .order-items { margin: 8px 0; font-size: 14px; }
+  .order-images { display: flex; gap: 4px; margin: 8px 0; flex-wrap: wrap; }
+  .order-images img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
+  .order-actions { margin-top: 12px; display: flex; gap: 8px; }
+  .btn-print, .btn-whatsapp { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
   .btn-print { background: #2196F3; color: white; }
   .btn-whatsapp { background: #25D366; color: white; }
 `;
