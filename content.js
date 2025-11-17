@@ -354,7 +354,8 @@ function removeFromCart(id) {
   updateCartUI();
 }
 
-function placeOrder() {
+// ✅✅✅ UPDATED: placeOrder() — async + geolocation + tracking node ✅✅✅
+async function placeOrder() {
   if (!isLoggedIn()) {
     showToast('Please log in to place an order.');
     const loginModal = document.getElementById('loginModal');
@@ -384,6 +385,28 @@ function placeOrder() {
   const payment = (checkoutPayment?.value) || 'Cash on Delivery';
   const instructions = (checkoutInstructions?.value || '').trim();
 
+  // ✅ Get user's delivery location
+  let deliveryLocation = null;
+  if ('geolocation' in navigator) {
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 60000
+        });
+      });
+      deliveryLocation = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      };
+      console.log('📍 Delivery location captured:', deliveryLocation);
+    } catch (err) {
+      console.warn('📍 Geolocation denied/failed:', err.message);
+      showToast('Using address only (location access denied).');
+    }
+  }
+
   const computedTotal = cart.reduce((s, it) => {
     const pr = safeNumber(it.price, 0);
     const q = Math.max(0, Number(it.qty) || 0);
@@ -391,7 +414,7 @@ function placeOrder() {
   }, 0);
 
   const order = {
-    phoneNumber: phone, // ✅ Now correctly set
+    phoneNumber: phone,
     address,
     instructions,
     paymentMode: payment,
@@ -404,22 +427,36 @@ function placeOrder() {
     })),
     total: Number(computedTotal.toFixed(2)),
     timestamp: new Date().toISOString(),
-    status: 'pending'
+    status: 'pending',
+    // ✅ Save geolocation if available
+    ...(deliveryLocation ? { lat: deliveryLocation.lat, lng: deliveryLocation.lng } : {})
   };
 
-  push(ref(db, 'orders'), order)
-    .then(() => {
-      showToast('Order placed successfully!');
-      cart = [];
-      saveCart();
-      updateCartUI();
-      if (cartPopupEl) cartPopupEl.style.display = 'none';
-      if (checkoutModal) checkoutModal.style.display = 'none';
-    })
-    .catch(err => {
-      console.error('placeOrder error:', err);
-      showToast('Failed to place order.');
-    });
+  try {
+    const orderRef = push(ref(db, 'orders'), order);
+    const orderId = orderRef.key;
+
+    // ✅ Create real-time tracking node for live updates
+    if (deliveryLocation && orderId) {
+      await push(ref(db, `tracking/${orderId}`), {
+        lat: deliveryLocation.lat,
+        lng: deliveryLocation.lng,
+        timestamp: new Date().toISOString(),
+        note: '📦 Order placed — awaiting pickup'
+      });
+    }
+
+    showToast('✅ Order placed successfully!');
+    cart = [];
+    saveCart();
+    updateCartUI();
+    if (cartPopupEl) cartPopupEl.style.display = 'none';
+    if (checkoutModal) checkoutModal.style.display = 'none';
+
+  } catch (err) {
+    console.error('❌ placeOrder error:', err);
+    showToast('Failed to place order.');
+  }
 }
 
 checkoutCancel && checkoutCancel.addEventListener('click', () => {
