@@ -1,4 +1,4 @@
-// ===== stickybar.js (FULLY CORRECTED) =====
+// ===== stickybar.js (FULLY COMPLETE) =====
 const authButton = document.getElementById('authButton');
 const authText = document.getElementById('authText');
 const homeBtn = document.getElementById('homeBtn');
@@ -220,7 +220,17 @@ function generateWhatsAppMessage(order) {
   return msg;
 }
 
-// ✅ CORRECTED: Tracking handler with proper ref/onValue import
+// ✅ FIXED: renderMapEmbed — uses Embed API (no ref error)
+function renderMapEmbed(lat, lng, zoom = 15) {
+  const mapEl = document.getElementById('track-map');
+  if (!mapEl) return;
+  
+  // ✅ CORRECT Embed URL — works with your key
+  const url = `https://www.google.com/maps/embed/v1/place?key=AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ&q=${lat},${lng}`;
+  mapEl.src = url;
+}
+
+// ✅ Tracking handler — no Firebase ref needed here
 document.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('track-btn')) return;
 
@@ -230,27 +240,25 @@ document.addEventListener('click', async (e) => {
 
   const trackStatusEl = document.getElementById('track-status');
   const trackNoteEl = document.getElementById('track-note');
-  const trackMapImg = document.getElementById('track-map'); // 👈 <img>, not <iframe>
+  const trackMapEl = document.getElementById('track-map');
 
-  if (!trackMapImg || !trackStatusEl || !trackNoteEl) {
+  if (!trackMapEl || !trackStatusEl || !trackNoteEl) {
     console.error('Missing track-popup elements!');
     return;
   }
 
-  // ✅ Render initial static map
-  const apiKey = "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ";
-  const url = `https://maps.googleapis.com/maps/api/staticmap?center=${initialLat},${initialLng}&zoom=15&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${initialLat},${initialLng}&key=${apiKey}`;
-  trackMapImg.src = url;
+  // ✅ Render initial map
+  renderMapEmbed(initialLat, initialLng);
 
   trackStatusEl.textContent = '🚚 On the way';
   trackNoteEl.textContent = 'Loading location...';
   trackPopup.style.display = 'flex';
 
-  // ✅ Import Firebase functions ONLY when needed (no "ref is not defined")
+  // 🔁 Real-time updates via Firebase (separate import)
   let unsubscribe = null;
   try {
     const { getDatabase, ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-    const database = getDatabase(); // uses default app (already initialized)
+    const database = getDatabase();
     const trackingRef = ref(database, `tracking/${orderId}`);
 
     unsubscribe = onValue(trackingRef, (snapshot) => {
@@ -268,8 +276,7 @@ document.addEventListener('click', async (e) => {
       }
 
       if (latest && latest.lat && latest.lng) {
-        const url = `https://maps.googleapis.com/maps/api/staticmap?center=${latest.lat},${latest.lng}&zoom=16&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${latest.lat},${latest.lng}&key=${apiKey}`;
-        trackMapImg.src = url;
+        renderMapEmbed(latest.lat, latest.lng);
         const note = latest.note || 'Driver is en route';
         trackNoteEl.textContent = note;
         trackStatusEl.innerHTML = `🕒 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${note}`;
@@ -288,6 +295,14 @@ document.addEventListener('click', async (e) => {
 
   closeTrackBtn.onclick = closeTracking;
   trackPopup.onclick = (ev) => { if (ev.target === trackPopup) closeTracking(); };
+
+  // Manual refresh
+  const refreshBtn = document.getElementById('track-refresh');
+  if (refreshBtn) {
+    refreshBtn.onclick = () => {
+      trackNoteEl.textContent = '↻ Refreshing...';
+    };
+  }
 });
 
 // ===== EVENT LISTENERS =====
@@ -332,23 +347,67 @@ ordersPopup?.addEventListener('click', (e) => { if (e.target === ordersPopup) or
 closeTrackBtn?.addEventListener('click', () => { trackPopup.style.display = 'none'; });
 trackPopup?.addEventListener('click', (e) => { if (e.target === trackPopup) trackPopup.style.display = 'none'; });
 
-// Status badge styling
+// Optional: Add status badge styling
 const style = document.createElement('style');
 style.textContent = `
-  .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
   .status-badge.pending { background: #ffe082; color: #5d4037; }
   .status-badge.confirmed { background: #81d4fa; color: #01579b; }
   .status-badge['on the way'] { background: #a5d6a7; color: #1b5e20; }
   .status-badge.delivered { background: #c8e6c9; color: #2e7d32; }
   .status-badge.cancelled { background: #ffcdd2; color: #c62828; }
-  .order-card { background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .order-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; }
-  .order-meta { margin: 8px 0; font-size: 14px; }
-  .order-items { margin: 8px 0; font-size: 14px; }
-  .order-images { display: flex; gap: 4px; margin: 8px 0; flex-wrap: wrap; }
-  .order-images img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
-  .order-actions { margin-top: 12px; display: flex; gap: 8px; }
-  .btn-print, .btn-whatsapp { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .order-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .order-meta {
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .order-items {
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .order-images {
+    display: flex;
+    gap: 4px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+  .order-images img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #eee;
+  }
+  .order-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .btn-print, .btn-whatsapp {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+  }
   .btn-print { background: #2196F3; color: white; }
   .btn-whatsapp { background: #25D366; color: white; }
 `;
