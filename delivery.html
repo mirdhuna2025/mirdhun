@@ -48,8 +48,6 @@
     }
     .btn-primary { background: var(--primary); color: white; }
     .btn-success { background: var(--success); color: white; }
-    .btn-info { background: var(--info); color: white; }
-    .btn-whatsapp { background: var(--whatsapp); color: white; }
     select {
       width: 100%;
       padding: 12px;
@@ -62,15 +60,13 @@
     .status.pending { background: #ffe082; color: #5d4037; }
     .status['on the way'] { background: #a5d6a7; color: #1b5e20; }
     .status.delivered { background: #c8e6c9; color: #2e7d32; }
-    .loading { text-align: center; padding: 20px; }
     #partner-screen, #orders-screen { display: none; }
     body.show-partner #partner-screen { display: block; }
     body.show-orders #orders-screen { display: block; }
-    .small { font-size: 13px; color: #666; margin-top: 4px; }
   </style>
 </head>
 <body class="show-partner">
-  <!-- 🚚 Partner Selection Screen -->
+  <!-- 🚚 Partner Selection -->
   <div id="partner-screen">
     <div class="header">
       <h2>🚚 Mirdhuna Delivery</h2>
@@ -79,18 +75,18 @@
       <h3>Select Your Name</h3>
       <select id="partner-select">
         <option value="">— Choose Partner —</option>
-        <option value="Raj">Raj (+91 98765 43210)</option>
-        <option value="Suresh">Suresh (+91 87654 32109)</option>
-        <option value="Amit">Amit (+91 76543 21098)</option>
-        <option value="Priya">Priya (+91 65432 10987)</option>
-        <option value="Vikas">Vikas (+91 54321 09876)</option>
-        <option value="Neha">Neha (+91 43210 98765)</option>
+        <option value="Raj">Raj</option>
+        <option value="Suresh">Suresh</option>
+        <option value="Amit">Amit</option>
+        <option value="Priya">Priya</option>
+        <option value="Vikas">Vikas</option>
+        <option value="Neha">Neha</option>
       </select>
       <button class="btn btn-primary" id="select-partner">Continue</button>
     </div>
   </div>
 
-  <!-- 📋 Orders Screen -->
+  <!-- 📋 Orders -->
   <div id="orders-screen">
     <div class="header">
       <h2>📦 Your Orders</h2>
@@ -98,7 +94,7 @@
     </div>
     <div id="orders-container"></div>
     <div class="card" id="no-orders" style="display:none;">
-      <p>No active orders assigned.</p>
+      <p>No active orders.</p>
     </div>
   </div>
 
@@ -118,65 +114,50 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     let currentPartner = null;
     let trackingInterval = null;
 
-    // 🚚 Select Partner
     document.getElementById('select-partner').addEventListener('click', () => {
-      const partner = document.getElementById('partner-select').value;
-      if (!partner) return alert('❌ Please select your name');
-      
-      currentPartner = partner;
+      const p = document.getElementById('partner-select').value;
+      if (!p) return alert('❌ Select your name');
+      currentPartner = p;
       document.body.className = 'show-orders';
       loadOrders();
     });
 
-    // 📥 Load assigned orders
     function loadOrders() {
-      if (!currentPartner) return;
-
       const ordersRef = ref(db, 'orders');
       onValue(ordersRef, (snapshot) => {
         const data = snapshot.val();
         const orders = data ? Object.entries(data)
-          .filter(([key, order]) => order.assignedTo === currentPartner)
-          .map(([key, order]) => ({ key, ...order }))
+          .filter(([_, o]) => o.assignedTo === currentPartner)
+          .map(([key, o]) => ({ key, ...o }))
           .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
           : [];
 
-        const container = document.getElementById('orders-container');
-        const noOrders = document.getElementById('no-orders');
-
+        const cont = document.getElementById('orders-container');
+        const no = document.getElementById('no-orders');
         if (orders.length === 0) {
-          noOrders.style.display = 'block';
-          container.innerHTML = '';
+          no.style.display = 'block';
+          cont.innerHTML = '';
           return;
         }
-
-        noOrders.style.display = 'none';
-        container.innerHTML = orders.map(order => `
+        no.style.display = 'none';
+        cont.innerHTML = orders.map(o => `
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong>#${order.orderId || order.key.substring(0,5)}</strong>
-              <span class="status ${order.status}">${order.status}</span>
+            <div style="display:flex;justify-content:space-between">
+              <strong>#${o.orderId}</strong>
+              <span class="status ${o.status}">${o.status}</span>
             </div>
-            <p><strong>Phone:</strong> ${order.phoneNumber}</p>
-            <p><strong>Address:</strong> ${order.address || '—'}</p>
-            <p><strong>Total:</strong> ₹${(order.total || 0).toFixed(2)}</p>
-            <div class="small">Placed: ${order.timestamp ? new Date(order.timestamp).toLocaleString() : ''}</div>
-            
+            <p><strong>Phone:</strong> ${o.phoneNumber}</p>
+            <p><strong>Address:</strong> ${o.address || '—'}</p>
+            <p>₹${(o.total || 0).toFixed(2)}</p>
             ${
-              order.status === 'pending' || order.status === 'confirmed'
-                ? `<button class="btn btn-success start-tracking" data-key="${order.key}">🚀 Start Tracking</button>`
-                : order.status === 'on the way'
+              o.status === 'pending'
+                ? `<button class="btn btn-success start-tracking" data-key="${o.key}">🚀 Start Tracking</button>`
+                : o.status === 'on the way'
                 ? `<button class="btn btn-info" disabled>📍 Tracking...</button>
-                   <button class="btn btn-whatsapp share-location" data-key="${order.key}">💬 Share Location</button>`
-                : ''
-            }
-            ${
-              order.status === 'on the way'
-                ? `<button class="btn btn-primary mark-delivered" data-key="${order.key}">✅ Mark Delivered</button>`
+                   <button class="btn btn-primary mark-delivered" data-key="${o.key}">✅ Delivered</button>`
                 : ''
             }
           </div>
@@ -184,87 +165,52 @@
       });
     }
 
-    // 📍 Start real-time tracking
     document.addEventListener('click', async (e) => {
       const key = e.target.dataset.key;
+      if (!key) return;
 
-      // 🚀 Start Tracking
       if (e.target.classList.contains('start-tracking')) {
-        if (!confirm('🚀 Start live tracking for this order?')) return;
-
+        if (!confirm('Start live tracking?')) return;
         try {
-          await update(ref(db, 'orders/' + key), { 
-            status: 'on the way',
-            assignedTo: currentPartner
-          });
-
-          // Begin GPS sharing
+          await update(ref(db, 'orders/' + key), { status: 'on the way', assignedTo: currentPartner });
           startTracking(key);
           alert('✅ Tracking started!');
-
         } catch (err) {
-          alert('❌ Failed to start tracking: ' + err.message);
+          alert('❌ ' + err.message);
         }
       }
 
-      // ✅ Mark Delivered
       if (e.target.classList.contains('mark-delivered')) {
-        if (!confirm('✅ Mark as delivered?')) return;
+        if (!confirm('Mark delivered?')) return;
         try {
-          await update(ref(db, 'orders/' + key), { 
-            status: 'delivered',
-            deliveredAt: new Date().toISOString()
-          });
+          await update(ref(db, 'orders/' + key), { status: 'delivered' });
           if (trackingInterval) clearInterval(trackingInterval);
-          alert('📦 Order delivered!');
+          alert('📦 Delivered!');
         } catch (err) {
-          alert('❌ Failed: ' + err.message);
+          alert('❌ ' + err.message);
         }
-      }
-
-      // 💬 Share Live Location via WhatsApp
-      if (e.target.classList.contains('share-location')) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const loc = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-            const msg = `📍 Live location: ${loc}`;
-            window.open(`https://wa.me/91${key.split('-')[1] || '9876543210'}?text=${encodeURIComponent(msg)}`, '_blank');
-          },
-          (err) => alert('⚠️ Location access needed')
-        );
       }
     });
 
-    // 📍 Real-time GPS sharing
     async function startTracking(orderKey) {
       if (trackingInterval) clearInterval(trackingInterval);
-
-      const shareLocation = async () => {
+      const send = async () => {
         try {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000
-            });
-          });
-
-          const data = {
+          const pos = await new Promise((r, x) => 
+            navigator.geolocation.getCurrentPosition(r, x, { enableHighAccuracy: true, timeout: 10000 })
+          );
+          await push(ref(db, `tracking/${orderKey}`), {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             timestamp: new Date().toISOString(),
             note: `🚚 ${currentPartner} en route`
-          };
-
-          await push(ref(db, `tracking/${orderKey}`), data);
-          console.log('📍 Location sent:', data);
-
+          });
         } catch (err) {
-          console.warn('📍 Location failed:', err);
+          console.warn('📍', err);
         }
       };
-
-      await shareLocation();
-      trackingInterval = setInterval(shareLocation, 15000);
+      await send();
+      trackingInterval = setInterval(send, 15000);
     }
   </script>
 </body>
