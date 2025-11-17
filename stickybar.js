@@ -1,4 +1,4 @@
-// ===== stickybar.js (FULLY UPDATED) =====
+// ===== stickybar.js (FULLY CORRECTED) =====
 const authButton = document.getElementById('authButton');
 const authText = document.getElementById('authText');
 const homeBtn = document.getElementById('homeBtn');
@@ -220,7 +220,7 @@ function generateWhatsAppMessage(order) {
   return msg;
 }
 
-// 👇 REAL-TIME TRACKING — uses <img> + valid key
+// ✅ CORRECTED: Tracking handler with proper ref/onValue import
 document.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('track-btn')) return;
 
@@ -230,14 +230,14 @@ document.addEventListener('click', async (e) => {
 
   const trackStatusEl = document.getElementById('track-status');
   const trackNoteEl = document.getElementById('track-note');
-  const trackMapImg = document.getElementById('track-map'); // 👈 img, not iframe
+  const trackMapImg = document.getElementById('track-map'); // 👈 <img>, not <iframe>
 
   if (!trackMapImg || !trackStatusEl || !trackNoteEl) {
     console.error('Missing track-popup elements!');
     return;
   }
 
-  // ✅ Render static map with YOUR key
+  // ✅ Render initial static map
   const apiKey = "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ";
   const url = `https://maps.googleapis.com/maps/api/staticmap?center=${initialLat},${initialLng}&zoom=15&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${initialLat},${initialLng}&key=${apiKey}`;
   trackMapImg.src = url;
@@ -246,42 +246,41 @@ document.addEventListener('click', async (e) => {
   trackNoteEl.textContent = 'Loading location...';
   trackPopup.style.display = 'flex';
 
-  // 🔁 Real-time updates
-  let db, onValue;
+  // ✅ Import Firebase functions ONLY when needed (no "ref is not defined")
+  let unsubscribe = null;
   try {
-    const { getDatabase } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-    const { onValue: _onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-    db = getDatabase();
-    onValue = _onValue;
+    const { getDatabase, ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+    const database = getDatabase(); // uses default app (already initialized)
+    const trackingRef = ref(database, `tracking/${orderId}`);
+
+    unsubscribe = onValue(trackingRef, (snapshot) => {
+      const updates = snapshot.val();
+      if (!updates) return;
+
+      let latest;
+      if (Array.isArray(updates)) {
+        latest = updates[updates.length - 1];
+      } else if (typeof updates === 'object') {
+        const keys = Object.keys(updates).sort();
+        latest = updates[keys[keys.length - 1]];
+      } else {
+        latest = updates;
+      }
+
+      if (latest && latest.lat && latest.lng) {
+        const url = `https://maps.googleapis.com/maps/api/staticmap?center=${latest.lat},${latest.lng}&zoom=16&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${latest.lat},${latest.lng}&key=${apiKey}`;
+        trackMapImg.src = url;
+        const note = latest.note || 'Driver is en route';
+        trackNoteEl.textContent = note;
+        trackStatusEl.innerHTML = `🕒 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${note}`;
+      }
+    });
   } catch (err) {
+    console.error('Firebase import failed:', err);
     trackNoteEl.textContent = '⚠️ Tracking unavailable';
-    return;
   }
 
-  const trackingRef = ref(db, `tracking/${orderId}`);
-  const unsubscribe = onValue(trackingRef, (snapshot) => {
-    const updates = snapshot.val();
-    if (!updates) return;
-
-    let latest;
-    if (Array.isArray(updates)) {
-      latest = updates[updates.length - 1];
-    } else if (typeof updates === 'object') {
-      const keys = Object.keys(updates).sort();
-      latest = updates[keys[keys.length - 1]];
-    } else {
-      latest = updates;
-    }
-
-    if (latest && latest.lat && latest.lng) {
-      const url = `https://maps.googleapis.com/maps/api/staticmap?center=${latest.lat},${latest.lng}&zoom=16&size=400x300&scale=2&markers=color:red%7Clabel:%F0%9F%93%8D%7C${latest.lat},${latest.lng}&key=${apiKey}`;
-      trackMapImg.src = url;
-      const note = latest.note || 'Driver is en route';
-      trackNoteEl.textContent = note;
-      trackStatusEl.innerHTML = `🕒 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${note}`;
-    }
-  });
-
+  // Cleanup on close
   const closeTracking = () => {
     if (unsubscribe) unsubscribe();
     trackPopup.style.display = 'none';
