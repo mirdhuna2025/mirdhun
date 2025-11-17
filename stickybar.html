@@ -138,7 +138,7 @@
       overflow: hidden;
     }
 
-    /* ============== ✅ TRACK POPUP (IMG, not iframe) ============== */
+    /* ✅ TRACK POPUP — FIXED IFRAME */
     #track-popup {
       display: none;
       position: fixed;
@@ -224,7 +224,6 @@
     #track-map {
       width: 100%;
       height: 100%;
-      object-fit: cover;
       border: none;
     }
     .track-note {
@@ -308,7 +307,7 @@
     </div>
   </div>
 
-  <!-- ============== ✅ TRACK POPUP (IMG) ============== -->
+  <!-- ✅ TRACK POPUP — FIXED IFRAME -->
   <div id="track-popup">
     <div class="track-popup-content">
       <div class="track-header">
@@ -320,13 +319,23 @@
         <button id="track-refresh" class="refresh-btn" title="Refresh">↻</button>
       </div>
       <div id="track-map-container">
-        <img id="track-map" loading="lazy" />
+        <!-- ✅ CORRECT IFRAME — allow + referrerpolicy -->
+        <iframe
+          id="track-map"
+          width="100%"
+          height="100%"
+          frameborder="0"
+          style="border:0"
+          allow="geolocation"
+          referrerpolicy="no-referrer-when-downgrade"
+          loading="lazy">
+        </iframe>
       </div>
       <div class="track-note">
         <span id="track-note">Loading location...</span>
       </div>
       <div class="track-footer">
-        <small>📍 Updates every few seconds • Powered by Google Maps</small>
+        <small>📍 Powered by Google Maps</small>
       </div>
     </div>
   </div>
