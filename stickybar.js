@@ -132,18 +132,35 @@ async function loadOrders() {
       myOrders.forEach(order => {
         const status = order.status || 'pending';
         const itemsList = order.items
-          ? order.items.map(i => i.name + ' ×' + i.qty).join(', ')
-          : 'None';
+          ? order.items.map(i => `<div>${i.name} × ${i.qty} <span>₹${(i.price * i.qty).toFixed(2)}</span></div>`).join('')
+          : '<div>No items</div>';
+
+        const imagesHtml = order.items && order.items.length > 0
+          ? `<div class="order-images">${order.items.slice(0,3).map(i => `<img src="${i.image || ''}" alt="${i.name}" loading="lazy">`).join('')}</div>`
+          : '';
+
+        const total = order.total || 0;
+        const payment = order.paymentMode || 'COD';
+        const orderId = order.orderId || 'N/A'; // ✅ 5-digit ID
+        const placedDate = order.timestamp ? new Date(order.timestamp).toLocaleString() : '—';
 
         const card = document.createElement('div');
         card.className = 'order-card';
         card.innerHTML = `
-          <p><strong>Placed:</strong> ${order.timestamp ? new Date(order.timestamp).toLocaleString() : '—'}</p>
-          <p><strong>Phone:</strong> ${order.phoneNumber}</p>
-          <p><strong>Address:</strong> ${order.address || '—'}</p>
-          <p><strong>Payment:</strong> ${order.paymentMode || '—'}</p>
-          <p><strong>Items:</strong> ${itemsList}</p>
-          <p><strong>Status:</strong> <span class="status-badge ${status}">${status}</span></p>
+          <div class="order-header">
+            <span class="order-id">Order #${orderId}</span>
+            <span>📱 ${order.phoneNumber}</span>
+          </div>
+          <div class="order-meta">
+            <p><strong>Placed:</strong> ${placedDate}</p>
+            <p><strong>Payment:</strong> ${payment}</p>
+            <p><strong>Total:</strong> ₹${total.toFixed(2)}</p>
+            <p><strong>Status:</strong> <span class="status-badge ${status}">${status}</span></p>
+          </div>
+          <div class="order-items">
+            ${itemsList}
+          </div>
+          ${imagesHtml}
           ${
             status === 'on the way'
               ? `<button class="track-btn" 
@@ -154,6 +171,10 @@ async function loadOrders() {
                 </button>`
               : ''
           }
+          <div class="order-actions">
+            <button class="btn-print" data-order='${JSON.stringify(order)}'>🖨️ Print</button>
+            <button class="btn-whatsapp" data-msg="${encodeURIComponent(generateWhatsAppMessage(order))}" data-raw="${generateWhatsAppMessage(order)}">💬 WhatsApp</button>
+          </div>
         `;
         ordersContainer.appendChild(card);
       });
@@ -165,6 +186,39 @@ async function loadOrders() {
     console.error('Init error:', err);
     ordersContainer.innerHTML = '<div id="error">Failed to connect.</div>';
   }
+}
+
+// ✅ Generate WhatsApp message with all details
+function generateWhatsAppMessage(order) {
+  let msg = `*Mirdhuna Order*\n\n`;
+  msg += `🔢 Order ID: ${order.orderId || 'N/A'}\n`;
+  msg += `📱 Phone: ${order.phoneNumber || 'N/A'}\n`;
+  msg += `💳 Payment: ${order.paymentMode || 'COD'}\n`;
+  msg += `📦 Items:\n`;
+  if (order.items && order.items.length > 0) {
+    order.items.forEach(i => {
+      msg += `• ${i.name} x${i.qty} — ₹${(i.price * i.qty).toFixed(2)}\n`;
+    });
+  } else {
+    msg += `• No items\n`;
+  }
+  msg += `\n💰 Total: ₹${(order.total || 0).toFixed(2)}\n`;
+
+  if (order.lat && order.lng) {
+    msg += `\n📍 Location: https://maps.google.com/?q=${order.lat},${order.lng}`;
+  }
+
+  if (order.address) {
+    msg += `\n🏠 Address: ${order.address}`;
+  }
+
+  if (order.instructions) {
+    msg += `\n📝 Instructions: ${order.instructions}`;
+  }
+
+  msg += `\n\n✅ Ready for delivery!`;
+
+  return msg;
 }
 
 // ===== REAL-TIME TRACKING HANDLER =====
@@ -188,7 +242,7 @@ document.addEventListener('click', async (e) => {
   // Initial view
   renderMapEmbed(initialLat, initialLng, 15);
   trackStatusEl.textContent = '🚚 On the way';
-  trackNoteEl.textContent = 'Loading live location...';
+  trackNoteEl.textContent = 'Loading location...';
   trackPopup.style.display = 'flex';
 
   // Setup Firebase realtime listener
@@ -248,12 +302,12 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-// Helper: Render Google Map embed
+// Helper: Render Google Map embed (using Static Maps API — no key needed)
 function renderMapEmbed(lat, lng, zoom = 15) {
   const mapEl = document.getElementById('track-map');
   if (!mapEl) return;
-  const apiKey = "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ";
-  mapEl.src = `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${lat},${lng}&zoom=${zoom}&maptype=roadmap`;
+  // ✅ Key-free static map
+  mapEl.src = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=400x300&scale=2&markers=color:red%7Clabel:📍%7C${lat},${lng}&key=`;
 }
 
 // ===== EVENT LISTENERS =====
@@ -312,6 +366,55 @@ style.textContent = `
   .status-badge['on the way'] { background: #a5d6a7; color: #1b5e20; }
   .status-badge.delivered { background: #c8e6c9; color: #2e7d32; }
   .status-badge.cancelled { background: #ffcdd2; color: #c62828; }
+  .order-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .order-meta {
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .order-items {
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .order-images {
+    display: flex;
+    gap: 4px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+  .order-images img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #eee;
+  }
+  .order-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .btn-print, .btn-whatsapp {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .btn-print { background: #2196F3; color: white; }
+  .btn-whatsapp { background: #25D366; color: white; }
 `;
 document.head.appendChild(style);
 
