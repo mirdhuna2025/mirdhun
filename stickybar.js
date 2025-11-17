@@ -1,3 +1,4 @@
+// ===== stickybar.js (FULLY UPDATED) =====
 const authButton = document.getElementById('authButton');
 const authText = document.getElementById('authText');
 const homeBtn = document.getElementById('homeBtn');
@@ -87,7 +88,6 @@ async function handleLogin() {
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('mobileNumber', number);
     updateAuthUI();
-   
     closeLoginPopup();
   } catch (error) {
     console.error('Firebase error:', error);
@@ -101,7 +101,6 @@ async function handleLogin() {
 async function loadOrders() {
   const userPhone = localStorage.getItem('mobileNumber');
   if (!userPhone) {
-    // ❌ Removed alert — but this should not be reached due to Orders click handler
     ordersPopup.style.display = 'none';
     return;
   }
@@ -144,10 +143,15 @@ async function loadOrders() {
           <p><strong>Address:</strong> ${order.address || '—'}</p>
           <p><strong>Payment:</strong> ${order.paymentMode || '—'}</p>
           <p><strong>Items:</strong> ${itemsList}</p>
-          <p><strong>Status:</strong> ${status}</p>
+          <p><strong>Status:</strong> <span class="status-badge ${status}">${status}</span></p>
           ${
             status === 'on the way'
-              ? `<button class="track-btn" data-lat="${order.lat || '28.6139'}" data-lng="${order.lng || '77.2090'}">Track Delivery</button>`
+              ? `<button class="track-btn" 
+                  data-order-id="${order.key}" 
+                  data-lat="${order.lat || '28.6139'}" 
+                  data-lng="${order.lng || '77.2090'}">
+                  🚚 Track Live
+                </button>`
               : ''
           }
         `;
@@ -163,15 +167,103 @@ async function loadOrders() {
   }
 }
 
+// ===== REAL-TIME TRACKING HANDLER =====
+document.addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('track-btn')) return;
+
+  const orderId = e.target.dataset.orderId;
+  const initialLat = parseFloat(e.target.dataset.lat) || 28.6139;
+  const initialLng = parseFloat(e.target.dataset.lng) || 77.2090;
+
+  const trackMapEl = document.getElementById('track-map');
+  const trackStatusEl = document.getElementById('track-status');
+  const trackNoteEl = document.getElementById('track-note');
+  const trackRefreshEl = document.getElementById('track-refresh');
+
+  if (!trackMapEl || !trackStatusEl || !trackNoteEl) {
+    console.error('Missing track-popup elements!');
+    return;
+  }
+
+  // Initial view
+  renderMapEmbed(initialLat, initialLng, 15);
+  trackStatusEl.textContent = '🚚 On the way';
+  trackNoteEl.textContent = 'Loading live location...';
+  trackPopup.style.display = 'flex';
+
+  // Setup Firebase realtime listener
+  let unsubscribe = null;
+  try {
+    const { getDatabase, ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+    const database = getDatabase();
+    const trackingRef = ref(database, `tracking/${orderId}`);
+
+    unsubscribe = onValue(trackingRef, (snapshot) => {
+      const updates = snapshot.val();
+      if (!updates) {
+        trackNoteEl.textContent = '📍 Awaiting driver update...';
+        return;
+      }
+
+      let latest;
+      if (Array.isArray(updates)) {
+        latest = updates[updates.length - 1];
+      } else if (typeof updates === 'object') {
+        const keys = Object.keys(updates).sort();
+        latest = updates[keys[keys.length - 1]];
+      } else {
+        latest = updates;
+      }
+
+      if (latest && latest.lat && latest.lng) {
+        renderMapEmbed(latest.lat, latest.lng, 16);
+        const note = latest.note || 'Driver is en route';
+        trackNoteEl.textContent = note;
+        trackStatusEl.innerHTML = `🕒 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${note}`;
+      }
+    }, (error) => {
+      console.warn('Tracking error:', error);
+      trackNoteEl.textContent = '📡 Connection issue';
+    });
+
+  } catch (err) {
+    console.error('Firebase tracking import failed:', err);
+    trackNoteEl.textContent = '⚠️ Tracking unavailable';
+  }
+
+  // Cleanup on close
+  const closeTracking = () => {
+    if (unsubscribe) unsubscribe();
+    trackPopup.style.display = 'none';
+  };
+
+  closeTrackBtn.onclick = closeTracking;
+  trackPopup.onclick = (ev) => { if (ev.target === trackPopup) closeTracking(); };
+
+  // Manual refresh
+  if (trackRefreshEl) {
+    trackRefreshEl.onclick = () => {
+      trackNoteEl.textContent = '↻ Refreshing...';
+    };
+  }
+});
+
+// Helper: Render Google Map embed
+function renderMapEmbed(lat, lng, zoom = 15) {
+  const mapEl = document.getElementById('track-map');
+  if (!mapEl) return;
+  const apiKey = "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ";
+  mapEl.src = `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${lat},${lng}&zoom=${zoom}&maptype=roadmap`;
+}
+
 // ===== EVENT LISTENERS =====
-homeBtn.addEventListener('click', () => {
+homeBtn?.addEventListener('click', () => {
   window.location.href = 'index.html';
 });
 
-ordersBtn.addEventListener('click', () => {
+ordersBtn?.addEventListener('click', () => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   if (!isLoggedIn) {
-    // ✅ CHANGE 1: Show login popup instead of alert
     popup.style.display = 'flex';
     return;
   }
@@ -179,17 +271,16 @@ ordersBtn.addEventListener('click', () => {
   loadOrders();
 });
 
-searchBtn.addEventListener('click', () => {
+searchBtn?.addEventListener('click', () => {
   window.location.href = 'search.html';
 });
 
-authButton.addEventListener('click', () => {
+authButton?.addEventListener('click', () => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   if (isLoggedIn) {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('mobileNumber');
     updateAuthUI();
-  
     ordersPopup.style.display = 'none';
   } else {
     popup.style.display = 'flex';
@@ -197,25 +288,31 @@ authButton.addEventListener('click', () => {
 });
 
 // Popup close handlers
-closeBtn.addEventListener('click', closeLoginPopup);
-submitBtn.addEventListener('click', handleLogin);
-popup.addEventListener('click', (e) => { if (e.target === popup) closeLoginPopup(); });
+closeBtn?.addEventListener('click', closeLoginPopup);
+submitBtn?.addEventListener('click', handleLogin);
+popup?.addEventListener('click', (e) => { if (e.target === popup) closeLoginPopup(); });
 
-closeOrdersBtn.addEventListener('click', () => { ordersPopup.style.display = 'none'; });
-ordersPopup.addEventListener('click', (e) => { if (e.target === ordersPopup) ordersPopup.style.display = 'none'; });
+closeOrdersBtn?.addEventListener('click', () => { ordersPopup.style.display = 'none'; });
+ordersPopup?.addEventListener('click', (e) => { if (e.target === ordersPopup) ordersPopup.style.display = 'none'; });
 
-closeTrackBtn.addEventListener('click', () => { trackPopup.style.display = 'none'; });
-trackPopup.addEventListener('click', (e) => { if (e.target === trackPopup) trackPopup.style.display = 'none'; });
+closeTrackBtn?.addEventListener('click', () => { trackPopup.style.display = 'none'; });
+trackPopup?.addEventListener('click', (e) => { if (e.target === trackPopup) trackPopup.style.display = 'none'; });
 
-document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('track-btn')) {
-    const lat = e.target.dataset.lat;
-    const lng = e.target.dataset.lng;
-    document.getElementById('track-map').src = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
-    // ✅ CHANGE 2: Ensure track popup is on top
-    trackPopup.style.zIndex = '10001'; // higher than orders-popup (10000)
-    trackPopup.style.display = 'flex';
+// Optional: Add status badge styling
+const style = document.createElement('style');
+style.textContent = `
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
   }
-});
+  .status-badge.pending { background: #ffe082; color: #5d4037; }
+  .status-badge.confirmed { background: #81d4fa; color: #01579b; }
+  .status-badge['on the way'] { background: #a5d6a7; color: #1b5e20; }
+  .status-badge.delivered { background: #c8e6c9; color: #2e7d32; }
+  .status-badge.cancelled { background: #ffcdd2; color: #c62828; }
+`;
+document.head.appendChild(style);
 
 updateAuthUI();
