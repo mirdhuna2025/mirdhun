@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPbOZwAZEMiC1LSDSgnSEPmSxQ7-pR2oQ",
@@ -354,7 +354,7 @@ function removeFromCart(id) {
   updateCartUI();
 }
 
-// ✅✅✅ UPDATED: placeOrder() — async + geolocation + tracking node ✅✅✅
+// ✅✅✅ FULLY UPDATED: placeOrder() — 5-digit ID + geolocation + tracking node ✅✅✅
 async function placeOrder() {
   if (!isLoggedIn()) {
     showToast('Please log in to place an order.');
@@ -375,7 +375,6 @@ async function placeOrder() {
     return;
   }
 
-  // ✅ CRITICAL FIX: Use mobileNumber from stickybar.js login
   const phone = localStorage.getItem('mobileNumber');
   if (!phone) {
     showToast('Session expired. Please log in again.');
@@ -385,7 +384,7 @@ async function placeOrder() {
   const payment = (checkoutPayment?.value) || 'Cash on Delivery';
   const instructions = (checkoutInstructions?.value || '').trim();
 
-  // ✅ Get user's delivery location
+  // ✅ Get delivery location
   let deliveryLocation = null;
   if ('geolocation' in navigator) {
     try {
@@ -413,6 +412,22 @@ async function placeOrder() {
     return s + pr * q;
   }, 0);
 
+  // ✅ Generate 5-digit sequential Order ID
+  let orderIdNum = 1;
+  try {
+    const lastIdRef = ref(db, 'lastOrderId');
+    const snapshot = await get(lastIdRef);
+    if (snapshot.exists()) {
+      orderIdNum = snapshot.val() + 1;
+    }
+    await set(lastIdRef, orderIdNum); // increment for next order
+  } catch (err) {
+    console.warn('⚠️ Failed to fetch/generate orderId, using fallback', err);
+    orderIdNum = Math.floor(10000 + Math.random() * 90000); // random 5-digit
+  }
+
+  const orderIdStr = String(orderIdNum).padStart(5, '0'); // e.g., "00001"
+
   const order = {
     phoneNumber: phone,
     address,
@@ -429,16 +444,18 @@ async function placeOrder() {
     timestamp: new Date().toISOString(),
     status: 'pending',
     // ✅ Save geolocation if available
-    ...(deliveryLocation ? { lat: deliveryLocation.lat, lng: deliveryLocation.lng } : {})
+    ...(deliveryLocation ? { lat: deliveryLocation.lat, lng: deliveryLocation.lng } : {}),
+    // ✅ Add 5-digit order ID
+    orderId: orderIdStr
   };
 
   try {
     const orderRef = push(ref(db, 'orders'), order);
-    const orderId = orderRef.key;
+    const firebaseKey = orderRef.key;
 
     // ✅ Create real-time tracking node for live updates
-    if (deliveryLocation && orderId) {
-      await push(ref(db, `tracking/${orderId}`), {
+    if (deliveryLocation && firebaseKey) {
+      await push(ref(db, `tracking/${firebaseKey}`), {
         lat: deliveryLocation.lat,
         lng: deliveryLocation.lng,
         timestamp: new Date().toISOString(),
@@ -446,7 +463,7 @@ async function placeOrder() {
       });
     }
 
-    showToast('✅ Order placed successfully!');
+    showToast(`✅ Order #${orderIdStr} placed successfully!`);
     cart = [];
     saveCart();
     updateCartUI();
@@ -455,7 +472,7 @@ async function placeOrder() {
 
   } catch (err) {
     console.error('❌ placeOrder error:', err);
-    showToast('Failed to place order.');
+    showToast('Failed to place order. Try again.');
   }
 }
 
