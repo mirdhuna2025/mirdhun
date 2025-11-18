@@ -4,18 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mirdhuna Delivery</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --primary: #d40000;
-      --success: #4CAF50;
-      --info: #2196F3;
-      --whatsapp: #25D366;
-    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Poppins', sans-serif;
-      background: #f5f5f5;
+      background: #f8f9fa;
       padding: 16px;
       max-width: 500px;
       margin: 0 auto;
@@ -24,7 +18,7 @@
       text-align: center;
       padding: 16px 0;
       color: white;
-      background: var(--primary);
+      background: #d40000;
       border-radius: 12px;
       margin-bottom: 20px;
     }
@@ -46,9 +40,9 @@
       cursor: pointer;
       margin-top: 12px;
     }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-info { background: var(--info); color: white; }
+    .btn-success { background: #4CAF50; color: white; }
+    .btn-info { background: #2196F3; color: white; }
+    .btn-primary { background: #d40000; color: white; }
     select {
       width: 100%;
       padding: 12px;
@@ -57,19 +51,28 @@
       font-size: 16px;
       margin: 10px 0;
     }
-    .status { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
-    .status.pending { background: #ffe082; color: #5d4037; }
-    .status['on the way'] { background: #a5d6a7; color: #1b5e20; font-weight: bold; }
-    .status.delivered { background: #c8e6c9; color: #2e7d32; }
-    #partner-screen, #orders-screen { display: none; }
-    body.show-partner #partner-screen { display: block; }
-    body.show-orders #orders-screen { display: block; }
-    .highlight { animation: pulse 1.5s infinite; }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    .status {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
     }
+    .status.pending {
+      background: #ffe082;
+      color: #5d4037;
+      border: 2px solid #ffca28;
+    }
+    .highlight {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 202, 40, 0.7); }
+      70% { box-shadow: 0 0 0 12px rgba(255, 202, 40, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 202, 40, 0); }
+    }
+    #partner-screen, #orders-screen { display: none; }
+    body.show-orders #orders-screen { display: block; }
+    body.show-partner #partner-screen { display: block; }
   </style>
 </head>
 <body class="show-partner">
@@ -97,7 +100,9 @@
   <div id="orders-screen">
     <div class="header">
       <h2>📦 Your Orders</h2>
-      <button class="btn" style="background:#6c757d;margin-top:8px;font-size:14px;" onclick="document.body.className='show-partner'">← Change Partner</button>
+      <button class="btn" style="background:#6c757d;margin-top:8px;font-size:14px;" onclick="document.body.className='show-partner'">
+        ← Change Partner
+      </button>
     </div>
     <div id="orders-container"></div>
     <div class="card" id="no-orders" style="display:none;">
@@ -123,21 +128,19 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     let currentPartner = null;
-    let trackingInterval = null;
 
     // 🚚 Select Partner
     document.getElementById('select-partner').addEventListener('click', () => {
       const p = document.getElementById('partner-select').value;
-      if (!p) return alert('❌ Select your name');
+      if (!p) return alert('❌ Please select your name');
       currentPartner = p;
       document.body.className = 'show-orders';
       loadOrders();
     });
 
-    // 📥 Load assigned orders
+    // 📥 Load orders
     function loadOrders() {
       if (!currentPartner) return;
-
       const ordersRef = ref(db, 'orders');
       onValue(ordersRef, (snapshot) => {
         const data = snapshot.val();
@@ -161,17 +164,17 @@
               <strong>#${o.orderId || 'N/A'}</strong>
               <span class="status ${o.status}">${o.status}</span>
             </div>
-            <p><strong>Phone:</strong> ${o.phoneNumber || '—'}</p>
-            <p><strong>Address:</strong> ${o.address?.substring(0,30) || '—'}</p>
-            <p><strong>Total:</strong> ₹${(o.total || 0).toFixed(2)}</p>
+            <p><strong>📱</strong> ${o.phoneNumber || '—'}</p>
+            <p><strong>📍</strong> ${o.address?.substring(0,40) || '—'}</p>
+            <p><strong>💰</strong> ₹${(o.total || 0).toFixed(2)}</p>
             ${
               o.status === 'pending'
-                ? `<button class="btn btn-success start-tracking" data-key="${o.key}" data-order-id="${o.orderId}">
+                ? `<button class="btn btn-success start-tracking" data-key="${o.key}">
                     🚀 Start Tracking
                   </button>`
                 : o.status === 'on the way'
                 ? `<button class="btn btn-info" disabled>📍 Tracking...</button>
-                   <button class="btn btn-primary mark-delivered" data-key="${o.key}">✅ Mark Delivered</button>`
+                   <button class="btn btn-primary mark-delivered" data-key="${o.key}">✅ Delivered</button>`
                 : ''
             }
           </div>
@@ -182,99 +185,48 @@
     // ✅ CLICK HANDLERS — FIXED
     document.addEventListener('click', async (e) => {
       const key = e.target.dataset.key;
-      const orderId = e.target.dataset.orderId;
+      if (!key) return;
 
-      // 🚀 Start Tracking — FULLY FUNCTIONAL
+      // 🚀 Start Tracking
       if (e.target.classList.contains('start-tracking')) {
-        if (!confirm(`🚀 Start live tracking for Order #${orderId}?`)) return;
+        if (!confirm('Start live tracking for this order?')) return;
 
         try {
-          // ✅ 1. Update order status + assignedTo
+          // ✅ 1. Update order status
           await update(ref(db, `orders/${key}`), {
             status: 'on the way',
-            assignedTo: currentPartner,
-            // Optional: capture initial location
-            lat: 28.6139, // fallback
-            lng: 77.2090
+            assignedTo: currentPartner
           });
 
-          // ✅ 2. Create tracking node for real-time updates
-          const trackingRef = ref(db, `tracking/${key}`);
-          await push(trackingRef, {
-            lat: 28.6139,
+          // ✅ 2. Create initial tracking point
+          await push(ref(db, `tracking/${key}`), {
+            lat: 28.6139,  // fallback Delhi
             lng: 77.2090,
             timestamp: new Date().toISOString(),
             note: `🚚 ${currentPartner} started delivery`
           });
 
-          // ✅ 3. Begin live GPS sharing
-          startLiveTracking(key);
-
-          alert(`✅ Tracking started for Order #${orderId}!`);
+          alert('✅ Tracking started!');
           loadOrders(); // refresh UI
 
         } catch (err) {
-          console.error('❌ Start Tracking failed:', err);
+          console.error('❌ Failed:', err);
           alert('Failed to start tracking. Check internet.');
         }
       }
 
       // ✅ Mark Delivered
       if (e.target.classList.contains('mark-delivered')) {
-        if (!confirm('✅ Mark as delivered?')) return;
+        if (!confirm('Mark as delivered?')) return;
         try {
-          await update(ref(db, `orders/${key}`), { 
-            status: 'delivered',
-            deliveredAt: new Date().toISOString()
-          });
-          if (trackingInterval) clearInterval(trackingInterval);
-          alert('📦 Order delivered!');
+          await update(ref(db, `orders/${key}`), { status: 'delivered' });
+          alert('📦 Delivered!');
           loadOrders();
         } catch (err) {
-          alert('❌ Failed to mark delivered: ' + err.message);
+          alert('❌ Failed: ' + err.message);
         }
       }
     });
-
-    // 📍 Real-time GPS sharing
-    async function startLiveTracking(orderKey) {
-      if (trackingInterval) clearInterval(trackingInterval);
-
-      const shareLocation = async () => {
-        try {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 60000
-            });
-          });
-
-          // ✅ Push to /tracking/{orderId}
-          await push(ref(db, `tracking/${orderKey}`), {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            timestamp: new Date().toISOString(),
-            note: `📍 ${currentPartner} en route`
-          });
-          console.log('📍 Location sent');
-
-        } catch (err) {
-          console.warn('📍 GPS failed:', err);
-        }
-      };
-
-      // Send immediately + every 15 sec
-      await shareLocation();
-      trackingInterval = setInterval(shareLocation, 15000);
-    }
-
-    // Auto-load for dev (optional)
-    // if (location.hostname === 'localhost') {
-    //   currentPartner = 'Raj';
-    //   document.body.className = 'show-orders';
-    //   loadOrders();
-    // }
   </script>
 </body>
 </html>
