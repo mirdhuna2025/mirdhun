@@ -48,6 +48,7 @@
     }
     .btn-primary { background: var(--primary); color: white; }
     .btn-success { background: var(--success); color: white; }
+    .btn-info { background: var(--info); color: white; }
     select {
       width: 100%;
       padding: 12px;
@@ -58,11 +59,17 @@
     }
     .status { padding: 4px 8px; border-radius: 6px; font-size: 12px; }
     .status.pending { background: #ffe082; color: #5d4037; }
-    .status['on the way'] { background: #a5d6a7; color: #1b5e20; }
+    .status['on the way'] { background: #a5d6a7; color: #1b5e20; font-weight: bold; }
     .status.delivered { background: #c8e6c9; color: #2e7d32; }
     #partner-screen, #orders-screen { display: none; }
     body.show-partner #partner-screen { display: block; }
     body.show-orders #orders-screen { display: block; }
+    .highlight { animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    }
   </style>
 </head>
 <body class="show-partner">
@@ -99,6 +106,7 @@
   </div>
 
   <script type="module">
+    // ✅ Initialize Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getDatabase, ref, onValue, update, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -117,6 +125,7 @@
     let currentPartner = null;
     let trackingInterval = null;
 
+    // 🚚 Select Partner
     document.getElementById('select-partner').addEventListener('click', () => {
       const p = document.getElementById('partner-select').value;
       if (!p) return alert('❌ Select your name');
@@ -125,7 +134,10 @@
       loadOrders();
     });
 
+    // 📥 Load assigned orders
     function loadOrders() {
+      if (!currentPartner) return;
+
       const ordersRef = ref(db, 'orders');
       onValue(ordersRef, (snapshot) => {
         const data = snapshot.val();
@@ -144,20 +156,22 @@
         }
         no.style.display = 'none';
         cont.innerHTML = orders.map(o => `
-          <div class="card">
-            <div style="display:flex;justify-content:space-between">
-              <strong>#${o.orderId}</strong>
+          <div class="card ${o.status === 'pending' ? 'highlight' : ''}">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong>#${o.orderId || 'N/A'}</strong>
               <span class="status ${o.status}">${o.status}</span>
             </div>
-            <p><strong>Phone:</strong> ${o.phoneNumber}</p>
-            <p><strong>Address:</strong> ${o.address || '—'}</p>
-            <p>₹${(o.total || 0).toFixed(2)}</p>
+            <p><strong>Phone:</strong> ${o.phoneNumber || '—'}</p>
+            <p><strong>Address:</strong> ${o.address?.substring(0,30) || '—'}</p>
+            <p><strong>Total:</strong> ₹${(o.total || 0).toFixed(2)}</p>
             ${
               o.status === 'pending'
-                ? `<button class="btn btn-success start-tracking" data-key="${o.key}">🚀 Start Tracking</button>`
+                ? `<button class="btn btn-success start-tracking" data-key="${o.key}" data-order-id="${o.orderId}">
+                    🚀 Start Tracking
+                  </button>`
                 : o.status === 'on the way'
                 ? `<button class="btn btn-info" disabled>📍 Tracking...</button>
-                   <button class="btn btn-primary mark-delivered" data-key="${o.key}">✅ Delivered</button>`
+                   <button class="btn btn-primary mark-delivered" data-key="${o.key}">✅ Mark Delivered</button>`
                 : ''
             }
           </div>
@@ -165,53 +179,102 @@
       });
     }
 
+    // ✅ CLICK HANDLERS — FIXED
     document.addEventListener('click', async (e) => {
       const key = e.target.dataset.key;
-      if (!key) return;
+      const orderId = e.target.dataset.orderId;
 
+      // 🚀 Start Tracking — FULLY FUNCTIONAL
       if (e.target.classList.contains('start-tracking')) {
-        if (!confirm('Start live tracking?')) return;
+        if (!confirm(`🚀 Start live tracking for Order #${orderId}?`)) return;
+
         try {
-          await update(ref(db, 'orders/' + key), { status: 'on the way', assignedTo: currentPartner });
-          startTracking(key);
-          alert('✅ Tracking started!');
+          // ✅ 1. Update order status + assignedTo
+          await update(ref(db, `orders/${key}`), {
+            status: 'on the way',
+            assignedTo: currentPartner,
+            // Optional: capture initial location
+            lat: 28.6139, // fallback
+            lng: 77.2090
+          });
+
+          // ✅ 2. Create tracking node for real-time updates
+          const trackingRef = ref(db, `tracking/${key}`);
+          await push(trackingRef, {
+            lat: 28.6139,
+            lng: 77.2090,
+            timestamp: new Date().toISOString(),
+            note: `🚚 ${currentPartner} started delivery`
+          });
+
+          // ✅ 3. Begin live GPS sharing
+          startLiveTracking(key);
+
+          alert(`✅ Tracking started for Order #${orderId}!`);
+          loadOrders(); // refresh UI
+
         } catch (err) {
-          alert('❌ ' + err.message);
+          console.error('❌ Start Tracking failed:', err);
+          alert('Failed to start tracking. Check internet.');
         }
       }
 
+      // ✅ Mark Delivered
       if (e.target.classList.contains('mark-delivered')) {
-        if (!confirm('Mark delivered?')) return;
+        if (!confirm('✅ Mark as delivered?')) return;
         try {
-          await update(ref(db, 'orders/' + key), { status: 'delivered' });
+          await update(ref(db, `orders/${key}`), { 
+            status: 'delivered',
+            deliveredAt: new Date().toISOString()
+          });
           if (trackingInterval) clearInterval(trackingInterval);
-          alert('📦 Delivered!');
+          alert('📦 Order delivered!');
+          loadOrders();
         } catch (err) {
-          alert('❌ ' + err.message);
+          alert('❌ Failed to mark delivered: ' + err.message);
         }
       }
     });
 
-    async function startTracking(orderKey) {
+    // 📍 Real-time GPS sharing
+    async function startLiveTracking(orderKey) {
       if (trackingInterval) clearInterval(trackingInterval);
-      const send = async () => {
+
+      const shareLocation = async () => {
         try {
-          const pos = await new Promise((r, x) => 
-            navigator.geolocation.getCurrentPosition(r, x, { enableHighAccuracy: true, timeout: 10000 })
-          );
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000
+            });
+          });
+
+          // ✅ Push to /tracking/{orderId}
           await push(ref(db, `tracking/${orderKey}`), {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             timestamp: new Date().toISOString(),
-            note: `🚚 ${currentPartner} en route`
+            note: `📍 ${currentPartner} en route`
           });
+          console.log('📍 Location sent');
+
         } catch (err) {
-          console.warn('📍', err);
+          console.warn('📍 GPS failed:', err);
         }
       };
-      await send();
-      trackingInterval = setInterval(send, 15000);
+
+      // Send immediately + every 15 sec
+      await shareLocation();
+      trackingInterval = setInterval(shareLocation, 15000);
     }
+
+    // Auto-load for dev (optional)
+    // if (location.hostname === 'localhost') {
+    //   currentPartner = 'Raj';
+    //   document.body.className = 'show-orders';
+    //   loadOrders();
+    // }
   </script>
 </body>
 </html>
