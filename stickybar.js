@@ -1,4 +1,4 @@
-// ===== stickybar.js (FULLY COMPLETE) =====
+// ===== stickybar.js (FULLY COMPLETE + REAL MOVING TRACKING) =====
 const authButton = document.getElementById('authButton');
 const authText = document.getElementById('authText');
 const homeBtn = document.getElementById('homeBtn');
@@ -230,7 +230,7 @@ function renderMapEmbed(lat, lng, zoom = 15) {
   mapEl.src = url;
 }
 
-// ✅ Tracking handler — no Firebase ref needed here
+// ✅ Tracking handler — REAL MOVING TRACKING (no ref error)
 document.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('track-btn')) return;
 
@@ -254,27 +254,29 @@ document.addEventListener('click', async (e) => {
   trackNoteEl.textContent = 'Loading location...';
   trackPopup.style.display = 'flex';
 
-  // 🔁 Real-time updates via Firebase (separate import)
+  // 🔁 REAL-TIME MOVING TRACKING
   let unsubscribe = null;
   try {
     const { getDatabase, ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-    const database = getDatabase();
+    const database = getDatabase(); // uses default app
     const trackingRef = ref(database, `tracking/${orderId}`);
 
     unsubscribe = onValue(trackingRef, (snapshot) => {
       const updates = snapshot.val();
       if (!updates) return;
 
+      // Get latest location point
       let latest;
       if (Array.isArray(updates)) {
-        latest = updates[updates.length - 1];
+        latest = updates[updates.length - 1]; // last in array
       } else if (typeof updates === 'object') {
-        const keys = Object.keys(updates).sort();
+        const keys = Object.keys(updates).sort(); // sort timestamps/keys
         latest = updates[keys[keys.length - 1]];
       } else {
         latest = updates;
       }
 
+      // ✅ Update map to NEW location → driver MOVES
       if (latest && latest.lat && latest.lng) {
         renderMapEmbed(latest.lat, latest.lng);
         const note = latest.note || 'Driver is en route';
@@ -283,26 +285,18 @@ document.addEventListener('click', async (e) => {
       }
     });
   } catch (err) {
-    console.error('Firebase import failed:', err);
-    trackNoteEl.textContent = '⚠️ Tracking unavailable';
+    console.error('Firebase tracking failed:', err);
+    trackNoteEl.textContent = '⚠️ Real-time tracking unavailable';
   }
 
   // Cleanup on close
   const closeTracking = () => {
-    if (unsubscribe) unsubscribe();
+    if (unsubscribe) unsubscribe(); // stop listening
     trackPopup.style.display = 'none';
   };
 
   closeTrackBtn.onclick = closeTracking;
   trackPopup.onclick = (ev) => { if (ev.target === trackPopup) closeTracking(); };
-
-  // Manual refresh
-  const refreshBtn = document.getElementById('track-refresh');
-  if (refreshBtn) {
-    refreshBtn.onclick = () => {
-      trackNoteEl.textContent = '↻ Refreshing...';
-    };
-  }
 });
 
 // ===== EVENT LISTENERS =====
