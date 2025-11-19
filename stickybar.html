@@ -138,7 +138,7 @@
       overflow: hidden;
     }
 
-    /* ✅ TRACK POPUP — FIXED IFRAME */
+    /* ✅ TRACK POPUP — FULLY ENHANCED FOR LIVE TRACKING */
     #track-popup {
       display: none;
       position: fixed;
@@ -194,7 +194,7 @@
       background: #f8f9fa;
       border-bottom: 1px solid #eee;
     }
-    .status-text {
+    #track-status {
       font-weight: 600;
       color: #2b2d42;
       font-size: 15px;
@@ -226,7 +226,7 @@
       height: 100%;
       border: none;
     }
-    .track-note {
+    #track-note {
       padding: 12px 16px;
       font-size: 14px;
       color: #495057;
@@ -307,7 +307,7 @@
     </div>
   </div>
 
-  <!-- ✅ TRACK POPUP — FIXED IFRAME -->
+  <!-- ✅ TRACK POPUP — FULLY FUNCTIONAL FOR LIVE MOVING TRACKING -->
   <div id="track-popup">
     <div class="track-popup-content">
       <div class="track-header">
@@ -315,7 +315,7 @@
         <button id="close-track" class="close-btn">×</button>
       </div>
       <div class="track-status-bar">
-        <div id="track-status" class="status-text">🚚 On the way</div>
+        <div id="track-status">🚚 On the way</div>
         <button id="track-refresh" class="refresh-btn" title="Refresh">↻</button>
       </div>
       <div id="track-map-container">
@@ -335,7 +335,7 @@
         <span id="track-note">Loading location...</span>
       </div>
       <div class="track-footer">
-        <small>📍 Powered by Google Maps</small>
+        <small>📍 Updates every 15 seconds • Powered by Google Maps</small>
       </div>
     </div>
   </div>
