@@ -58,13 +58,12 @@
       font-size: 12px;
       font-weight: 600;
     }
-    .status.pending {
-      background: #ffe082;
-      color: #5d4037;
-      border: 2px solid #ffca28;
-    }
+    .status.pending { background: #ffe082; color: #5d4037; }
+    .status['on the way'] { background: #a5d6a7; color: #1b5e20; }
+    .status.delivered { background: #c8e6c9; color: #2e7d32; }
     .highlight {
       animation: pulse 2s infinite;
+      border: 2px solid #ffca28;
     }
     @keyframes pulse {
       0% { box-shadow: 0 0 0 0 rgba(255, 202, 40, 0.7); }
@@ -79,6 +78,7 @@
   </style>
 </head>
 <body class="show-partner">
+  <!-- 🚚 Partner Selection -->
   <div id="partner-screen">
     <div class="header">
       <h2>🚚 Mirdhuna Delivery</h2>
@@ -98,6 +98,7 @@
     </div>
   </div>
 
+  <!-- 📋 Orders -->
   <div id="orders-screen">
     <div class="header">
       <h2>📦 Your Orders</h2>
@@ -133,7 +134,7 @@
 
     document.getElementById('select-partner').addEventListener('click', () => {
       const p = document.getElementById('partner-select').value;
-      if (!p) return alert('❌ Select your name');
+      if (!p) return alert('❌ Please select your name');
       currentPartner = p;
       document.body.className = 'show-orders';
       loadOrders();
@@ -167,7 +168,7 @@
       no.style.display = 'none';
       
       cont.innerHTML = orders.map(o => `
-        <div class="card ${o.status === 'pending' ? 'highlight' : ''}">
+        <div class="card ${o.assignedTo === currentPartner && o.status !== 'on the way' && o.status !== 'delivered' ? 'highlight' : ''}">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <strong>#${o.orderId || 'N/A'}</strong>
             <span class="status ${o.status}">${o.status}</span>
@@ -177,7 +178,8 @@
           <p><strong>💰</strong> ₹${(o.total || 0).toFixed(2)}</p>
           <div class="actions">
             ${
-              o.status === 'pending'
+              // ✅ FIXED: Show "Start Tracking" for ANY non-on-the-way order
+              o.status !== 'on the way' && o.status !== 'delivered' && o.status !== 'cancelled'
                 ? `<button class="btn btn-success start-tracking" data-key="${o.key}">
                     🚀 Start Tracking
                   </button>`
@@ -203,12 +205,12 @@
 
       // 🚀 START TRACKING — REAL GPS + LIVE UPDATES
       if (e.target.classList.contains('start-tracking')) {
-        if (!confirm('🚀 Start live tracking?\nLocation will update every 15s.')) return;
+        if (!confirm('🚀 Start live tracking?\nYour location will update every 15 seconds.')) return;
 
         try {
-          // ✅ Get REAL GPS (not fallback)
+          // ✅ Get REAL GPS
           const pos = await new Promise((resolve, reject) => {
-            if (!navigator.geolocation) reject(new Error('No geolocation'));
+            if (!navigator.geolocation) reject(new Error('Geolocation not supported'));
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: true,
               timeout: 10000
@@ -229,17 +231,18 @@
           await push(ref(db, `tracking/${key}`), {
             lat, lng,
             timestamp: new Date().toISOString(),
-            note: `🚚 ${currentPartner} en route`
+            note: `🚚 ${currentPartner} started delivery`
           });
 
-          // ✅ LIVE TRACKING LOOP — every 15s
+          // ✅ LIVE TRACKING LOOP
           startLiveTracking(key);
 
-          alert('✅ Tracking started! Map will update live.');
-          loadOrders();
+          alert('✅ Tracking started! Customer will see you move.');
+          loadOrders(); // refresh UI
 
         } catch (err) {
-          alert('⚠️ Allow location access to start tracking.');
+          console.error('❌ Tracking failed:', err);
+          alert('⚠️ Please allow location access and retry.');
         }
       }
 
@@ -250,26 +253,26 @@
             navigator.geolocation.getCurrentPosition(r, x, { timeout: 5000 })
           );
           const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-          window.open(`https://wa.me/91${phone}?text=${encodeURIComponent('📍 Live location: ' + url)}`, '_blank');
+          window.open(`https://wa.me/91${phone}?text=${encodeURIComponent('📍 My live location: ' + url)}`, '_blank');
         } catch (err) {
-          alert('⚠️ Location access needed.');
+          alert('⚠️ Location access needed to share live location.');
         }
       }
 
-      // ✅ Delivered
+      // ✅ Mark Delivered
       if (e.target.classList.contains('mark-delivered')) {
-        if (!confirm('✅ Mark delivered?')) return;
+        if (!confirm('✅ Mark as delivered?')) return;
         try {
           await update(ref(db, `orders/${key}`), { status: 'delivered' });
           if (trackingInterval) clearInterval(trackingInterval);
-          alert('📦 Delivered!');
+          alert('📦 Order delivered!');
         } catch (err) {
-          alert('❌ Failed');
+          alert('❌ Failed to update status.');
         }
       }
     });
 
-    // 🔄 LIVE GPS LOOP
+    // 🔄 LIVE GPS LOOP — every 15 seconds
     function startLiveTracking(orderKey) {
       if (trackingInterval) clearInterval(trackingInterval);
 
@@ -282,15 +285,19 @@
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             timestamp: new Date().toISOString(),
-            note: `📍 Moving`
+            note: `📍 ${currentPartner} en route`
           });
-        } catch (err) { /* silent fail */ }
+          console.log('📍 Location sent:', pos.coords.latitude, pos.coords.longitude);
+        } catch (err) {
+          console.warn('📍 GPS update failed:', err);
+        }
       };
 
-      sendLocation(); // now
-      trackingInterval = setInterval(sendLocation, 15000); // every 15s
+      sendLocation(); // Send now
+      trackingInterval = setInterval(sendLocation, 15000); // Every 15s
     }
 
+    // 🔚 Cleanup
     window.addEventListener('beforeunload', () => {
       if (trackingInterval) clearInterval(trackingInterval);
       if (ordersUnsubscribe) ordersUnsubscribe();
