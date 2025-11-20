@@ -205,7 +205,7 @@
 
       // 🚀 START TRACKING — REAL GPS + LIVE UPDATES
       if (e.target.classList.contains('start-tracking')) {
-        if (!confirm('🚀 Start live tracking?\nYour location will update every 15 seconds.')) return;
+        if (!confirm('🚀 Start live tracking?\nYour location will update every 5 seconds.')) return;
 
         try {
           // ✅ Get REAL GPS
@@ -294,7 +294,7 @@
       };
 
       sendLocation(); // Send now
-      trackingInterval = setInterval(sendLocation, 15000); // Every 15s
+      trackingInterval = setInterval(sendLocation, 5000); // Every 5s
     }
 
     // 🔚 Cleanup
