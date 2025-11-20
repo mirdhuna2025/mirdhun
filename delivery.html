@@ -250,7 +250,7 @@
       if (e.target.classList.contains('share-location')) {
         try {
           const pos = await new Promise((r, x) => 
-            navigator.geolocation.getCurrentPosition(r, x, { timeout: 5000 })
+            navigator.geolocation.getCurrentPosition(r, x, { timeout: 50000 })
           );
           const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
           window.open(`https://wa.me/91${phone}?text=${encodeURIComponent('📍 My live location: ' + url)}`, '_blank');
