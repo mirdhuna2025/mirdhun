@@ -484,6 +484,7 @@
     <div>
       <button id="grid-view" class="view-btn active">Grid</button>
       <button id="list-view" class="view-btn">List</button>
+      <a href="https://mirdhuna.com" style="padding: 6px 14px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 20px; font-size: 13px; text-decoration: none; color: #333; transition: all 0.2s; display: inline-block;">Home</a>
     </div>
   </div>
 
@@ -506,7 +507,7 @@
 
   <div id="productPopup">
     <div class="box">
-      <img id="pp-img" src="" alt="product image" />
+      <img id="pp-img" src="/placeholder.svg" alt="product image" />
       <div class="content">
         <h3 id="pp-name" style="margin:0;color:#d40000"></h3>
         <div id="pp-desc" style="font-size:14px;color:#444;margin-top:6px"></div>
@@ -534,6 +535,19 @@
       <div style="display:flex; gap:8px; margin-top:8px;">
         <button id="checkout-place" class="checkout-btn" style="flex:1">Place Order</button>
         <button id="checkout-cancel" class="view-btn" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Added login modal popup from login.html -->
+  <div id="loginModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); justify-content: center; align-items: center; z-index: 10000;">
+    <div style="background: white; padding: 45px 36px; border-radius: 24px; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3); width: 90%; max-width: 440px; text-align: center;">
+      <div style="font-size: 30px; font-weight: 700; margin-bottom: 10px; background: linear-gradient(135deg, #d40000, #ff4c4c); -webkit-background-clip: text; color: transparent;">MIRDHUNA</div>
+      <h3 style="margin: 0 0 24px 0; color: #333; font-size: 20px; font-weight: 600;">Enter Mobile Number</h3>
+      <input type="tel" id="login-mob-number" placeholder="10-digit mobile number" maxlength="10" style="width: 100%; padding: 15px 18px; margin: 12px 0 24px; border: 2px solid #eee; border-radius: 14px; font-size: 16px; box-sizing: border-box; outline: none; font-family: 'Poppins', sans-serif;" />
+      <div style="display: flex; gap: 14px; justify-content: center;">
+        <button id="submit-login-modal" style="padding: 13px 20px; border: none; border-radius: 14px; font-weight: 600; font-size: 16px; cursor: pointer; flex: 1; min-width: 110px; background: linear-gradient(135deg, #d40000, #ff4c4c); color: white;">Login</button>
+        <button id="close-login-modal" style="padding: 13px 20px; border: 1px solid #ddd; border-radius: 14px; font-weight: 600; font-size: 16px; cursor: pointer; flex: 1; min-width: 110px; background: #f8f9fa; color: #444;">Cancel</button>
       </div>
     </div>
   </div>
