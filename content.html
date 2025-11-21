@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mirdhuna Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f9f9f9; padding: 10px; color: #333; }
@@ -88,14 +89,6 @@
       border: 2px solid #eee;
       background: #fff;
       margin-bottom: 6px;
-    }
-    .category-name {
-      font-size: 12px;
-      margin-top: 0;
-      font-weight: 500;
-      text-align: center;
-      word-wrap: break-word;
-      max-width: 80px;
     }
 
     .offer-banner {
@@ -463,6 +456,107 @@
     #checkoutModal input, #checkoutModal textarea, #checkoutModal select {
       width:100%; padding:8px; margin:8px 0; border-radius:6px; border:1px solid #ddd;
     }
+
+    /* Login popup styling matching login.html exactly */
+    #login-popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .popup-content {
+      background: white;
+      padding: 45px 36px;
+      border-radius: 24px;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 440px;
+      text-align: center;
+    }
+
+    .brand {
+      font-size: 30px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
+      -webkit-background-clip: text;
+      color: transparent;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .popup-content h3 {
+      margin: 0 0 24px 0;
+      color: #333;
+      font-size: 20px;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .popup-content input {
+      width: 100%;
+      padding: 15px 18px;
+      margin: 12px 0 24px;
+      border: 2px solid #eee;
+      border-radius: 14px;
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none;
+      font-family: 'Poppins', sans-serif;
+      transition: border-color 0.3s;
+    }
+
+    .popup-content input:focus {
+      border-color: #d40000;
+      box-shadow: 0 0 12px rgba(212, 0, 0, 0.3);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .popup-content button {
+      padding: 13px 20px;
+      border: none;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 110px;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.3s;
+    }
+
+    #submit-login {
+      background: linear-gradient(135deg, #d40000, #ff4c4c);
+      color: white;
+    }
+
+    #submit-login:hover {
+      opacity: 0.9;
+    }
+
+    #submit-login:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #close-popup {
+      background: #f8f9fa;
+      color: #444;
+      border: 1px solid #ddd;
+    }
+
+    #close-popup:hover {
+      background: #f0f0f0;
+    }
   </style>
 </head>
 <body>
@@ -539,15 +633,15 @@
     </div>
   </div>
 
-  <!-- Added login modal popup from login.html -->
-  <div id="loginModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); justify-content: center; align-items: center; z-index: 10000;">
-    <div style="background: white; padding: 45px 36px; border-radius: 24px; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3); width: 90%; max-width: 440px; text-align: center;">
-      <div style="font-size: 30px; font-weight: 700; margin-bottom: 10px; background: linear-gradient(135deg, #d40000, #ff4c4c); -webkit-background-clip: text; color: transparent;">MIRDHUNA</div>
-      <h3 style="margin: 0 0 24px 0; color: #333; font-size: 20px; font-weight: 600;">Enter Mobile Number</h3>
-      <input type="tel" id="login-mob-number" placeholder="10-digit mobile number" maxlength="10" style="width: 100%; padding: 15px 18px; margin: 12px 0 24px; border: 2px solid #eee; border-radius: 14px; font-size: 16px; box-sizing: border-box; outline: none; font-family: 'Poppins', sans-serif;" />
-      <div style="display: flex; gap: 14px; justify-content: center;">
-        <button id="submit-login-modal" style="padding: 13px 20px; border: none; border-radius: 14px; font-weight: 600; font-size: 16px; cursor: pointer; flex: 1; min-width: 110px; background: linear-gradient(135deg, #d40000, #ff4c4c); color: white;">Login</button>
-        <button id="close-login-modal" style="padding: 13px 20px; border: 1px solid #ddd; border-radius: 14px; font-weight: 600; font-size: 16px; cursor: pointer; flex: 1; min-width: 110px; background: #f8f9fa; color: #444;">Cancel</button>
+  <!-- Login popup matching login.html with correct IDs -->
+  <div id="login-popup">
+    <div class="popup-content">
+      <div class="brand">MIRDHUNA</div>
+      <h3>Enter Mobile Number</h3>
+      <input type="tel" id="mob-number" placeholder="10-digit mobile number" maxlength="10" />
+      <div class="button-group">
+        <button id="submit-login">Login</button>
+        <button id="close-popup">Cancel</button>
       </div>
     </div>
   </div>
