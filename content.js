@@ -175,11 +175,14 @@ function renderOffer() {
 function renderCategories() {
   if (!categoryCarousel) return
   categoryCarousel.innerHTML = ""
+
   const allDiv = document.createElement("div")
-  allDiv.className = "category-item"
-  allDiv.innerHTML = `<img class="category-img" src="/placeholder.svg" alt="All"/>`
+  allDiv.className = "category-item active"
+  allDiv.textContent = "ALL"
   allDiv.addEventListener("click", () => {
     selectedCategory = null
+    document.querySelectorAll(".category-item").forEach((el) => el.classList.remove("active"))
+    allDiv.classList.add("active")
     renderMenu()
   })
   categoryCarousel.appendChild(allDiv)
@@ -187,10 +190,10 @@ function renderCategories() {
   categories.forEach((cat) => {
     const div = document.createElement("div")
     div.className = "category-item"
-    div.innerHTML = `
-      <img class="category-img" src="${cat.image || ""}" alt="${cat.name || "Category"}"/>
-    `
+    div.textContent = cat.name || "Category"
     div.addEventListener("click", () => {
+      document.querySelectorAll(".category-item").forEach((el) => el.classList.remove("active"))
+      div.classList.add("active")
       selectedCategory = cat.name
       renderMenu()
     })
